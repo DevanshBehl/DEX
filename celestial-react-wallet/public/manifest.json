@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Celestial Wallet",
+  "version": "1.0.0",
+  "description": "A non-custodial HD wallet — your keys, your crypto, your future.",
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Open Celestial"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inpage.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

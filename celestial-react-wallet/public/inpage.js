@@ -1,0 +1,1 @@
+window.celestial = { isCelestial: true, version: "1.0.0" };

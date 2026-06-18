@@ -12,6 +12,7 @@
 
 let sessionKey = null;   // CryptoKey — non-extractable, memory-only
 let isUnlocked = false;
+let activeVaultId = null;
 
 // ---- Crypto helpers (matching landing page implementation) ------------------
 
@@ -78,18 +79,31 @@ async function handleMessage(message) {
     case 'VAULT_INIT': {
       // Store encrypted vault from landing page
       const { vault } = payload;
-      if (!vault || !vault.salt || !vault.mnemonic) {
+      if (!vault || !vault.salt || !vault.mnemonic || !vault.id) {
         return { success: false, error: 'Invalid vault payload' };
       }
-      await chrome.storage.local.set({ 'celestial/vault': vault });
+      const result = await chrome.storage.local.get('celestial/vaults');
+      const vaults = result['celestial/vaults'] || [];
+      
+      // Ensure no duplicate ID
+      const existingIdx = vaults.findIndex((v) => v.id === vault.id);
+      if (existingIdx >= 0) {
+        vaults[existingIdx] = vault;
+      } else {
+        vaults.push(vault);
+      }
+
+      await chrome.storage.local.set({ 'celestial/vaults': vaults });
       return { success: true };
     }
 
     case 'VAULT_UNLOCK': {
       // Attempt to decrypt the vault with the provided password
-      const { password } = payload;
-      const result = await chrome.storage.local.get('celestial/vault');
-      const vault = result['celestial/vault'];
+      const { password, vaultId } = payload;
+      const result = await chrome.storage.local.get('celestial/vaults');
+      const vaults = result['celestial/vaults'] || [];
+      
+      const vault = vaults.find((v) => v.id === vaultId);
       
       if (!vault) {
         return { success: false, error: 'No vault found' };
@@ -103,6 +117,7 @@ async function handleMessage(message) {
         // Cache key in memory
         sessionKey = key;
         isUnlocked = true;
+        activeVaultId = vault.id;
 
         return { success: true, mnemonic };
       } catch {
@@ -113,13 +128,21 @@ async function handleMessage(message) {
     case 'VAULT_LOCK': {
       sessionKey = null;
       isUnlocked = false;
+      activeVaultId = null;
       return { success: true };
     }
 
     case 'VAULT_STATE_GET': {
-      const result = await chrome.storage.local.get('celestial/vault');
-      const hasVault = !!result['celestial/vault'];
-      return { success: true, hasVault, isUnlocked };
+      const result = await chrome.storage.local.get('celestial/vaults');
+      const vaults = result['celestial/vaults'] || [];
+      const hasVault = vaults.length > 0;
+      return { 
+        success: true, 
+        hasVault, 
+        isUnlocked,
+        activeVaultId,
+        vaults: vaults.map(v => ({ id: v.id, name: v.name }))
+      };
     }
 
     default:

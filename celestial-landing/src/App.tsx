@@ -25,6 +25,7 @@ type Step = 'welcome' | 'set-password' | 'seed-phrase' | 'completion';
 
 interface WizardState {
   step: Step;
+  walletName: string;
   password: string;
   confirmPassword: string;
   mnemonic: string;
@@ -40,6 +41,7 @@ interface WizardState {
 
 type WizardAction =
   | { type: 'SET_STEP'; step: Step }
+  | { type: 'SET_WALLET_NAME'; value: string }
   | { type: 'SET_PASSWORD'; value: string }
   | { type: 'SET_CONFIRM_PASSWORD'; value: string }
   | { type: 'SET_MNEMONIC'; value: string }
@@ -55,6 +57,7 @@ type WizardAction =
 
 const INITIAL_STATE: WizardState = {
   step: 'welcome',
+  walletName: 'Wallet 1',
   password: '',
   confirmPassword: '',
   mnemonic: '',
@@ -72,6 +75,8 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'SET_STEP':
       return { ...state, step: action.step, error: '' };
+    case 'SET_WALLET_NAME':
+      return { ...state, walletName: action.value, error: '' };
     case 'SET_PASSWORD':
       return { ...state, password: action.value, error: '' };
     case 'SET_CONFIRM_PASSWORD':
@@ -195,7 +200,10 @@ export default function App() {
   }
 
   function handlePasswordContinue() {
+    dispatch({ type: 'SET_ERROR', value: '' });
+
     const result = onboardingPasswordSchema.safeParse({
+      walletName: state.walletName,
       password: state.password,
       confirmPassword: state.confirmPassword,
       acknowledged: state.acknowledged,
@@ -226,7 +234,7 @@ export default function App() {
 
     try {
       // Encrypt mnemonic into a vault blob
-      const vault = await createVaultBlob(state.mnemonic, state.password);
+      const vault = await createVaultBlob(state.mnemonic, state.password, state.walletName);
 
       // Send to extension via postMessage → content script → background
       window.postMessage(
@@ -278,6 +286,7 @@ export default function App() {
 
   const strength = getPasswordStrength(state.password);
   const canContinuePassword =
+    state.walletName.trim().length > 0 &&
     strength === 4 &&
     state.password === state.confirmPassword &&
     state.acknowledged;
@@ -447,6 +456,20 @@ function PasswordStep({
           This password encrypts your wallet locally. You'll need it every time
           you open Celestial.
         </p>
+      </div>
+
+      {/* Wallet Name Field */}
+      <div className="flex flex-col gap-1.5">
+        <input
+          type="text"
+          placeholder="Wallet Name (e.g. Trading Wallet)"
+          value={state.walletName}
+          onChange={(e) =>
+            dispatch({ type: 'SET_WALLET_NAME', value: e.target.value })
+          }
+          className="input-field"
+          autoFocus
+        />
       </div>
 
       {/* Password Field */}

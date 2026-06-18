@@ -37,6 +37,8 @@ export interface EncryptedPayload {
 
 export interface VaultBlob {
   version: 1;
+  id: string;                  // unique identifier for the vault
+  name: string;                // user-defined name for the wallet
   salt: string;                // base64-encoded 16-byte PBKDF2 salt
   mnemonic: EncryptedPayload;  // encrypted BIP-39 phrase
   createdAt: number;           // timestamp
@@ -125,6 +127,7 @@ export async function decrypt(
 export async function createVaultBlob(
   mnemonic: string,
   password: string,
+  name: string = 'Wallet 1'
 ): Promise<VaultBlob> {
   const salt = generateSalt();
   const key = await deriveKey(password, salt);
@@ -132,6 +135,8 @@ export async function createVaultBlob(
 
   return {
     version: 1,
+    id: `wallet_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    name,
     salt: toBase64(salt),
     mnemonic: encryptedMnemonic,
     createdAt: Date.now(),

@@ -13,6 +13,7 @@ export const passwordSchema = z
 
 export const onboardingPasswordSchema = z
   .object({
+    walletName: z.string().min(1, 'Wallet name is required'),
     password: passwordSchema,
     confirmPassword: z.string(),
     acknowledged: z.boolean().refine((val) => val === true, {

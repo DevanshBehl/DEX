@@ -17,6 +17,11 @@ interface MockToken {
   neon: string;
 }
 
+interface VaultInfo {
+  id: string;
+  name: string;
+}
+
 const MOCK_TOKENS: MockToken[] = [
   { symbol: 'ETH', name: 'Ethereum', balance: '1.45', usdValue: '$4,350.00', change: '+2.4%', positive: true, color: '#627eea', neon: 'rgba(98,126,234,0.4)' },
   { symbol: 'SOL', name: 'Solana', balance: '45.2', usdValue: '$6,420.00', change: '+5.1%', positive: true, color: '#14F195', neon: 'rgba(20,241,149,0.4)' },
@@ -30,6 +35,8 @@ const MOCK_ADDRESS = '0x1A4...9B2';
 
 export default function App() {
   const [walletState, setWalletState] = useState<WalletState>('loading');
+  const [vaults, setVaults] = useState<VaultInfo[]>([]);
+  const [selectedVaultId, setSelectedVaultId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,6 +65,11 @@ export default function App() {
         { type: 'VAULT_STATE_GET', payload: {} },
         (response: any) => {
           if (response?.success) {
+            setVaults(response.vaults || []);
+            if (response.vaults?.length > 0 && !selectedVaultId) {
+              setSelectedVaultId(response.vaults[0].id);
+            }
+
             if (!response.hasVault) {
               setWalletState('uninitialized');
             } else if (!response.isUnlocked) {
@@ -74,7 +86,7 @@ export default function App() {
       // Dev mode — no chrome API
       setWalletState('uninitialized');
     }
-  }, []);
+  }, [selectedVaultId]);
 
   useEffect(() => {
     checkVaultState();
@@ -99,7 +111,7 @@ export default function App() {
     try {
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage(
-          { type: 'VAULT_UNLOCK', payload: { password } },
+          { type: 'VAULT_UNLOCK', payload: { password, vaultId: selectedVaultId } },
           (response: any) => {
             setLoading(false);
             if (response?.success) {
@@ -155,7 +167,7 @@ export default function App() {
 
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       chrome.runtime.sendMessage(
-        { type: 'VAULT_UNLOCK', payload: { password: revealPassword } },
+        { type: 'VAULT_UNLOCK', payload: { password: revealPassword, vaultId: selectedVaultId } },
         (response: any) => {
           setIsRevealing(false);
           if (response?.success && response.mnemonic) {
@@ -200,6 +212,9 @@ export default function App() {
   if (walletState === 'locked') {
     return (
       <LockedScreen
+        vaults={vaults}
+        selectedVaultId={selectedVaultId}
+        onSelectVault={setSelectedVaultId}
         password={password}
         setPassword={(v) => { setPassword(v); setError(''); }}
         error={error}
@@ -568,6 +583,9 @@ function UninitializedScreen() {
 }
 
 function LockedScreen({
+  vaults,
+  selectedVaultId,
+  onSelectVault,
   password,
   setPassword,
   error,
@@ -576,6 +594,9 @@ function LockedScreen({
   inputRef,
   onUnlock,
 }: {
+  vaults: VaultInfo[];
+  selectedVaultId: string;
+  onSelectVault: (id: string) => void;
   password: string;
   setPassword: (v: string) => void;
   error: string;
@@ -637,9 +658,26 @@ function LockedScreen({
           </div>
         </div>
 
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center mb-8 w-full">
           <h2 className="text-[1.75rem] font-black text-white tracking-tight">Welcome Back</h2>
-          <p className="text-sm font-bold text-zinc-500 mt-1">Wallet 1</p>
+          
+          {/* Wallet Selector Dropdown */}
+          <div className="mt-3 relative w-full max-w-[200px]">
+            <select
+              value={selectedVaultId}
+              onChange={(e) => onSelectVault(e.target.value)}
+              className="appearance-none w-full bg-[#111111] border border-white/10 text-white text-sm font-bold rounded-xl px-4 py-2 text-center shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer hover:bg-[#18181b] hover:border-white/20 transition-all outline-none"
+            >
+              {vaults.map((vault) => (
+                <option key={vault.id} value={vault.id} className="bg-[#111111]">
+                  {vault.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+            </div>
+          </div>
         </div>
 
         <div className={`w-full flex flex-col gap-4 ${shaking ? 'shake' : ''}`}>

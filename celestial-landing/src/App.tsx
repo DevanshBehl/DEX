@@ -101,6 +101,48 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
+// ---- Network Logos ----------------------------------------------------------
+
+const NETWORK_LOGOS = [
+  // 1. Solana (SOL) - Green/Purple
+  <svg viewBox="0 0 400 400" fill="none" className="w-full h-full drop-shadow-xl">
+    <defs>
+      <linearGradient id="solGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#14F195" />
+        <stop offset="100%" stopColor="#9945FF" />
+      </linearGradient>
+    </defs>
+    <path d="M64 268l42-42h230l-42 42H64zm0-136l42-42h230l-42 42H64zm42 68l-42-42h230l42 42H106z" fill="url(#solGrad)" />
+  </svg>,
+  // 2. Bitcoin (BTC) - Orange
+  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full drop-shadow-xl">
+    <circle cx="12" cy="12" r="11" fill="#F7931A" />
+    <path fill="#FFF" d="M16.66 10.56c.22-1.46-1.14-2.25-2.85-2.84l.58-2.34-1.42-.35-.57 2.27c-.37-.09-.76-.18-1.14-.27l.58-2.3-1.43-.36-.58 2.33c-.3-.07-.6-.15-.89-.22L7.33 5.9l-.4 1.6s1.07.24 1.05.26c.58.15.69.53.67.83l-1.34 5.37c.05.01.12.03.2.06l-.21-.06-1.87 7.5c-.09.2-.33.32-.82.19.02.01-1.06-.26-1.06-.26l-1.12 1.7 2.05.51c.38.1.75.2 1.12.3l-.59 2.38 1.42.36.58-2.34c.39.1.76.19 1.14.28l-.58 2.34 1.43.35.6-2.39c2.37.45 4.14.27 4.9-1.92.6-1.76-.02-2.78-1.33-3.44.95-.22 1.66-.85 1.83-2.14zm-3.32 4.67c-1.01 4.07-7.85 1.96-10.07 1.4l1.8-7.22c2.22.55 9.3 2.14 8.27 5.82z" />
+  </svg>,
+  // 3. Ethereum (ETH) - Multi-color gradient
+  <svg viewBox="0 0 256 417" fill="none" className="w-full h-full drop-shadow-xl">
+    <defs>
+      <linearGradient id="ethGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#8A2BE2" />
+        <stop offset="50%" stopColor="#4169E1" />
+        <stop offset="100%" stopColor="#FF1493" />
+      </linearGradient>
+    </defs>
+    <path fill="url(#ethGrad)" d="M127.96 0l-127.96 212.32 127.96 75.64 127.96-75.64z" />
+    <path fill="url(#ethGrad)" opacity="0.7" d="M127.96 312.3l-127.96-100 127.96 204.45 127.96-204.45z" />
+  </svg>,
+  // 4. Arbitrum (ARB) - Blue
+  <svg viewBox="0 0 400 400" fill="none" className="w-full h-full drop-shadow-xl">
+    <path d="M200 40L40 340h80l80-150 80 150h80L200 40z" fill="#28A0F0" />
+    <circle cx="200" cy="270" r="40" fill="#28A0F0" />
+  </svg>,
+  // 5. Sui (SUI) - Teal
+  <svg viewBox="0 0 400 400" fill="none" className="w-full h-full drop-shadow-xl">
+    <path d="M200 20C100.59 20 20 100.59 20 200s80.59 180 180 180 180-80.59 180-180S299.41 20 200 20zm0 280c-55.23 0-100-44.77-100-100s44.77-100 100-100 100 44.77 100 100-44.77 100-100 100z" fill="#4CA2FF" />
+    <path d="M200 120L150 200h100L200 120z" fill="#4CA2FF" />
+  </svg>
+];
+
 // ---- App Component ----------------------------------------------------------
 
 export default function App() {
@@ -241,44 +283,113 @@ export default function App() {
     state.acknowledged;
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
-      {/* Ambient Orbs */}
-      <div className="orb-1" />
-      <div className="orb-2" />
-
-      {/* Main Content */}
-      <div className="relative z-10 w-full max-w-lg">
-        <div className={stepClass}>
-          {state.step === 'welcome' && (
-            <WelcomeStep
-              extensionDetected={state.extensionDetected}
-              onCreateWallet={handleCreateWallet}
+    <div className="relative min-h-screen bg-white text-neutral-900 overflow-hidden font-sans tracking-tight flex flex-col">
+      {/* Navigation Bar */}
+      <nav className="w-full px-8 py-6 flex items-center justify-between z-20 flex-shrink-0">
+        <div className="text-xl md:text-2xl font-black tracking-tighter text-black">CELESTIAL</div>
+        <div className="flex items-center gap-6">
+          <button className="text-sm font-semibold text-neutral-500 hover:text-black transition-colors hidden sm:block">Docs</button>
+          {/* Extension Badge */}
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-neutral-500 uppercase tracking-widest bg-neutral-100 px-3 py-1.5 rounded-full border border-black/5">
+            <div
+              className="w-2 h-2 rounded-full transition-colors duration-500"
+              style={{ backgroundColor: state.extensionDetected ? '#10b981' : '#ef4444' }}
             />
-          )}
-
-          {state.step === 'set-password' && (
-            <PasswordStep
-              state={state}
-              dispatch={dispatch}
-              canContinue={canContinuePassword}
-              onContinue={handlePasswordContinue}
-              onBack={() => transitionTo('welcome')}
-            />
-          )}
-
-          {state.step === 'seed-phrase' && (
-            <SeedPhraseStep
-              state={state}
-              dispatch={dispatch}
-              onCopy={handleCopyPhrase}
-              onComplete={handleComplete}
-              onBack={() => transitionTo('set-password')}
-            />
-          )}
-
-          {state.step === 'completion' && <CompletionStep />}
+            {state.extensionDetected ? 'Active' : 'Missing'}
+          </div>
         </div>
-      </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <main className="relative z-10 w-full flex-1 flex flex-col items-center px-6 lg:px-24 pt-24 lg:pt-32 pb-24 text-center">
+        
+        {/* Content Container */}
+        <div className="relative w-full flex flex-col items-center">
+          
+          {/* Semicircle of Logos (Behind Content) */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] pointer-events-none z-0 blur-[2px] opacity-80">
+            {NETWORK_LOGOS.map((logo, i) => {
+              // Create a top-facing semi-circle arching over the title (-180 to 0 degrees)
+              const angles = [-170, -135, -90, -45, -10];
+              const radiusX = 450;
+              const radiusY = 250;
+              const angleRad = angles[i] * (Math.PI / 180);
+              const x = Math.cos(angleRad) * radiusX;
+              const y = Math.sin(angleRad) * radiusY;
+              
+              return (
+                <div 
+                  key={i} 
+                  className="absolute w-20 h-20 md:w-28 md:h-28 animate-float"
+                  style={{ 
+                    left: `calc(50% + ${x}px - 56px)`, 
+                    top: `calc(40% + ${y}px - 56px)`, 
+                    animationDelay: `${i * 0.8}s` 
+                  }}
+                >
+                  {logo}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center w-full">
+            {/* Hero Section */}
+            <div className="mb-20 w-full max-w-4xl">
+              <h1 className="text-[5rem] md:text-[8rem] font-black tracking-tighter leading-[1.05] mb-8 text-black">
+                Meet CELESTIAL.
+              </h1>
+              <p className="text-xl md:text-2xl text-neutral-500 max-w-2xl mx-auto leading-relaxed font-medium">
+                The next-generation non-custodial wallet. <br className="hidden md:block"/> Your keys. Your crypto. Your future.
+              </p>
+            </div>
+
+            {/* Wizard / Onboarding Section */}
+            <div className="w-full max-w-md">
+              <div className={stepClass}>
+                {state.step === 'welcome' && (
+                  <WelcomeStep
+                    extensionDetected={state.extensionDetected}
+                    onCreateWallet={handleCreateWallet}
+                  />
+                )}
+
+                {state.step === 'set-password' && (
+                  <PasswordStep
+                    state={state}
+                    dispatch={dispatch}
+                    canContinue={canContinuePassword}
+                    onContinue={handlePasswordContinue}
+                    onBack={() => transitionTo('welcome')}
+                  />
+                )}
+
+                {state.step === 'seed-phrase' && (
+                  <SeedPhraseStep
+                    state={state}
+                    dispatch={dispatch}
+                    onCopy={handleCopyPhrase}
+                    onComplete={handleComplete}
+                    onBack={() => transitionTo('set-password')}
+                  />
+                )}
+
+                {state.step === 'completion' && <CompletionStep />}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full py-8 px-8 border-t border-black/5 flex flex-col md:flex-row items-center justify-between z-20 bg-white">
+        <div className="text-xs font-bold text-black tracking-widest mb-4 md:mb-0">CELESTIAL WALLET</div>
+        <div className="flex items-center gap-6 text-xs text-neutral-400 font-medium">
+          <a href="#" className="hover:text-black transition-colors">Terms of Service</a>
+          <a href="#" className="hover:text-black transition-colors">Privacy Policy</a>
+          <a href="#" className="hover:text-black transition-colors">GitHub</a>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -293,86 +404,22 @@ function WelcomeStep({
   onCreateWallet: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center gap-8 text-center">
-      {/* Animated Logo */}
-      <div className="relative">
-        <div
-          className="absolute inset-0 rounded-full animate-glow-pulse"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(187,134,252,0.15) 0%, transparent 70%)',
-            transform: 'scale(2.5)',
-          }}
-        />
-        <div className="relative w-20 h-20 flex items-center justify-center">
-          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-            {/* Crescent Moon */}
-            <defs>
-              <linearGradient
-                id="moonGrad"
-                x1="10"
-                y1="8"
-                x2="40"
-                y2="48"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop offset="0%" stopColor="#e2d4f5" />
-                <stop offset="100%" stopColor="#bb86fc" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M28 4C17.507 4 9 12.507 9 23s8.507 19 19 19c4.632 0 8.9-1.66 12.21-4.42A22 22 0 0 1 28 42C14.745 42 4 31.255 4 18S14.745-6 28-6c5.377 0 10.366 1.924 14.21 5.42A18.93 18.93 0 0 0 28 4Z"
-              fill="url(#moonGrad)"
-              transform="translate(4, 6)"
-            />
-            {/* Star Sparkle */}
-            <path
-              d="M44 10l1.5 3.5L49 15l-3.5 1.5L44 20l-1.5-3.5L39 15l3.5-1.5Z"
-              fill="#e2d4f5"
-              opacity="0.9"
-            />
-            <circle cx="48" cy="24" r="1.5" fill="#bb86fc" opacity="0.6" />
-          </svg>
-        </div>
+    <div className="glass-card p-10 flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <p className="text-neutral-500 font-medium">Initialize your secure local vault to continue.</p>
       </div>
 
-      {/* Title */}
       <div className="flex flex-col gap-3">
-        <h1 className="text-5xl font-black tracking-tight md:text-6xl">
-          Meet{' '}
-          <span className="gradient-text">CELESTIAL</span>
-        </h1>
-        <p className="text-lg text-star-muted max-w-md mx-auto leading-relaxed">
-          The next-generation non-custodial wallet.
-          <br />
-          Your keys. Your crypto. Your future.
-        </p>
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-col gap-3 w-full max-w-xs">
         <button
           onClick={onCreateWallet}
           disabled={!extensionDetected}
-          className="btn-primary w-full"
+          className="btn-primary w-full py-4 text-base"
         >
           Create Wallet
         </button>
-        <button className="btn-ghost w-full">Read the Docs</button>
-      </div>
-
-      {/* Extension Status */}
-      <div className="flex items-center gap-2 text-sm text-star-dim">
-        <div
-          className="w-2 h-2 rounded-full transition-colors duration-500"
-          style={{
-            backgroundColor: extensionDetected ? '#22c55e' : '#ef4444',
-            boxShadow: extensionDetected
-              ? '0 0 8px rgba(34,197,94,0.6)'
-              : '0 0 8px rgba(239,68,68,0.4)',
-          }}
-        />
-        {extensionDetected ? 'Extension Active' : 'Extension Not Detected'}
+        <button className="btn-ghost w-full py-4 text-base">
+          Read the Docs
+        </button>
       </div>
     </div>
   );
@@ -421,9 +468,9 @@ function PasswordStep({
             className="absolute right-3 top-1/2 -translate-y-1/2 text-star-dim hover:text-star-muted transition-colors p-1"
           >
             {state.showPassword ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
             )}
           </button>
         </div>
@@ -450,9 +497,9 @@ function PasswordStep({
           className="absolute right-3 top-1/2 -translate-y-1/2 text-star-dim hover:text-star-muted transition-colors p-1"
         >
           {state.showConfirmPassword ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
           )}
         </button>
       </div>
@@ -651,7 +698,7 @@ function CompletionStep() {
             cx="48"
             cy="48"
             r="44"
-            stroke="#bb86fc"
+            stroke="#0f172a"
             strokeWidth="2"
             opacity="0.3"
           />
@@ -660,9 +707,8 @@ function CompletionStep() {
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center"
           style={{
-            background:
-              'linear-gradient(135deg, rgba(187,134,252,0.2) 0%, rgba(55,0,179,0.2) 100%)',
-            border: '2px solid rgba(187,134,252,0.3)',
+            background: '#0f172a',
+            border: '2px solid rgba(15,23,42,0.1)',
           }}
         >
           <svg
@@ -671,7 +717,7 @@ function CompletionStep() {
             height="28"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#bb86fc"
+            stroke="#ffffff"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"

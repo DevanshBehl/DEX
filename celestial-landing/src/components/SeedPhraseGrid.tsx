@@ -38,7 +38,7 @@ export default function SeedPhraseGrid({
         {/* Hover Hint Overlay */}
         {!isHovering && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-void-100/90 border border-white/10 backdrop-blur-sm">
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/90 border border-black/5 backdrop-blur-md shadow-xl">
               <svg
                 width="16"
                 height="16"

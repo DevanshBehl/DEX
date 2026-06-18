@@ -33,7 +33,7 @@ export default function PasswordStrength({ password }: Props) {
               className="h-1 flex-1 rounded-full transition-all duration-300"
               style={{
                 backgroundColor:
-                  strength >= level ? color : 'rgba(255,255,255,0.06)',
+                  strength >= level ? color : 'rgba(15,23,42,0.08)',
               }}
             />
           ))}
@@ -56,7 +56,7 @@ function RuleItem({ label, passed }: { label: string; passed: boolean }) {
     <div className="flex items-center gap-1.5 text-xs">
       <span
         className="transition-colors duration-200"
-        style={{ color: passed ? '#22c55e' : 'rgba(255,255,255,0.25)' }}
+        style={{ color: passed ? '#10b981' : 'rgba(15,23,42,0.2)' }}
       >
         {passed ? '✓' : '✗'}
       </span>
@@ -64,8 +64,8 @@ function RuleItem({ label, passed }: { label: string; passed: boolean }) {
         className="transition-colors duration-200"
         style={{
           color: passed
-            ? 'rgba(255,255,255,0.7)'
-            : 'rgba(255,255,255,0.3)',
+            ? 'rgba(15,23,42,0.8)'
+            : 'rgba(15,23,42,0.4)',
         }}
       >
         {label}

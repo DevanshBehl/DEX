@@ -473,20 +473,61 @@ function LockedScreen({
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [inputRef]);
 
-  return (
-    <div className="w-[360px] h-[600px] flex flex-col bg-black relative overflow-hidden">
-      <div className="absolute top-[-50px] left-[-50px] w-48 h-48 bg-[#bd00ff] opacity-10 rounded-full blur-[80px]" />
+  // Reactive animation math based on password length
+  const ringRotation = password.length * 20;
+  const glowOpacity = Math.min(0.05 + (password.length * 0.08), 0.6);
+  const ringScale = 1 + (password.length * 0.05);
+  const isTyping = password.length > 0;
 
-      <div className="flex-1 flex flex-col justify-center px-6 z-10 animate-fade-in">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-white/5 flex items-center justify-center mb-6 shadow-2xl">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+  return (
+    <div className="w-[360px] h-[600px] flex flex-col items-center justify-center bg-[#000000] relative overflow-hidden">
+      {/* Ambient glowing core that pulses and grows as you type */}
+      <div 
+        className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-[80px] transition-all duration-300 ease-out pointer-events-none"
+        style={{ 
+          background: isTyping ? `rgba(0, 240, 255, ${glowOpacity})` : 'rgba(189, 0, 255, 0.05)',
+          transform: `translate(-50%, -50%) scale(${ringScale})` 
+        }}
+      />
+
+      <div className="flex-1 flex flex-col items-center justify-center px-8 w-full z-10 animate-fade-in relative mt-12">
+        
+        {/* Interactive Celestial Rings */}
+        <div className="relative w-28 h-28 mb-8 flex-shrink-0">
+          {/* Outer Cyan Ring */}
+          <div 
+            className="absolute inset-0 rounded-full border-[2px] border-white/5 border-t-[#00f0ff] transition-transform duration-300 ease-out"
+            style={{ transform: `rotate(${ringRotation}deg)` }}
+          />
+          {/* Inner Purple Ring */}
+          <div 
+            className="absolute inset-3 rounded-full border-[2px] border-white/5 border-b-[#bd00ff] transition-transform duration-300 ease-out"
+            style={{ transform: `rotate(${-ringRotation * 1.5}deg)` }}
+          />
+          {/* Center Hub */}
+          <div className="absolute inset-6 rounded-full bg-[#0a0a0a] flex items-center justify-center border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.8)] z-10 transition-colors duration-300">
+            {isTyping ? (
+              // Unlocked Icon (Neon Cyan)
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-in drop-shadow-[0_0_8px_rgba(0,240,255,0.5)]">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+              </svg>
+            ) : (
+              // Locked Icon (White)
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-in">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            )}
           </div>
-          <h2 className="text-2xl font-black text-white">Welcome Back</h2>
-          <p className="text-sm font-medium text-zinc-500 mt-1">Wallet 1</p>
         </div>
 
-        <div className={`flex flex-col gap-4 ${shaking ? 'shake' : ''}`}>
+        <div className="flex flex-col items-center mb-8">
+          <h2 className="text-[1.75rem] font-black text-white tracking-tight">Welcome Back</h2>
+          <p className="text-sm font-bold text-zinc-500 mt-1">Wallet 1</p>
+        </div>
+
+        <div className={`w-full flex flex-col gap-4 ${shaking ? 'shake' : ''}`}>
           <input
             ref={inputRef}
             type="password"
@@ -495,11 +536,11 @@ function LockedScreen({
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') onUnlock(); }}
             disabled={loading}
-            className="input-field bg-[#111111]"
+            className="input-field bg-[#0a0a0a] text-center tracking-widest text-lg"
           />
 
           {error && (
-            <p className="text-xs font-bold text-center text-[#ff0055]">
+            <p className="text-xs font-bold text-center text-[#ff0055] animate-fade-in">
               {error}
             </p>
           )}
@@ -509,7 +550,7 @@ function LockedScreen({
             disabled={loading || !password}
             className="btn-primary mt-2"
           >
-            {loading ? 'Decrypting...' : 'Unlock'}
+            {loading ? 'Decrypting...' : 'Unlock Vault'}
           </button>
         </div>
       </div>

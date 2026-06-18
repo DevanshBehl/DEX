@@ -37,6 +37,11 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSwapOpen, setIsSwapOpen] = useState(false);
+  const [revealSeedState, setRevealSeedState] = useState<'idle' | 'input' | 'revealed'>('idle');
+  const [revealPassword, setRevealPassword] = useState('');
+  const [revealError, setRevealError] = useState('');
+  const [revealedSeed, setRevealedSeed] = useState('');
+  const [isRevealing, setIsRevealing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ---- Dynamic Width --------------------------------------------------------
@@ -139,6 +144,47 @@ export default function App() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch { /* ignore */ }
+  }
+
+  // ---- Reveal Seed Handler --------------------------------------------------
+
+  async function handleRevealSeed() {
+    if (!revealPassword) return;
+    setIsRevealing(true);
+    setRevealError('');
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage(
+        { type: 'VAULT_UNLOCK', payload: { password: revealPassword } },
+        (response: any) => {
+          setIsRevealing(false);
+          if (response?.success && response.mnemonic) {
+            setRevealedSeed(response.mnemonic);
+            setRevealSeedState('revealed');
+            setRevealPassword('');
+          } else {
+            setRevealError('Incorrect password');
+          }
+        }
+      );
+    } else {
+      // Dev fallback
+      setTimeout(() => {
+        setIsRevealing(false);
+        setRevealedSeed('abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
+        setRevealSeedState('revealed');
+      }, 500);
+    }
+  }
+
+  function handleCloseSettings() {
+    setIsSettingsOpen(false);
+    setTimeout(() => {
+      setRevealSeedState('idle');
+      setRevealPassword('');
+      setRevealError('');
+      setRevealedSeed('');
+    }, 500);
   }
 
   // ---- Render ---------------------------------------------------------------
@@ -288,18 +334,18 @@ export default function App() {
       {/* ---- Floating Bottom Nav ---- */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
         <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
-          <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen} onClick={() => { setIsSettingsOpen(false); setIsSwapOpen(false); }} />
+          <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
           <NavItem 
             icon="swap" 
             active={isSwapOpen} 
-            onClick={() => { setIsSwapOpen(!isSwapOpen); setIsSettingsOpen(false); }} 
+            onClick={() => { setIsSwapOpen(!isSwapOpen); handleCloseSettings(); }} 
             iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSwapOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
           />
-          <NavItem icon="clock" onClick={() => { setIsSettingsOpen(false); setIsSwapOpen(false); }} />
+          <NavItem icon="clock" onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
           <NavItem 
             icon="settings" 
             active={isSettingsOpen} 
-            onClick={() => { setIsSettingsOpen(!isSettingsOpen); setIsSwapOpen(false); }} 
+            onClick={() => { isSettingsOpen ? handleCloseSettings() : setIsSettingsOpen(true); setIsSwapOpen(false); }} 
             iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSettingsOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
           />
         </nav>
@@ -365,37 +411,106 @@ export default function App() {
         style={{ transform: isSettingsOpen ? 'translateY(0)' : 'translateY(100%)' }}
       >
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-black text-white">Settings</h2>
-          <button onClick={() => setIsSettingsOpen(false)} className="haptic-btn w-8 h-8 rounded-full bg-[#111111] border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white">
+          {revealSeedState === 'idle' ? (
+            <h2 className="text-2xl font-black text-white">Settings</h2>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button onClick={() => setRevealSeedState('idle')} className="text-zinc-400 hover:text-white transition-colors">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+              </button>
+              <h2 className="text-xl font-black text-white">Recovery Phrase</h2>
+            </div>
+          )}
+          <button onClick={handleCloseSettings} className="haptic-btn w-8 h-8 rounded-full bg-[#111111] border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {[
-            { title: 'General', desc: 'Currency, Language, Theme', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
-            { title: 'Security & Privacy', desc: 'Recovery Phrase, Auto-Lock', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> },
-            { title: 'Networks', desc: 'Ethereum, Solana, Polygon', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> },
-            { title: 'Address Book', desc: 'Saved Contacts', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
-            { title: 'Support', desc: 'Help Center, Contact Us', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg> }
-          ].map((item) => (
-            <div key={item.title} className="flex items-center gap-4 bg-[#111111] border border-white/5 p-4 rounded-2xl haptic-btn group">
-              <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/10 group-hover:border-[#00f0ff] transition-colors">
-                {item.icon}
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-white">{item.title}</h3>
-                <p className="text-xs font-medium text-zinc-500">{item.desc}</p>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors"><polyline points="9 18 15 12 9 6" /></svg>
+        {revealSeedState === 'idle' && (
+          <>
+            <div className="flex flex-col gap-3">
+              {[
+                { title: 'General', desc: 'Currency, Language, Theme', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
+                { id: 'security', title: 'Security & Privacy', desc: 'Reveal Recovery Phrase', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> },
+                { title: 'Networks', desc: 'Ethereum, Solana, Polygon', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> },
+                { title: 'Address Book', desc: 'Saved Contacts', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
+              ].map((item) => (
+                <div 
+                  key={item.title} 
+                  className="flex items-center gap-4 bg-[#111111] border border-white/5 p-4 rounded-2xl haptic-btn group"
+                  onClick={() => {
+                    if (item.id === 'security') setRevealSeedState('input');
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/10 group-hover:border-[#00f0ff] transition-colors">
+                    {item.icon}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-white">{item.title}</h3>
+                    <p className="text-xs font-medium text-zinc-500">{item.desc}</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors"><polyline points="9 18 15 12 9 6" /></svg>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        
-        <div className="mt-auto mb-24 flex flex-col items-center gap-2">
-          <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">Celestial v2.0.0</span>
-          <button onClick={handleLock} className="text-xs font-bold text-[#ff0055] hover:text-white transition-colors">Lock Wallet</button>
-        </div>
+            
+            <div className="mt-auto mb-24 flex flex-col items-center gap-2">
+              <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">Celestial v2.0.0</span>
+              <button onClick={handleLock} className="text-xs font-bold text-[#ff0055] hover:text-white transition-colors">Lock Wallet</button>
+            </div>
+          </>
+        )}
+
+        {revealSeedState === 'input' && (
+          <div className="flex flex-col gap-6 animate-fade-in mt-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.1)]">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+              </div>
+              <p className="text-sm text-zinc-400 font-medium">Enter your password to reveal your secret recovery phrase. Never share this phrase with anyone.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={revealPassword}
+                onChange={(e) => setRevealPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleRevealSeed(); }}
+                disabled={isRevealing}
+                className="input-field bg-[#111111] text-center tracking-widest text-lg border-white/5"
+              />
+              {revealError && <p className="text-xs font-bold text-center text-[#ff0055]">{revealError}</p>}
+              <button onClick={handleRevealSeed} disabled={isRevealing || !revealPassword} className="btn-primary mt-2">
+                {isRevealing ? 'Verifying...' : 'Reveal Phrase'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {revealSeedState === 'revealed' && (
+          <div className="flex flex-col gap-6 animate-fade-in mt-2">
+            <div className="p-4 bg-[#ff0055]/10 border border-[#ff0055]/30 rounded-2xl">
+              <p className="text-xs font-bold text-[#ff0055] text-center">WARNING: Anyone with this phrase can steal your assets. Do not screenshot.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {revealedSeed.split(' ').map((word, idx) => (
+                <div key={idx} className="flex items-center bg-[#111111] border border-white/10 rounded-xl px-3 py-2.5 shadow-lg">
+                  <span className="text-[10px] font-black text-zinc-600 w-5">{idx + 1}</span>
+                  <span className="text-sm font-bold text-white tracking-wide">{word}</span>
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(revealedSeed);
+                setRevealSeedState('idle');
+              }} 
+              className="btn-primary mt-4"
+            >
+              Copy to Clipboard
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

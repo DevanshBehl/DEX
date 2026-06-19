@@ -84,11 +84,14 @@ export default function App() {
   const [shaking, setShaking] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSwapOpen, setIsSwapOpen] = useState(false);
-  const [revealSeedState, setRevealSeedState] = useState<'idle' | 'input' | 'revealed'>('idle');
+  const [settingsMode, setSettingsMode] = useState<'idle' | 'seed_input' | 'seed_revealed' | 'manage_accounts' | 'account_details' | 'key_input' | 'key_revealed' | 'delete_confirm' | 'delete_password'>('idle');
+  const [selectedManageAccountIndex, setSelectedManageAccountIndex] = useState<number | null>(null);
+  const [selectedManageChain, setSelectedManageChain] = useState<ChainAccount | null>(null);
 
   const [revealPassword, setRevealPassword] = useState('');
   const [revealError, setRevealError] = useState('');
   const [revealedSeed, setRevealedSeed] = useState('');
+  const [revealedPrivateKey, setRevealedPrivateKey] = useState('');
   const [isRevealing, setIsRevealing] = useState(false);
   const [accountCount, setAccountCount] = useState(() => {
     const saved = localStorage.getItem('celestial_account_count');
@@ -103,6 +106,7 @@ export default function App() {
   const [allAccounts, setAllAccounts] = useState<{ name: string; chains: ChainAccount[] }[]>([]);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const settingsScrollRef = useRef<HTMLDivElement>(null);
 
   // ---- Persist State --------------------------------------------------------
 
@@ -113,6 +117,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('celestial_active_account', activeAccountIndex.toString());
   }, [activeAccountIndex]);
+
+  useEffect(() => {
+    settingsScrollRef.current?.scrollTo(0, 0);
+  }, [settingsMode]);
 
   // ---- Dynamic Width --------------------------------------------------------
 
@@ -253,7 +261,7 @@ export default function App() {
           setIsRevealing(false);
           if (response?.success && response.mnemonic) {
             setRevealedSeed(response.mnemonic);
-            setRevealSeedState('revealed');
+            setSettingsMode('seed_revealed');
             setRevealPassword('');
           } else {
             setRevealError('Incorrect password');
@@ -265,7 +273,42 @@ export default function App() {
       setTimeout(() => {
         setIsRevealing(false);
         setRevealedSeed('abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
-        setRevealSeedState('revealed');
+        setSettingsMode('seed_revealed');
+      }, 500);
+    }
+  }
+
+  // ---- Reveal Private Key Handler -------------------------------------------
+
+  async function handleRevealPrivateKey() {
+    if (!revealPassword) return;
+    setIsRevealing(true);
+    setRevealError('');
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage(
+        { type: 'VAULT_UNLOCK', payload: { password: revealPassword, vaultId: selectedVaultId } },
+        (response: any) => {
+          setIsRevealing(false);
+          if (response?.success) {
+            if (selectedManageChain) {
+              setRevealedPrivateKey(selectedManageChain.privateKey);
+              setSettingsMode('key_revealed');
+            }
+            setRevealPassword('');
+          } else {
+            setRevealError('Incorrect password');
+          }
+        }
+      );
+    } else {
+      // Dev fallback
+      setTimeout(() => {
+        setIsRevealing(false);
+        if (selectedManageChain) {
+          setRevealedPrivateKey(selectedManageChain.privateKey);
+          setSettingsMode('key_revealed');
+        }
       }, 500);
     }
   }
@@ -273,10 +316,13 @@ export default function App() {
   function handleCloseSettings() {
     setIsSettingsOpen(false);
     setTimeout(() => {
-      setRevealSeedState('idle');
+      setSettingsMode('idle');
       setRevealPassword('');
       setRevealError('');
       setRevealedSeed('');
+      setRevealedPrivateKey('');
+      setSelectedManageAccountIndex(null);
+      setSelectedManageChain(null);
     }, 500);
   }
 
@@ -479,24 +525,26 @@ export default function App() {
       </div>
 
       {/* ---- Floating Bottom Nav ---- */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
-        <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
-          <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
-          <NavItem 
-            icon="swap" 
-            active={isSwapOpen} 
-            onClick={() => { setIsSwapOpen(!isSwapOpen); handleCloseSettings(); }} 
-            iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSwapOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
-          />
-          <NavItem icon="clock" onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
-          <NavItem 
-            icon="settings" 
-            active={isSettingsOpen} 
-            onClick={() => { isSettingsOpen ? handleCloseSettings() : setIsSettingsOpen(true); setIsSwapOpen(false); }} 
-            iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSettingsOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
-          />
-        </nav>
-      </div>
+      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[200]">
+          <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+            <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
+            <NavItem 
+              icon="swap" 
+              active={isSwapOpen} 
+              onClick={() => { setIsSwapOpen(!isSwapOpen); handleCloseSettings(); }} 
+              iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSwapOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
+            />
+            <NavItem icon="clock" onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
+            <NavItem 
+              icon="settings" 
+              active={isSettingsOpen} 
+              onClick={() => { isSettingsOpen ? handleCloseSettings() : setIsSettingsOpen(true); setIsSwapOpen(false); }} 
+              iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSettingsOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
+            />
+          </nav>
+        </div>
+      )}
 
       {/* ---- Accounts Sliding Panel ---- */}
       <div 
@@ -672,14 +720,21 @@ export default function App() {
         style={{ transform: isSettingsOpen ? 'translateY(0)' : 'translateY(100%)' }}
       >
         <div className="flex items-center justify-between mb-8">
-          {revealSeedState === 'idle' ? (
+          {settingsMode === 'idle' ? (
             <h2 className="text-2xl font-black text-white">Settings</h2>
           ) : (
             <div className="flex items-center gap-3">
-              <button onClick={() => setRevealSeedState('idle')} className="text-zinc-400 hover:text-white transition-colors">
+              <button onClick={() => {
+                if (settingsMode === 'account_details') setSettingsMode('manage_accounts');
+                else if (settingsMode === 'key_input' || settingsMode === 'key_revealed') setSettingsMode('account_details');
+                else if (settingsMode === 'delete_confirm' || settingsMode === 'delete_password') setSettingsMode('account_details');
+                else setSettingsMode('idle');
+              }} className="text-zinc-400 hover:text-white transition-colors">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
               </button>
-              <h2 className="text-xl font-black text-white">Recovery Phrase</h2>
+              <h2 className="text-xl font-black text-white">
+                {settingsMode.startsWith('seed') ? 'Recovery Phrase' : settingsMode === 'account_details' && selectedManageAccountIndex !== null ? allAccounts[selectedManageAccountIndex]?.name : settingsMode === 'delete_confirm' || settingsMode === 'delete_password' ? 'Delete Account' : 'Manage Accounts'}
+              </h2>
             </div>
           )}
           <button onClick={handleCloseSettings} className="haptic-btn w-8 h-8 rounded-full bg-[#111111] border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white">
@@ -687,27 +742,32 @@ export default function App() {
           </button>
         </div>
 
-        {revealSeedState === 'idle' && (
+        <div ref={settingsScrollRef} className="flex-1 overflow-y-auto pb-24 flex flex-col pr-2 -mr-2">
+          {settingsMode === 'idle' && (
           <>
             <div className="flex flex-col gap-3">
               {[
                 { title: 'General', desc: 'Currency, Language, Theme', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
+                { id: 'manage_accounts', title: 'Manage Accounts', desc: 'View accounts & private keys', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
                 { id: 'security', title: 'Security & Privacy', desc: 'Reveal Recovery Phrase', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> },
                 { title: 'Networks', desc: 'Ethereum, Solana, Polygon', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> },
                 { title: 'Address Book', desc: 'Saved Contacts', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
+                { id: 'lock', title: 'Lock Wallet', desc: 'Secure your session', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>, isDanger: true },
               ].map((item) => (
                 <div 
                   key={item.title} 
                   className="flex items-center gap-4 bg-[#111111] border border-white/5 p-4 rounded-2xl haptic-btn group"
                   onClick={() => {
-                    if (item.id === 'security') setRevealSeedState('input');
+                    if (item.id === 'security') setSettingsMode('seed_input');
+                    else if (item.id === 'manage_accounts') setSettingsMode('manage_accounts');
+                    else if (item.id === 'lock') handleLock();
                   }}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/10 group-hover:border-[#00f0ff] transition-colors">
+                  <div className={`w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/10 ${item.isDanger ? 'group-hover:border-[#ff0055]' : 'group-hover:border-[#00f0ff]'} transition-colors`}>
                     {item.icon}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-bold text-white">{item.title}</h3>
+                    <h3 className={`text-sm font-bold ${item.isDanger ? 'text-[#ff0055]' : 'text-white'}`}>{item.title}</h3>
                     <p className="text-xs font-medium text-zinc-500">{item.desc}</p>
                   </div>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors"><polyline points="9 18 15 12 9 6" /></svg>
@@ -715,14 +775,10 @@ export default function App() {
               ))}
             </div>
             
-            <div className="mt-auto mb-24 flex flex-col items-center gap-2">
-              <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">Celestial v2.0.0</span>
-              <button onClick={handleLock} className="text-xs font-bold text-[#ff0055] hover:text-white transition-colors">Lock Wallet</button>
-            </div>
           </>
         )}
 
-        {revealSeedState === 'input' && (
+        {settingsMode === 'seed_input' && (
           <div className="flex flex-col gap-6 animate-fade-in mt-4">
             <div className="text-center">
               <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.1)]">
@@ -748,7 +804,7 @@ export default function App() {
           </div>
         )}
 
-        {revealSeedState === 'revealed' && (
+        {settingsMode === 'seed_revealed' && (
           <div className="flex flex-col gap-6 animate-fade-in mt-2">
             <div className="p-4 bg-[#ff0055]/10 border border-[#ff0055]/30 rounded-2xl">
               <p className="text-xs font-bold text-[#ff0055] text-center">WARNING: Anyone with this phrase can steal your assets. Do not screenshot.</p>
@@ -764,7 +820,7 @@ export default function App() {
             <button 
               onClick={() => {
                 navigator.clipboard.writeText(revealedSeed);
-                setRevealSeedState('idle');
+                setSettingsMode('idle');
               }} 
               className="btn-primary mt-4"
             >
@@ -772,6 +828,282 @@ export default function App() {
             </button>
           </div>
         )}
+
+        {/* ---- Manage Accounts Views ---- */}
+
+        {settingsMode === 'manage_accounts' && (
+          <div className="flex flex-col gap-3 animate-fade-in mt-4">
+            {allAccounts.map((acc, idx) => (
+              <div 
+                key={idx} 
+                className="flex items-center gap-4 bg-[#111111] border border-white/5 p-4 rounded-2xl haptic-btn group"
+                onClick={() => {
+                  setSelectedManageAccountIndex(idx);
+                  setSettingsMode('account_details');
+                }}
+              >
+                <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/10 group-hover:border-[#00f0ff] transition-colors">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-white">{acc.name}</h3>
+                  <p className="text-xs font-medium text-zinc-500">{acc.chains.length} chains active</p>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors"><polyline points="9 18 15 12 9 6" /></svg>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {settingsMode === 'account_details' && selectedManageAccountIndex !== null && (
+          <div className="flex flex-col gap-4 animate-fade-in mt-2">
+            {/* Account Identity Header */}
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00f0ff] to-[#bd00ff] p-[2px] shadow-[0_0_20px_rgba(0,240,255,0.15)]">
+                <div className="w-full h-full bg-[#0a0a0a] rounded-full flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">{allAccounts[selectedManageAccountIndex].name}</h3>
+                <p className="text-xs font-medium text-zinc-500">{allAccounts[selectedManageAccountIndex].chains.length} chains · Index {selectedManageAccountIndex}</p>
+              </div>
+            </div>
+
+            {/* Chain Cards */}
+            {allAccounts[selectedManageAccountIndex].chains.map(chain => {
+              const chainColor = chain.chain === 'EVM' ? '#627eea' : chain.chain === 'Solana' ? '#14F195' : '#f7931a';
+              return (
+              <div key={chain.chain} className="flex flex-col gap-3 bg-[#111111] border border-white/5 p-4 rounded-2xl relative overflow-hidden">
+                {/* Subtle chain glow */}
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] opacity-[0.06] pointer-events-none" style={{ background: chainColor }} />
+                
+                <div className="flex items-center gap-2.5">
+                  {chain.chain === 'EVM' && (
+                    <div className="w-7 h-7 rounded-full bg-[#627eea] flex items-center justify-center shadow-lg border border-white/10">
+                      <svg width="10" height="10" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
+                    </div>
+                  )}
+                  {chain.chain === 'Solana' && (
+                    <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center shadow-lg border border-[#14F195]/30">
+                      <svg width="12" height="12" viewBox="0 0 397 311" fill="url(#solana-grad-2)"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+                    </div>
+                  )}
+                  {chain.chain === 'Bitcoin' && (
+                    <div className="w-7 h-7 rounded-full bg-[#f7931a] flex items-center justify-center shadow-lg border border-white/10">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M14.653 10.686c1.171-.341 1.996-1.045 2.128-2.656.16-1.954-1.127-2.92-3.327-3.237l.745-2.991-1.815-.452-.724 2.905c-.477-.119-.968-.232-1.464-.343l.732-2.936-1.814-.452-.746 2.994c-.396-.089-.785-.181-1.164-.282l-2.493-.621-.48 1.926s1.341.306 1.314.327c.732.182.865.666.843 1.049l-1.688 6.772c-.092.219-.344.545-.855.419.023.03-1.316-.328-1.316-.328l-.902 2.083 2.355.587c.435.108.865.223 1.291.332l-.75 3.013 1.815.452.744-2.986c.493.131.975.253 1.448.369l-.736 2.955 1.814.452.753-3.023c2.721.516 4.776.31 5.631-2.155.688-1.986-.019-3.13-1.503-3.878zM11.603 6.953c1.554.388 2.658.625 2.454 1.443-.203.815-1.428.614-2.982.227l.528-1.67zm1.189 7.747c-1.745-.436-3.05-.662-2.825-1.564.225-.902 1.623-.637 3.368-.201.597.149 1.139.317 1.488.586.643.493.58 1.408-.035 1.656-.475.191-1.189.163-1.996-.477z"/></svg>
+                    </div>
+                  )}
+                  <span className="text-xs font-black uppercase tracking-widest" style={{ color: chainColor }}>{chain.chain}</span>
+                </div>
+
+                {/* Public Key */}
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 bg-black/50 p-3 rounded-xl border border-white/5">
+                    <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Public Address</p>
+                    <p className="text-[12px] font-mono text-zinc-200 leading-relaxed break-all select-all">{chain.address}</p>
+                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(chain.address);
+                      setCopiedAddress(chain.address);
+                      setTimeout(() => setCopiedAddress(null), 2000);
+                    }}
+                    className="mt-6 p-2.5 bg-black/50 rounded-xl border border-white/5 hover:bg-white/10 transition-all hover:scale-105 active:scale-95 flex-shrink-0"
+                    title="Copy Address"
+                  >
+                    {copiedAddress === chain.address ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00ff66" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-in"><polyline points="20 6 9 17 4 12" /></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                    )}
+                  </button>
+                </div>
+
+                {/* Reveal Key Button */}
+                <div className="flex justify-end">
+                  <button 
+                    onClick={() => {
+                      setSelectedManageChain(chain);
+                      setSettingsMode('key_input');
+                    }}
+                    className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 hover:text-[#ff0055] transition-all py-1.5 px-3 rounded-full hover:bg-[#ff0055]/10 border border-white/5 hover:border-[#ff0055]/20"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                    Reveal Private Key
+                  </button>
+                </div>
+              </div>
+              );
+            })}
+
+            {/* Delete Account Button */}
+            {accountCount > 1 && (
+              <button
+                onClick={() => setSettingsMode('delete_confirm')}
+                className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 bg-[#ff0055]/10 border border-[#ff0055]/20 rounded-2xl text-[#ff0055] text-sm font-bold hover:bg-[#ff0055]/20 transition-all active:scale-[0.98]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                Delete Account
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ---- Delete Confirmation ---- */}
+        {settingsMode === 'delete_confirm' && selectedManageAccountIndex !== null && (
+          <div className="flex flex-col gap-6 animate-fade-in mt-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.15)]">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+              </div>
+              <h3 className="text-lg font-black text-white mb-2">Delete {allAccounts[selectedManageAccountIndex].name}?</h3>
+              <p className="text-sm text-zinc-400 font-medium leading-relaxed">This will remove the account from your wallet. You can always re-derive it later using the same seed phrase and account index.</p>
+            </div>
+            <div className="p-4 bg-[#ff0055]/10 border border-[#ff0055]/30 rounded-2xl">
+              <p className="text-xs font-bold text-[#ff0055] text-center">⚠️ Make sure you have backed up any private keys before proceeding. This action cannot be undone.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => setSettingsMode('delete_password')}
+                className="w-full py-3.5 bg-[#ff0055] text-white font-bold rounded-2xl hover:bg-[#ff0055]/90 transition-all active:scale-[0.98]"
+              >
+                Continue
+              </button>
+              <button 
+                onClick={() => setSettingsMode('account_details')}
+                className="w-full py-3.5 bg-white/5 text-zinc-400 font-bold rounded-2xl hover:bg-white/10 border border-white/10 transition-all active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ---- Delete Password ---- */}
+        {settingsMode === 'delete_password' && selectedManageAccountIndex !== null && (
+          <div className="flex flex-col gap-6 animate-fade-in mt-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.1)]">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              </div>
+              <p className="text-sm text-zinc-400 font-medium">Enter your password to confirm deletion of <span className="font-bold text-white">{allAccounts[selectedManageAccountIndex].name}</span>.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={revealPassword}
+                onChange={(e) => setRevealPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && revealPassword) {
+                    setIsRevealing(true);
+                    setRevealError('');
+                    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+                      chrome.runtime.sendMessage(
+                        { type: 'VAULT_UNLOCK', payload: { password: revealPassword, vaultId: selectedVaultId } },
+                        (response: any) => {
+                          setIsRevealing(false);
+                          if (response?.success) {
+                            // Delete the account
+                            if (activeAccountIndex >= accountCount - 1) setActiveAccountIndex(Math.max(0, accountCount - 2));
+                            setAccountCount(prev => Math.max(1, prev - 1));
+                            setRevealPassword('');
+                            setSettingsMode('manage_accounts');
+                            setSelectedManageAccountIndex(null);
+                          } else {
+                            setRevealError('Incorrect password');
+                          }
+                        }
+                      );
+                    }
+                  }
+                }}
+                disabled={isRevealing}
+                className="input-field bg-[#111111] text-center tracking-widest text-lg border-white/5"
+              />
+              {revealError && <p className="text-xs font-bold text-center text-[#ff0055]">{revealError}</p>}
+              <button 
+                onClick={() => {
+                  if (!revealPassword) return;
+                  setIsRevealing(true);
+                  setRevealError('');
+                  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+                    chrome.runtime.sendMessage(
+                      { type: 'VAULT_UNLOCK', payload: { password: revealPassword, vaultId: selectedVaultId } },
+                      (response: any) => {
+                        setIsRevealing(false);
+                        if (response?.success) {
+                          if (activeAccountIndex >= accountCount - 1) setActiveAccountIndex(Math.max(0, accountCount - 2));
+                          setAccountCount(prev => Math.max(1, prev - 1));
+                          setRevealPassword('');
+                          setSettingsMode('manage_accounts');
+                          setSelectedManageAccountIndex(null);
+                        } else {
+                          setRevealError('Incorrect password');
+                        }
+                      }
+                    );
+                  }
+                }}
+                disabled={isRevealing || !revealPassword} 
+                className="w-full py-3.5 bg-[#ff0055] text-white font-bold rounded-2xl hover:bg-[#ff0055]/90 transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
+              >
+                {isRevealing ? 'Verifying...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {settingsMode === 'key_input' && selectedManageChain && (
+          <div className="flex flex-col gap-6 animate-fade-in mt-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.1)]">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>
+              </div>
+              <p className="text-sm text-zinc-400 font-medium">Enter your password to reveal the <span className="font-bold text-white">{selectedManageChain.chain}</span> private key. Never share this with anyone.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={revealPassword}
+                onChange={(e) => setRevealPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleRevealPrivateKey(); }}
+                disabled={isRevealing}
+                className="input-field bg-[#111111] text-center tracking-widest text-lg border-white/5"
+              />
+              {revealError && <p className="text-xs font-bold text-center text-[#ff0055]">{revealError}</p>}
+              <button onClick={handleRevealPrivateKey} disabled={isRevealing || !revealPassword} className="btn-primary mt-2">
+                {isRevealing ? 'Verifying...' : 'Reveal Key'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {settingsMode === 'key_revealed' && selectedManageChain && (
+          <div className="flex flex-col gap-6 animate-fade-in mt-2">
+            <div className="p-4 bg-[#ff0055]/10 border border-[#ff0055]/30 rounded-2xl">
+              <p className="text-xs font-bold text-[#ff0055] text-center">WARNING: Anyone with this private key can steal your {selectedManageChain.chain} assets. Do not share it.</p>
+            </div>
+            <div className="p-4 bg-[#111111] border border-[#ff0055]/20 rounded-xl relative group">
+              <p className="text-sm font-mono text-white break-all text-center selection:bg-[#ff0055]/30">{revealedPrivateKey}</p>
+            </div>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(revealedPrivateKey);
+                setSettingsMode('account_details');
+                setRevealedPrivateKey('');
+              }} 
+              className="btn-primary mt-4"
+            >
+              Copy and Close
+            </button>
+          </div>
+        )}
+        </div>
+
       </div>
     </div>
   );

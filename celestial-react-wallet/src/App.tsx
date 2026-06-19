@@ -1,6 +1,7 @@
 /// <reference types="chrome" />
 import { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
+import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
 
 // ---- Types ------------------------------------------------------------------
 
@@ -29,11 +30,10 @@ const MOCK_TOKENS: MockToken[] = [
   { symbol: 'BTC', name: 'Bitcoin', balance: '0.045', usdValue: '$2,850.00', change: '-1.2%', positive: false, color: '#F7931A', neon: 'rgba(247,147,26,0.4)' },
 ];
 
-const MOCK_ADDRESS = '0x1A4...9B2';
-
 // ---- App Component ----------------------------------------------------------
 
 export default function App() {
+  const rawSeedPhrase = "grid satisfy sad social rely pull siren path donate song side april";
   const [walletState, setWalletState] = useState<WalletState>('loading');
   const [vaults, setVaults] = useState<VaultInfo[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState('');
@@ -41,7 +41,6 @@ export default function App() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shaking, setShaking] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSwapOpen, setIsSwapOpen] = useState(false);
   const [revealSeedState, setRevealSeedState] = useState<'idle' | 'input' | 'revealed'>('idle');
@@ -49,13 +48,50 @@ export default function App() {
   const [revealError, setRevealError] = useState('');
   const [revealedSeed, setRevealedSeed] = useState('');
   const [isRevealing, setIsRevealing] = useState(false);
+  const [accountCount, setAccountCount] = useState(() => {
+    const saved = localStorage.getItem('celestial_account_count');
+    return saved ? parseInt(saved, 10) : 1;
+  });
+  const [activeAccountIndex, setActiveAccountIndex] = useState(() => {
+    const saved = localStorage.getItem('celestial_active_account');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [expandedAccounts, setExpandedAccounts] = useState<Record<number, boolean>>({ 0: true });
+  const [isAccountsOpen, setIsAccountsOpen] = useState(false);
+  const [allAccounts, setAllAccounts] = useState<{ name: string; chains: ChainAccount[] }[]>([]);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ---- Persist State --------------------------------------------------------
+
+  useEffect(() => {
+    localStorage.setItem('celestial_account_count', accountCount.toString());
+  }, [accountCount]);
+
+  useEffect(() => {
+    localStorage.setItem('celestial_active_account', activeAccountIndex.toString());
+  }, [activeAccountIndex]);
 
   // ---- Dynamic Width --------------------------------------------------------
 
   useEffect(() => {
     document.body.style.width = '360px'; // Set extension popup width
   }, []);
+
+  // ---- Derive Accounts ------------------------------------------------------
+
+  useEffect(() => {
+    const derived = [];
+    for (let i = 0; i < accountCount; i++) {
+      derived.push({
+        name: `Account ${i + 1}`,
+        chains: deriveMultiChainAccounts(rawSeedPhrase, i)
+      });
+    }
+    setAllAccounts(derived);
+  }, [rawSeedPhrase, accountCount]);
+
+  const accounts = allAccounts[activeAccountIndex]?.chains || [];
 
   // ---- Boot: Check vault state ----------------------------------------------
 
@@ -148,16 +184,6 @@ export default function App() {
     setError('');
   }
 
-  // ---- Copy Address ---------------------------------------------------------
-
-  async function handleCopyAddress() {
-    try {
-      await navigator.clipboard.writeText('0x1A4F98c7D9bB2');
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* ignore */ }
-  }
-
   // ---- Reveal Seed Handler --------------------------------------------------
 
   async function handleRevealSeed() {
@@ -236,22 +262,56 @@ export default function App() {
       <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-[#bd00ff] opacity-10 rounded-full blur-[80px] pointer-events-none" />
 
       {/* ---- Header ---- */}
-      <header className="flex items-center justify-between px-6 py-4 z-10 flex-shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between px-6 py-4 z-50 relative flex-shrink-0">
+        <div className="flex items-center gap-3 relative">
           {/* Avatar Pill */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00f0ff] to-[#bd00ff] p-[2px]">
+          <button onClick={() => setIsAccountsOpen(true)} className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00f0ff] to-[#bd00ff] p-[2px] hover:scale-105 transition-transform active:scale-95 z-10 relative">
             <div className="w-full h-full bg-black rounded-full flex items-center justify-center">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
             </div>
-          </div>
-          <button onClick={handleCopyAddress} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-            <span className="font-semibold text-sm tracking-wide">{MOCK_ADDRESS}</span>
-            {copied ? (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00ff66" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-            ) : (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-            )}
           </button>
+          
+          <div className="relative group cursor-default">
+            <div className="flex items-center gap-1.5 py-2 z-10 relative">
+              <span className="font-semibold text-sm tracking-wide">Account {activeAccountIndex + 1}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-180 transition-transform duration-300"><polyline points="6 9 12 15 18 9" /></svg>
+            </div>
+
+            {/* Hover Dropdown */}
+          <div className="absolute top-[calc(100%-10px)] left-0 pt-[10px] w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 origin-top-left scale-95 group-hover:scale-100">
+            {/* Invisible bridge just in case */}
+            <div className="absolute -top-4 left-0 w-full h-8 bg-transparent" />
+            <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.8)] relative z-10">
+              <div className="flex flex-col gap-1">
+                {accounts.map(chain => (
+                  <div key={chain.chain} className="flex items-center justify-between p-2 rounded-xl hover:bg-white/10 transition-colors group/item cursor-pointer" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(chain.address); setCopiedAddress(chain.address); setTimeout(() => setCopiedAddress(null), 2000); }}>
+                    <div className="flex items-center gap-2.5">
+                      {/* Chain Logo */}
+                      {chain.chain === 'EVM' && (
+                        <div className="w-6 h-6 rounded-full bg-[#627eea] flex items-center justify-center shadow-lg border border-white/10">
+                          <svg width="10" height="10" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
+                        </div>
+                      )}
+                      <span className="text-xs font-semibold text-zinc-300 tracking-wide font-mono group-hover/item:text-white transition-colors">
+                        {chain.address.slice(0,6)}...{chain.address.slice(-4)}
+                      </span>
+                    </div>
+                    <button 
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                      title="Copy Address"
+                    >
+                      {copiedAddress === chain.address ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00ff66" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -364,6 +424,110 @@ export default function App() {
             iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSettingsOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
           />
         </nav>
+      </div>
+
+      {/* ---- Accounts Sliding Panel ---- */}
+      <div 
+        className="absolute inset-0 z-[100] flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] bg-black/20 backdrop-blur-[40px]"
+        style={{ transform: isAccountsOpen ? 'translateY(0)' : 'translateY(-100%)' }}
+      >
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-6 pt-6 pb-6">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black text-white">Accounts</h2>
+            <button onClick={() => setIsAccountsOpen(false)} className="haptic-btn w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {allAccounts.map((acc, idx) => (
+              <div 
+                key={idx} 
+                className="py-2 px-4 transition-all bg-transparent"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Avatar Pill */}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00f0ff] to-[#bd00ff] p-[2px] shadow-lg">
+                    <div className="w-full h-full bg-black rounded-full flex items-center justify-center">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                    </div>
+                  </div>
+                  
+                  <span 
+                    className="text-base font-bold text-white cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => {
+                      setActiveAccountIndex(idx);
+                      setIsAccountsOpen(false);
+                    }}
+                  >
+                    {acc.name}
+                  </span>
+
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedAccounts(prev => ({ ...prev, [idx]: !prev[idx] }));
+                    }} 
+                    className="p-1 ml-auto text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <svg 
+                      width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                      className={`transition-transform duration-300 ${expandedAccounts[idx] ? 'rotate-180' : 'rotate-0'}`}
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className={`overflow-hidden transition-all duration-300 ${expandedAccounts[idx] ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0 mt-0'}`}>
+                  <div className="flex flex-col pl-[3.25rem]">
+                    {acc.chains.map(chain => (
+                      <div key={chain.chain} className="flex items-center justify-between py-2 px-1 bg-transparent">
+                        <div className="flex items-center gap-3">
+                          {/* Chain Logo */}
+                          {chain.chain === 'EVM' && (
+                            <div className="w-7 h-7 rounded-full bg-[#627eea] flex items-center justify-center shadow-lg border border-white/10">
+                              <svg width="12" height="12" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
+                            </div>
+                          )}
+                          <span className="text-sm font-semibold text-zinc-300 tracking-wide font-mono">
+                            {chain.address.slice(0,6)}...{chain.address.slice(-4)}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(chain.address);
+                            setCopiedAddress(chain.address);
+                            setTimeout(() => setCopiedAddress(null), 2000);
+                          }}
+                          className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+                          title="Copy Address"
+                        >
+                          {copiedAddress === chain.address ? (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff66" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-in"><polyline points="20 6 9 17 4 12" /></svg>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-white/5 bg-transparent">
+          <button 
+            onClick={() => setAccountCount(prev => prev + 1)} 
+            className="w-full py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl flex items-center justify-center gap-2 border border-white/10 transition-colors active:scale-[0.98] backdrop-blur-md"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            Add New Account
+          </button>
+        </div>
       </div>
 
       {/* ---- Swap Sliding Panel ---- */}

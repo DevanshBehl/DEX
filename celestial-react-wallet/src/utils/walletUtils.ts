@@ -1,3 +1,8 @@
+import { Buffer } from 'buffer';
+if (typeof window !== 'undefined') {
+  window.Buffer = window.Buffer || Buffer;
+}
+
 import { ethers } from 'ethers';
 import { Keypair } from '@solana/web3.js';
 import { derivePath } from 'ed25519-hd-key';
@@ -20,23 +25,25 @@ export interface ChainAccount {
 export function deriveMultiChainAccounts(seedPhrase: string, accountIndex: number = 0): ChainAccount[] {
   const accounts: ChainAccount[] = [];
 
+  // 1. EVM Derivation (m/44'/60'/0'/0/x)
+  // EVM derivation uses ethers.js and doesn't rely on the bip39/Buffer polyfill, 
+  // so we do it first and independently.
+  try {
+    const evmPath = `m/44'/60'/0'/0/${accountIndex}`;
+    const evmWallet = ethers.HDNodeWallet.fromPhrase(seedPhrase, undefined, evmPath);
+    accounts.push({
+      chain: 'EVM',
+      address: evmWallet.address,
+      privateKey: evmWallet.privateKey,
+      derivationPath: evmPath,
+    });
+  } catch (e) {
+    console.error('Failed to derive EVM account:', e);
+  }
+
   try {
     // Shared root seed buffer for non-EVM derivatives
     const seedBuffer = bip39.mnemonicToSeedSync(seedPhrase);
-
-    // 1. EVM Derivation (m/44'/60'/0'/0/x)
-    try {
-      const evmPath = `m/44'/60'/0'/0/${accountIndex}`;
-      const evmWallet = ethers.HDNodeWallet.fromPhrase(seedPhrase, undefined, evmPath);
-      accounts.push({
-        chain: 'EVM',
-        address: evmWallet.address,
-        privateKey: evmWallet.privateKey,
-        derivationPath: evmPath,
-      });
-    } catch (e) {
-      console.error('Failed to derive EVM account:', e);
-    }
 
     // 2. Solana Derivation (m/44'/501'/x'/0')
     try {

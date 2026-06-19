@@ -337,9 +337,9 @@ export default function App() {
             {/* Invisible bridge just in case */}
             <div className="absolute -top-4 left-0 w-full h-8 bg-transparent" />
             <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.8)] relative z-10">
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-0.5">
                 {accounts.map(chain => (
-                  <div key={chain.chain} className="flex items-center justify-between p-2 rounded-xl hover:bg-white/10 transition-colors group/item cursor-pointer" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(chain.address); setCopiedAddress(chain.address); setTimeout(() => setCopiedAddress(null), 2000); }}>
+                  <div key={chain.chain} className="flex items-center justify-between py-1.5 px-2 rounded-xl hover:bg-white/10 transition-colors group/item cursor-pointer" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(chain.address); setCopiedAddress(chain.address); setTimeout(() => setCopiedAddress(null), 2000); }}>
                     <div className="flex items-center gap-2.5">
                       {/* Chain Logo */}
                       {chain.chain === 'EVM' && (
@@ -552,9 +552,9 @@ export default function App() {
                 </div>
                 
                 <div className={`overflow-hidden transition-all duration-300 ${expandedAccounts[idx] ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0 mt-0'}`}>
-                  <div className="flex flex-col pl-[3.25rem]">
+                  <div className="flex flex-col pl-4">
                     {acc.chains.map(chain => (
-                      <div key={chain.chain} className="flex items-center justify-between py-2 px-1 bg-transparent">
+                      <div key={chain.chain} className="flex items-center justify-between py-1 px-1 bg-transparent">
                         <div className="flex items-center gap-3">
                           {/* Chain Logo */}
                           {chain.chain === 'EVM' && (

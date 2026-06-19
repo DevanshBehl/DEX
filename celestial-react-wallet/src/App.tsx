@@ -3,6 +3,47 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
 
+// ---- Components -------------------------------------------------------------
+
+const AnimatedOdometer = ({ value, className = '' }: { value: string, className?: string }) => {
+  const [target, setTarget] = useState(value.replace(/[0-9]/g, '0'));
+
+  useEffect(() => {
+    // Delay ensures CSS transition reliably triggers after initial render
+    const timer = setTimeout(() => {
+      setTarget(value);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  return (
+    <span className={`inline-flex ${className}`}>
+      {target.split('').map((char, i) => {
+        const isNum = !isNaN(parseInt(char, 10)) && char !== ' ';
+        if (!isNum) return <span key={i}>{char}</span>;
+        
+        return (
+          <span key={i} className="inline-block relative overflow-hidden tabular-nums">
+            {/* Invisible placeholder establishes exact native width, height, and true baseline */}
+            <span className="invisible">{char}</span>
+            <span 
+              className="absolute inset-x-0 top-0 flex flex-col transition-transform duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+              style={{ 
+                transform: `translateY(-${parseInt(char, 10) * 10}%)`,
+                transitionDelay: `${i * 100}ms` 
+              }}
+            >
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+                <span key={n}>{n}</span>
+              ))}
+            </span>
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
 // ---- Types ------------------------------------------------------------------
 
 type WalletState = 'loading' | 'uninitialized' | 'locked' | 'unlocked';
@@ -44,6 +85,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSwapOpen, setIsSwapOpen] = useState(false);
   const [revealSeedState, setRevealSeedState] = useState<'idle' | 'input' | 'revealed'>('idle');
+
   const [revealPassword, setRevealPassword] = useState('');
   const [revealError, setRevealError] = useState('');
   const [revealedSeed, setRevealedSeed] = useState('');
@@ -150,11 +192,24 @@ export default function App() {
           { type: 'VAULT_UNLOCK', payload: { password, vaultId: selectedVaultId } },
           (response: any) => {
             setLoading(false);
-            if (response?.success) {
+            if (chrome.runtime.lastError) {
+              console.error('Unlock message error:', chrome.runtime.lastError);
+              setError('Extension error — try reloading');
+              setPassword('');
+              return;
+            }
+            if (!response) {
+              setError('No response from wallet — try reloading extension');
+              setPassword('');
+              return;
+            }
+            if (response.success) {
               setWalletState('unlocked');
               setPassword('');
             } else {
-              setError('Incorrect password');
+              console.error('Unlock failed:', response.error, 'vaultId:', selectedVaultId);
+              // Temporary debug: show real error
+              setError(`${response.error || 'Unknown error'} [vault: ${selectedVaultId || 'NONE'}]`);
               setPassword('');
               setShaking(true);
               setTimeout(() => setShaking(false), 400);
@@ -292,6 +347,16 @@ export default function App() {
                           <svg width="10" height="10" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
                         </div>
                       )}
+                      {chain.chain === 'Solana' && (
+                        <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center shadow-lg border border-[#14F195]/30">
+                          <svg width="12" height="12" viewBox="0 0 397 311" fill="url(#solana-grad-1)"><defs><linearGradient id="solana-grad-1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#00FFA3" /><stop offset="100%" stopColor="#DC1FFF" /></linearGradient></defs><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+                        </div>
+                      )}
+                      {chain.chain === 'Bitcoin' && (
+                        <div className="w-6 h-6 rounded-full bg-[#f7931a] flex items-center justify-center shadow-lg border border-white/10">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M14.653 10.686c1.171-.341 1.996-1.045 2.128-2.656.16-1.954-1.127-2.92-3.327-3.237l.745-2.991-1.815-.452-.724 2.905c-.477-.119-.968-.232-1.464-.343l.732-2.936-1.814-.452-.746 2.994c-.396-.089-.785-.181-1.164-.282l-2.493-.621-.48 1.926s1.341.306 1.314.327c.732.182.865.666.843 1.049l-1.688 6.772c-.092.219-.344.545-.855.419.023.03-1.316-.328-1.316-.328l-.902 2.083 2.355.587c.435.108.865.223 1.291.332l-.75 3.013 1.815.452.744-2.986c.493.131.975.253 1.448.369l-.736 2.955 1.814.452.753-3.023c2.721.516 4.776.31 5.631-2.155.688-1.986-.019-3.13-1.503-3.878zM11.603 6.953c1.554.388 2.658.625 2.454 1.443-.203.815-1.428.614-2.982.227l.528-1.67zm1.189 7.747c-1.745-.436-3.05-.662-2.825-1.564.225-.902 1.623-.637 3.368-.201.597.149 1.139.317 1.488.586.643.493.58 1.408-.035 1.656-.475.191-1.189.163-1.996-.477z"/></svg>
+                        </div>
+                      )}
                       <span className="text-xs font-semibold text-zinc-300 tracking-wide font-mono group-hover/item:text-white transition-colors">
                         {chain.address.slice(0,6)}...{chain.address.slice(-4)}
                       </span>
@@ -330,12 +395,19 @@ export default function App() {
       <div className="px-6 pt-6 pb-8 flex flex-col z-10">
         <span className="text-zinc-500 text-sm font-semibold mb-1">Total Balance</span>
         <div className="flex items-baseline gap-2">
-          <span className="text-[2.75rem] font-black tracking-tighter leading-none">$12,010</span>
-          <span className="text-2xl font-bold text-zinc-400">.00</span>
+          <span className="text-3xl font-bold mt-1.5 mr-1 text-zinc-400">$</span>
+          <span className="text-[2.75rem] font-black tracking-tighter leading-none">
+            <AnimatedOdometer value="12,010" />
+          </span>
+          <span className="text-2xl font-bold text-zinc-400">
+            .<AnimatedOdometer value="00" />
+          </span>
         </div>
         <div className="flex items-center gap-2 mt-2">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00ff66" strokeWidth="3" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
-          <span className="text-sm font-bold text-[#00ff66]">+245.12 (2.4%)</span>
+          <span className="text-sm font-bold text-[#00ff66]">
+            +<AnimatedOdometer value="245.12" /> (2.4%)
+          </span>
           <span className="text-xs font-semibold text-zinc-500 ml-1 bg-zinc-900 px-2 py-0.5 rounded-full">Today</span>
         </div>
       </div>
@@ -490,6 +562,16 @@ export default function App() {
                               <svg width="12" height="12" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
                             </div>
                           )}
+                          {chain.chain === 'Solana' && (
+                            <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center shadow-lg border border-[#14F195]/30">
+                              <svg width="14" height="14" viewBox="0 0 397 311" fill="url(#solana-grad-2)"><defs><linearGradient id="solana-grad-2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#00FFA3" /><stop offset="100%" stopColor="#DC1FFF" /></linearGradient></defs><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+                            </div>
+                          )}
+                          {chain.chain === 'Bitcoin' && (
+                            <div className="w-7 h-7 rounded-full bg-[#f7931a] flex items-center justify-center shadow-lg border border-white/10">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M14.653 10.686c1.171-.341 1.996-1.045 2.128-2.656.16-1.954-1.127-2.92-3.327-3.237l.745-2.991-1.815-.452-.724 2.905c-.477-.119-.968-.232-1.464-.343l.732-2.936-1.814-.452-.746 2.994c-.396-.089-.785-.181-1.164-.282l-2.493-.621-.48 1.926s1.341.306 1.314.327c.732.182.865.666.843 1.049l-1.688 6.772c-.092.219-.344.545-.855.419.023.03-1.316-.328-1.316-.328l-.902 2.083 2.355.587c.435.108.865.223 1.291.332l-.75 3.013 1.815.452.744-2.986c.493.131.975.253 1.448.369l-.736 2.955 1.814.452.753-3.023c2.721.516 4.776.31 5.631-2.155.688-1.986-.019-3.13-1.503-3.878zM11.603 6.953c1.554.388 2.658.625 2.454 1.443-.203.815-1.428.614-2.982.227l.528-1.67zm1.189 7.747c-1.745-.436-3.05-.662-2.825-1.564.225-.902 1.623-.637 3.368-.201.597.149 1.139.317 1.488.586.643.493.58 1.408-.035 1.656-.475.191-1.189.163-1.996-.477z"/></svg>
+                            </div>
+                          )}
                           <span className="text-sm font-semibold text-zinc-300 tracking-wide font-mono">
                             {chain.address.slice(0,6)}...{chain.address.slice(-4)}
                           </span>
@@ -532,7 +614,7 @@ export default function App() {
 
       {/* ---- Swap Sliding Panel ---- */}
       <div 
-        className="absolute inset-0 bg-[#0a0a0a] z-20 flex flex-col pt-8 px-6 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        className="absolute inset-0 bg-[#0a0a0a] z-[100] flex flex-col pt-8 px-6 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
         style={{ transform: isSwapOpen ? 'translateY(0)' : 'translateY(100%)' }}
       >
         <div className="flex items-center justify-between mb-8">
@@ -586,7 +668,7 @@ export default function App() {
 
       {/* ---- Settings Sliding Panel ---- */}
       <div 
-        className="absolute inset-0 bg-[#0a0a0a] z-20 flex flex-col pt-8 px-6 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        className="absolute inset-0 bg-[#0a0a0a] z-[100] flex flex-col pt-8 px-6 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
         style={{ transform: isSettingsOpen ? 'translateY(0)' : 'translateY(100%)' }}
       >
         <div className="flex items-center justify-between mb-8">

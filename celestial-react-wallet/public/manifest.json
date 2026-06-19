@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "A non-custodial HD wallet — your keys, your crypto, your future.",
   "permissions": ["storage"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "action": {
     "default_popup": "index.html",
     "default_title": "Open Celestial"
@@ -21,7 +24,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inpage.js"],
+      "resources": ["inpage.js", "assets/*.wasm"],
       "matches": ["<all_urls>"]
     }
   ]

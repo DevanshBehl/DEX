@@ -2,9 +2,10 @@ import { ethers } from 'ethers';
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { CONFIG } from '../config/networks';
 
-export async function fetchETHBalance(address: string): Promise<string> {
+export async function fetchETHBalance(address: string, isTestnet: boolean = false): Promise<string> {
   try {
-    const provider = new ethers.JsonRpcProvider(CONFIG.ALCHEMY_ETH_URL);
+    const rpcUrl = isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL;
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
     const balanceWei = await provider.getBalance(address);
     const balanceEth = ethers.formatEther(balanceWei);
     return parseFloat(balanceEth).toFixed(4).replace(/\.?0+$/, '');
@@ -14,9 +15,10 @@ export async function fetchETHBalance(address: string): Promise<string> {
   }
 }
 
-export async function fetchSOLBalance(address: string): Promise<string> {
+export async function fetchSOLBalance(address: string, isTestnet: boolean = false): Promise<string> {
   try {
-    const connection = new Connection(CONFIG.HELIUS_SOL_URL);
+    const rpcUrl = isTestnet ? CONFIG.HELIUS_DEVNET_URL : CONFIG.HELIUS_SOL_URL;
+    const connection = new Connection(rpcUrl, 'confirmed');
     const balance = await connection.getBalance(new PublicKey(address));
     return (balance / LAMPORTS_PER_SOL).toFixed(4).replace(/\.?0+$/, '');
   } catch (error) {
@@ -25,9 +27,10 @@ export async function fetchSOLBalance(address: string): Promise<string> {
   }
 }
 
-export async function fetchBTCBalance(address: string): Promise<string> {
+export async function fetchBTCBalance(address: string, isTestnet: boolean = false): Promise<string> {
   try {
-    const res = await fetch(`${CONFIG.MEMPOOL_BTC_URL}${address}`);
+    const rpcUrl = isTestnet ? CONFIG.MEMPOOL_TESTNET_URL : CONFIG.MEMPOOL_BTC_URL;
+    const res = await fetch(`${rpcUrl}${address}`);
     if (!res.ok) throw new Error("Failed to fetch BTC balance");
     const data = await res.json();
     const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;

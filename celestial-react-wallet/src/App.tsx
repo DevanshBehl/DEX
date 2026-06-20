@@ -3,8 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
 import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices } from './utils/rpcUtils';
-
-// ---- Components -------------------------------------------------------------
+import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
+import { CONFIG } from './config/networks';// ---- Components -------------------------------------------------------------
 
 const AnimatedOdometer = ({ value, className = '' }: { value: string, className?: string }) => {
   const [target, setTarget] = useState(value.replace(/[0-9]/g, '0'));
@@ -84,7 +84,21 @@ export default function App() {
   const [shaking, setShaking] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSwapOpen, setIsSwapOpen] = useState(false);
-  const [settingsMode, setSettingsMode] = useState<'idle' | 'seed_input' | 'seed_revealed' | 'manage_accounts' | 'account_details' | 'key_input' | 'key_revealed' | 'delete_confirm' | 'delete_password'>('idle');
+  const [isSendOpen, setIsSendOpen] = useState(false);
+  const [sendScreen, setSendScreen] = useState<'pick' | 'form'>('pick');
+  const [sendAsset, setSendAsset] = useState<'ETH' | 'SOL' | 'BTC'>('ETH');
+  const [sendAddress, setSendAddress] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [slideX, setSlideX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const sliderThumbRef = useRef<HTMLDivElement>(null);
+
+  const [settingsMode, setSettingsMode] = useState<'idle' | 'seed_input' | 'seed_revealed' | 'manage_accounts' | 'account_details' | 'key_input' | 'key_revealed' | 'delete_confirm' | 'delete_password' | 'networks'>('idle');
   const [selectedManageAccountIndex, setSelectedManageAccountIndex] = useState<number | null>(null);
   const [selectedManageChain, setSelectedManageChain] = useState<ChainAccount | null>(null);
 
@@ -107,6 +121,105 @@ export default function App() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
+
+  const resetSend = () => {
+    setSendScreen('pick');
+    setSendAsset('ETH');
+    setSendAddress('');
+    setSendAmount('');
+    setIsSending(false);
+    setSendSuccess(false);
+    setSendError(null);
+    setTxHash(null);
+    setSlideX(0);
+    setIsDragging(false);
+  };
+
+  const getSliderMax = () => {
+    if (!sliderRef.current || !sliderThumbRef.current) return 200;
+    return sliderRef.current.clientWidth - sliderThumbRef.current.clientWidth - 8;
+  };
+
+  const handleSliderStart = () => {
+    if (!sendAddress || !sendAmount || isSending || sendSuccess) return;
+    setIsDragging(true);
+  };
+
+  const handleSliderMove = (clientX: number) => {
+    if (!isDragging || !sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const max = getSliderMax();
+    const x = Math.min(Math.max(0, clientX - rect.left - 28), max);
+    setSlideX(x);
+    if (x >= max * 0.95) {
+      setIsDragging(false);
+      setSlideX(max);
+      executeSend();
+    }
+  };
+
+  const handleSliderEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (slideX < getSliderMax() * 0.95) {
+      setSlideX(0);
+    }
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e: MouseEvent) => handleSliderMove(e.clientX);
+    const onTouchMove = (e: TouchEvent) => handleSliderMove(e.touches[0].clientX);
+    const onEnd = () => handleSliderEnd();
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onEnd);
+    };
+  }, [isDragging, slideX]);
+
+  const executeSend = async () => {
+    setSendError(null);
+    setTxHash(null);
+    setIsSending(true);
+
+    try {
+      const activeAccountGroup = allAccounts[activeAccountIndex];
+      if (!activeAccountGroup) throw new Error("No active account found");
+      
+      const chainName = sendAsset === 'ETH' ? 'EVM' : sendAsset === 'SOL' ? 'Solana' : 'Bitcoin';
+      const account = activeAccountGroup.chains.find(a => a.chain === chainName);
+      
+      if (!account) throw new Error(`No private key found for ${chainName}`);
+
+      let hash = '';
+      if (sendAsset === 'ETH') {
+        const rpcUrl = isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL;
+        hash = await sendEVMTransaction(account.privateKey, sendAddress, sendAmount, rpcUrl);
+      } else if (sendAsset === 'SOL') {
+        const rpcUrl = isTestnet ? CONFIG.HELIUS_DEVNET_URL : CONFIG.HELIUS_SOL_URL;
+        hash = await sendSolanaTransaction(account.privateKey, sendAddress, sendAmount, rpcUrl);
+      } else if (sendAsset === 'BTC') {
+        hash = await sendBitcoinTransaction(account.privateKey, sendAddress, sendAmount, isTestnet ? 'testnet' : 'mainnet');
+      }
+
+      setTxHash(hash);
+      setIsSending(false);
+      setSendSuccess(true);
+      fetchBalances();
+
+    } catch (err: any) {
+      console.error("Send failed:", err);
+      setSendError(err.message || "Transaction failed");
+      setIsSending(false);
+      setSlideX(0);
+    }
+  };
 
   // ---- Persist State --------------------------------------------------------
 
@@ -152,43 +265,43 @@ export default function App() {
   const [totalUsdValue, setTotalUsdValue] = useState(0.00);
   const [totalUsdChange, setTotalUsdChange] = useState(0.00);
   const [totalPercentChange, setTotalPercentChange] = useState(0.00);
+  const [isTestnet, setIsTestnet] = useState<boolean>(false);
+
+  const fetchBalances = useCallback(async () => {
+    if (accounts.length === 0) return;
+    const [liveData, eth, sol, btc] = await Promise.all([
+      fetchLivePrices(),
+      ethAccount ? fetchETHBalance(ethAccount, isTestnet) : Promise.resolve("0.00"),
+      solAccount ? fetchSOLBalance(solAccount, isTestnet) : Promise.resolve("0.00"),
+      btcAccount ? fetchBTCBalance(btcAccount, isTestnet) : Promise.resolve("0.00")
+    ]);
+
+    setPrices(liveData.prices);
+    setChanges(liveData.changes);
+    setBalances({ eth, sol, btc });
+
+    const ethUsd = parseFloat(eth) * liveData.prices.eth;
+    const solUsd = parseFloat(sol) * liveData.prices.sol;
+    const btcUsd = parseFloat(btc) * liveData.prices.btc;
+
+    const totalUsd = ethUsd + solUsd + btcUsd;
+    setTotalUsdValue(totalUsd);
+
+    const ethGain = ethUsd - (ethUsd / (1 + liveData.changes.eth / 100));
+    const solGain = solUsd - (solUsd / (1 + liveData.changes.sol / 100));
+    const btcGain = btcUsd - (btcUsd / (1 + liveData.changes.btc / 100));
+    
+    const totalGain = ethGain + solGain + btcGain;
+    setTotalUsdChange(totalGain);
+    
+    const prevTotalUsd = totalUsd - totalGain;
+    const totalGainPercent = prevTotalUsd > 0 ? (totalGain / prevTotalUsd) * 100 : 0;
+    setTotalPercentChange(totalGainPercent);
+  }, [accounts.length, ethAccount, solAccount, btcAccount, isTestnet]);
 
   useEffect(() => {
-    async function loadData() {
-      const [liveData, eth, sol, btc] = await Promise.all([
-        fetchLivePrices(),
-        ethAccount ? fetchETHBalance(ethAccount) : Promise.resolve("0.00"),
-        solAccount ? fetchSOLBalance(solAccount) : Promise.resolve("0.00"),
-        btcAccount ? fetchBTCBalance(btcAccount) : Promise.resolve("0.00")
-      ]);
-
-      setPrices(liveData.prices);
-      setChanges(liveData.changes);
-      setBalances({ eth, sol, btc });
-
-      const ethUsd = parseFloat(eth) * liveData.prices.eth;
-      const solUsd = parseFloat(sol) * liveData.prices.sol;
-      const btcUsd = parseFloat(btc) * liveData.prices.btc;
-
-      const totalUsd = ethUsd + solUsd + btcUsd;
-      setTotalUsdValue(totalUsd);
-
-      const ethGain = ethUsd - (ethUsd / (1 + liveData.changes.eth / 100));
-      const solGain = solUsd - (solUsd / (1 + liveData.changes.sol / 100));
-      const btcGain = btcUsd - (btcUsd / (1 + liveData.changes.btc / 100));
-      
-      const totalGain = ethGain + solGain + btcGain;
-      setTotalUsdChange(totalGain);
-      
-      const prevTotalUsd = totalUsd - totalGain;
-      const totalGainPercent = prevTotalUsd > 0 ? (totalGain / prevTotalUsd) * 100 : 0;
-      setTotalPercentChange(totalGainPercent);
-    }
-    
-    if (accounts.length > 0) {
-      loadData();
-    }
-  }, [ethAccount, solAccount, btcAccount, accounts]);
+    fetchBalances();
+  }, [fetchBalances]);
 
   // ---- Boot: Check vault state ----------------------------------------------
 
@@ -405,6 +518,12 @@ export default function App() {
   return (
     <div className="flex flex-col h-[600px] bg-[#000000] relative overflow-hidden text-white font-sans animate-fade-in">
       
+      {isTestnet && (
+        <div className="w-full bg-[#ffaa00] text-black text-[10px] font-black uppercase tracking-[0.2em] py-1.5 text-center flex-shrink-0 z-[200]">
+          You are currently on Testnet
+        </div>
+      )}
+
       {/* Background Neon Bleed */}
       <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-[#00f0ff] opacity-10 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-[#bd00ff] opacity-10 rounded-full blur-[80px] pointer-events-none" />
@@ -521,12 +640,12 @@ export default function App() {
       <div className="px-6 mb-8 z-10">
         <div className="flex items-center justify-between bg-[#0a0a0a] p-1.5 rounded-2xl border border-white/5 shadow-2xl">
           {[
-            { label: 'Send', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> },
-            { label: 'Receive', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="7 13 12 18 17 13" /><line x1="12" y1="18" x2="12" y2="6" /><path d="M20 21H4" /></svg> },
-            { label: 'Swap', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg> },
-            { label: 'Buy', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
+            { label: 'Send', onClick: () => { setIsSendOpen(true); setIsSwapOpen(false); setIsSettingsOpen(false); setIsAccountsOpen(false); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> },
+            { label: 'Receive', onClick: () => {}, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="7 13 12 18 17 13" /><line x1="12" y1="18" x2="12" y2="6" /><path d="M20 21H4" /></svg> },
+            { label: 'Swap', onClick: () => { setIsSwapOpen(true); setIsSendOpen(false); setIsSettingsOpen(false); setIsAccountsOpen(false); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg> },
+            { label: 'Buy', onClick: () => {}, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
           ].map((action) => (
-            <button key={action.label} className="haptic-btn flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-[#18181b] group">
+            <button key={action.label} onClick={action.onClick} className="haptic-btn flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-[#18181b] group">
               <div className="text-zinc-300 group-hover:text-white transition-colors">
                 {action.icon}
               </div>
@@ -607,7 +726,7 @@ export default function App() {
       </div>
 
       {/* ---- Floating Bottom Nav ---- */}
-      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && (
+      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[200]">
           <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
             <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
@@ -742,6 +861,233 @@ export default function App() {
         </div>
       </div>
 
+      {/* ---- Send Sliding Panel ---- */}
+      <div 
+        className="absolute inset-0 bg-[#0a0a0a] z-[100] flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        style={{ transform: isSendOpen ? 'translateY(0)' : 'translateY(100%)' }}
+      >
+        {/* ===== SCREEN 1: Asset Picker ===== */}
+        {sendScreen === 'pick' && (
+          <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex items-center justify-between px-6 pt-8 pb-4 flex-shrink-0">
+              <h2 className="text-2xl font-black text-white tracking-tight">Send</h2>
+              <button onClick={() => { setIsSendOpen(false); resetSend(); }} className="haptic-btn w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <p className="text-zinc-500 text-xs font-semibold px-6 mb-4 tracking-wide uppercase">Select an asset to send</p>
+            <div className="flex flex-col px-2 flex-1 overflow-y-auto pb-8">
+              {/* ETH */}
+              <button 
+                onClick={() => { setSendAsset('ETH'); setSendScreen('form'); }}
+                className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
+              >
+                <div className="w-11 h-11 rounded-full bg-[#627eea] flex items-center justify-center flex-shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
+                </div>
+                <div className="flex flex-col items-start flex-1 min-w-0">
+                  <span className="text-sm font-bold text-white">Ethereum</span>
+                  <span className="text-xs text-zinc-500 font-mono">{balances.eth} ETH</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-white">${(parseFloat(balances.eth) * prices.eth).toFixed(2)}</span>
+                  <span className={`text-[10px] font-bold ${changes.eth >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>{changes.eth >= 0 ? '+' : ''}{changes.eth.toFixed(1)}%</span>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
+              </button>
+
+              {/* SOL */}
+              <button 
+                onClick={() => { setSendAsset('SOL'); setSendScreen('form'); }}
+                className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
+              >
+                <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center border border-[#14F195]/30 flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 397 311" fill="url(#solana-grad-send)"><defs><linearGradient id="solana-grad-send" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#00FFA3" /><stop offset="100%" stopColor="#DC1FFF" /></linearGradient></defs><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+                </div>
+                <div className="flex flex-col items-start flex-1 min-w-0">
+                  <span className="text-sm font-bold text-white">Solana</span>
+                  <span className="text-xs text-zinc-500 font-mono">{balances.sol} SOL</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-white">${(parseFloat(balances.sol) * prices.sol).toFixed(2)}</span>
+                  <span className={`text-[10px] font-bold ${changes.sol >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>{changes.sol >= 0 ? '+' : ''}{changes.sol.toFixed(1)}%</span>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
+              </button>
+
+              {/* BTC */}
+              <button 
+                onClick={() => { setSendAsset('BTC'); setSendScreen('form'); }}
+                className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
+              >
+                <div className="w-11 h-11 rounded-full bg-[#f7931a] flex items-center justify-center flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M14.653 10.686c1.171-.341 1.996-1.045 2.128-2.656.16-1.954-1.127-2.92-3.327-3.237l.745-2.991-1.815-.452-.724 2.905c-.477-.119-.968-.232-1.464-.343l.732-2.936-1.814-.452-.746 2.994c-.396-.089-.785-.181-1.164-.282l-2.493-.621-.48 1.926s1.341.306 1.314.327c.732.182.865.666.843 1.049l-1.688 6.772c-.092.219-.344.545-.855.419.023.03-1.316-.328-1.316-.328l-.902 2.083 2.355.587c.435.108.865.223 1.291.332l-.75 3.013 1.815.452.744-2.986c.493.131.975.253 1.448.369l-.736 2.955 1.814.452.753-3.023c2.721.516 4.776.31 5.631-2.155.688-1.986-.019-3.13-1.503-3.878zM11.603 6.953c1.554.388 2.658.625 2.454 1.443-.203.815-1.428.614-2.982.227l.528-1.67zm1.189 7.747c-1.745-.436-3.05-.662-2.825-1.564.225-.902 1.623-.637 3.368-.201.597.149 1.139.317 1.488.586.643.493.58 1.408-.035 1.656-.475.191-1.189.163-1.996-.477z"/></svg>
+                </div>
+                <div className="flex flex-col items-start flex-1 min-w-0">
+                  <span className="text-sm font-bold text-white">Bitcoin</span>
+                  <span className="text-xs text-zinc-500 font-mono">{balances.btc} BTC</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-white">${(parseFloat(balances.btc) * prices.btc).toFixed(2)}</span>
+                  <span className={`text-[10px] font-bold ${changes.btc >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>{changes.btc >= 0 ? '+' : ''}{changes.btc.toFixed(1)}%</span>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== SCREEN 2: Send Form ===== */}
+        {sendScreen === 'form' && (
+          <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex items-center justify-between px-6 pt-8 pb-4 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <button onClick={() => { setSendScreen('pick'); setSendAddress(''); setSendAmount(''); setSlideX(0); }} className="haptic-btn w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+                </button>
+                <div className="flex items-center gap-2">
+                  {sendAsset === 'ETH' && <div className="w-6 h-6 rounded-full bg-[#627eea] flex items-center justify-center shadow border border-white/10"><svg width="10" height="10" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg></div>}
+                  {sendAsset === 'SOL' && <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center shadow border border-[#14F195]/30"><svg width="12" height="12" viewBox="0 0 397 311" fill="url(#solana-grad-send)"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg></div>}
+                  {sendAsset === 'BTC' && <div className="w-6 h-6 rounded-full bg-[#f7931a] flex items-center justify-center shadow border border-white/10"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M14.653 10.686c1.171-.341 1.996-1.045 2.128-2.656.16-1.954-1.127-2.92-3.327-3.237l.745-2.991-1.815-.452-.724 2.905c-.477-.119-.968-.232-1.464-.343l.732-2.936-1.814-.452-.746 2.994c-.396-.089-.785-.181-1.164-.282l-2.493-.621-.48 1.926s1.341.306 1.314.327c.732.182.865.666.843 1.049l-1.688 6.772c-.092.219-.344.545-.855.419.023.03-1.316-.328-1.316-.328l-.902 2.083 2.355.587c.435.108.865.223 1.291.332l-.75 3.013 1.815.452.744-2.986c.493.131.975.253 1.448.369l-.736 2.955 1.814.452.753-3.023c2.721.516 4.776.31 5.631-2.155.688-1.986-.019-3.13-1.503-3.878zM11.603 6.953c1.554.388 2.658.625 2.454 1.443-.203.815-1.428.614-2.982.227l.528-1.67zm1.189 7.747c-1.745-.436-3.05-.662-2.825-1.564.225-.902 1.623-.637 3.368-.201.597.149 1.139.317 1.488.586.643.493.58 1.408-.035 1.656-.475.191-1.189.163-1.996-.477z"/></svg></div>}
+                  <h2 className="text-xl font-black text-white tracking-tight">Send {sendAsset}</h2>
+                </div>
+              </div>
+              <button onClick={() => { setIsSendOpen(false); resetSend(); }} className="haptic-btn w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4 relative flex-1 px-6 mt-2">
+              {/* Recipient Address */}
+              <div className="bg-[#111111] p-4 rounded-[20px] transition-all duration-300 focus-within:ring-1 focus-within:ring-white/20">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">To</span>
+                  <button 
+                    className="text-[11px] font-semibold text-zinc-400 hover:text-white transition-colors flex items-center gap-1 haptic-btn" 
+                    onClick={() => navigator.clipboard.readText().then(setSendAddress).catch(()=>{})}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                    Paste
+                  </button>
+                </div>
+                <input 
+                  type="text" 
+                  placeholder={sendAsset === 'SOL' ? 'Solana address...' : sendAsset === 'BTC' ? 'Bitcoin address...' : '0x...'}
+                  value={sendAddress}
+                  onChange={(e) => setSendAddress(e.target.value)}
+                  className="bg-transparent text-sm font-mono text-white outline-none w-full placeholder:text-zinc-700" 
+                />
+              </div>
+
+              {/* Amount */}
+              <div className="bg-[#111111] p-4 rounded-[20px] transition-all duration-300 focus-within:ring-1 focus-within:ring-white/20">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Amount</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium text-zinc-500">
+                      Balance: <span className="text-white font-mono">{sendAsset === 'ETH' ? balances.eth : sendAsset === 'SOL' ? balances.sol : balances.btc}</span>
+                    </span>
+                    <button 
+                      onClick={() => setSendAmount(sendAsset === 'ETH' ? balances.eth : sendAsset === 'SOL' ? balances.sol : balances.btc)} 
+                      className="haptic-btn text-[10px] font-bold bg-white/10 text-white px-2 py-1 rounded-full hover:bg-white/20 transition-colors"
+                    >
+                      MAX
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="0" 
+                    value={sendAmount}
+                    onChange={(e) => setSendAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                    className="bg-transparent text-4xl font-black text-white outline-none w-full placeholder:text-zinc-800" 
+                  />
+                  <span className="text-lg font-bold text-zinc-500 flex-shrink-0">{sendAsset}</span>
+                </div>
+                {sendAmount && (
+                  <span className="text-sm text-zinc-500 mt-2 block font-medium">
+                    ≈ ${(parseFloat(sendAmount || '0') * (sendAsset === 'ETH' ? prices.eth : sendAsset === 'SOL' ? prices.sol : prices.btc)).toFixed(2)}
+                  </span>
+                )}
+              </div>
+
+              {/* Network Fee */}
+              {sendAmount && sendAddress && (
+                <div className="flex items-center justify-between px-2 py-1 animate-fade-in">
+                  <span className="text-[11px] font-medium text-zinc-500">Estimated Network Fee</span>
+                  <span className="text-[11px] font-medium text-zinc-400">~ $0.01</span>
+                </div>
+              )}
+
+              <div className="flex-1" />
+
+              {/* ---- Slide to Send ---- */}
+              <div className="mt-auto mb-10 relative select-none flex flex-col gap-3">
+                {sendError && (
+                  <div className="w-full p-3 bg-[#ff0055]/10 border border-[#ff0055]/30 rounded-2xl flex flex-col items-center justify-center text-center animate-fade-in">
+                    <span className="text-[#ff0055] font-bold text-[13px] mb-1">Transaction Failed</span>
+                    <span className="text-[#ff0055]/80 font-medium text-[11px] leading-tight px-2">{sendError}</span>
+                  </div>
+                )}
+                {sendSuccess ? (
+                  <div className="w-full flex flex-col items-center gap-3 animate-fade-in">
+                    <div className="w-full h-14 bg-[#111111] border border-[#00ff66]/20 rounded-full flex items-center justify-center gap-2 text-[#00ff66] font-bold tracking-wide text-[14px]">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      Sent Successfully
+                    </div>
+                    {txHash && (
+                      <a 
+                        href={
+                          sendAsset === 'ETH' ? (isTestnet ? `https://sepolia.etherscan.io/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`) :
+                          sendAsset === 'SOL' ? (isTestnet ? `https://explorer.solana.com/tx/${txHash}?cluster=devnet` : `https://explorer.solana.com/tx/${txHash}`) :
+                          (isTestnet ? `https://mempool.space/testnet/tx/${txHash}` : `https://mempool.space/tx/${txHash}`)
+                        }
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-[12px] font-semibold text-zinc-400 hover:text-white underline underline-offset-4 decoration-zinc-600 hover:decoration-white transition-all haptic-btn"
+                      >
+                        View on Explorer
+                      </a>
+                    )}
+                  </div>
+                ) : isSending ? (
+                  <div className="w-full h-14 bg-[#111111] border border-white/5 rounded-full flex items-center justify-center gap-3 text-white font-bold tracking-wide text-[14px] animate-pulse">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin text-zinc-400"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                    Broadcasting
+                  </div>
+                ) : (
+                  <div 
+                    ref={sliderRef}
+                    className={`relative w-full h-14 rounded-full overflow-hidden ${!sendAddress || !sendAmount ? 'bg-[#111111] opacity-50' : 'bg-[#111111]'}`}
+                  >
+                    {/* Track fill */}
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 bg-white/10 rounded-full transition-none"
+                      style={{ width: `${slideX + 56}px`, opacity: sendAddress && sendAmount ? 1 : 0 }}
+                    />
+                    {/* Label */}
+                    <span className={`absolute inset-0 flex items-center justify-center text-[13px] font-bold text-zinc-400 transition-opacity ${slideX > 30 ? 'opacity-0' : 'opacity-100'} ${!sendAddress || !sendAmount ? 'text-zinc-600' : ''}`}>
+                      Slide to send
+                      {sendAddress && sendAmount && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-bounce-x ml-2"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>}
+                    </span>
+                    {/* Draggable Thumb */}
+                    <div
+                      ref={sliderThumbRef}
+                      onMouseDown={(e) => { e.preventDefault(); handleSliderStart(); }}
+                      onTouchStart={() => handleSliderStart()}
+                      className={`absolute top-1 bottom-1 left-1 w-12 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing transition-none z-10 ${!sendAddress || !sendAmount ? 'bg-zinc-800 text-zinc-500 pointer-events-none' : 'bg-white text-black shadow-md'}`}
+                      style={{ transform: `translateX(${slideX}px)`, transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.32,0.72,0,1)' }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ---- Swap Sliding Panel ---- */}
       <div 
         className="absolute inset-0 bg-[#0a0a0a] z-[100] flex flex-col pt-8 px-6 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
@@ -815,7 +1161,7 @@ export default function App() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
               </button>
               <h2 className="text-xl font-black text-white">
-                {settingsMode.startsWith('seed') ? 'Recovery Phrase' : settingsMode === 'account_details' && selectedManageAccountIndex !== null ? allAccounts[selectedManageAccountIndex]?.name : settingsMode === 'delete_confirm' || settingsMode === 'delete_password' ? 'Delete Account' : 'Manage Accounts'}
+                {settingsMode.startsWith('seed') ? 'Recovery Phrase' : settingsMode === 'account_details' && selectedManageAccountIndex !== null ? allAccounts[selectedManageAccountIndex]?.name : settingsMode === 'delete_confirm' || settingsMode === 'delete_password' ? 'Delete Account' : settingsMode === 'networks' ? 'Networks' : 'Manage Accounts'}
               </h2>
             </div>
           )}
@@ -832,7 +1178,7 @@ export default function App() {
                 { title: 'General', desc: 'Currency, Language, Theme', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
                 { id: 'manage_accounts', title: 'Manage Accounts', desc: 'View accounts & private keys', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
                 { id: 'security', title: 'Security & Privacy', desc: 'Reveal Recovery Phrase', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> },
-                { title: 'Networks', desc: 'Ethereum, Solana, Polygon', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> },
+                { id: 'networks', title: 'Networks', desc: 'Ethereum, Solana, Polygon', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> },
                 { title: 'Address Book', desc: 'Saved Contacts', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
                 { id: 'lock', title: 'Lock Wallet', desc: 'Secure your session', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>, isDanger: true },
               ].map((item) => (
@@ -842,6 +1188,7 @@ export default function App() {
                   onClick={() => {
                     if (item.id === 'security') setSettingsMode('seed_input');
                     else if (item.id === 'manage_accounts') setSettingsMode('manage_accounts');
+                    else if (item.id === 'networks') setSettingsMode('networks');
                     else if (item.id === 'lock') handleLock();
                   }}
                 >
@@ -908,6 +1255,26 @@ export default function App() {
             >
               Copy to Clipboard
             </button>
+          </div>
+        )}
+
+        {settingsMode === 'networks' && (
+          <div className="flex flex-col gap-6 animate-fade-in mt-4">
+            <div className="bg-[#111111] border border-white/5 p-4 rounded-3xl">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="text-white font-bold text-sm">Testnet Mode</h3>
+                  <p className="text-zinc-500 text-xs font-medium mt-0.5">Connect to Sepolia, Devnet, and Testnet</p>
+                </div>
+                {/* Toggle Switch */}
+                <div 
+                  className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 ease-in-out flex items-center ${isTestnet ? 'bg-[#00f0ff]' : 'bg-[#27272a]'}`}
+                  onClick={() => setIsTestnet(!isTestnet)}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${isTestnet ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

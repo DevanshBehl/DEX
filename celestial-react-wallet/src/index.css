@@ -5,7 +5,7 @@
    ================================================================ */
 
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   /* Obsidian Core Canvas */
   --color-obsidian: #000000;
@@ -150,6 +150,9 @@
   .shake {
     animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
   }
+  .animate-bounce-x {
+    animation: bounce-x 1.2s ease-in-out infinite;
+  }
 }
 
 @keyframes slide-up {
@@ -172,6 +175,29 @@
   20%, 80% { transform: translate3d(2px, 0, 0); }
   30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
   40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+@keyframes bounce-x {
+  0%, 100% {
+    transform: translateX(-25%);
+    animation-timing-function: cubic-bezier(0.8,0,1,1);
+  }
+  50% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0,0,0.2,1);
+  }
+}
+
+/* Force Apple System Font Globally */
+@layer base {
+  *, ::before, ::after {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+  }
+  
+  .font-mono, 
+  .font-mono * {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  }
 }
 
 /* Hide scrollbars for slickness */

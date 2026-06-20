@@ -5,5 +5,6 @@ export const CONFIG = {
   COINGECKO_API_KEY: import.meta.env.VITE_COINGECKO_API_KEY || '',
   ALCHEMY_SEPOLIA_URL: import.meta.env.VITE_ALCHEMY_SEPOLIA_URL || '',
   HELIUS_DEVNET_URL: import.meta.env.VITE_HELIUS_DEVNET_URL || '',
-  MEMPOOL_TESTNET_URL: import.meta.env.VITE_MEMPOOL_TESTNET_URL || ''
+  MEMPOOL_TESTNET_URL: import.meta.env.VITE_MEMPOOL_TESTNET_URL || '',
+  ETHERSCAN_API_KEY: import.meta.env.VITE_ETHERSCAN_API_KEY || ''
 };

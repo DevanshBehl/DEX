@@ -4,7 +4,9 @@ import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
 import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices } from './utils/rpcUtils';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
-import { CONFIG } from './config/networks';// ---- Components -------------------------------------------------------------
+import { fetchAccountHistory } from './utils/historyUtils';
+import type { TransactionRecord } from './types';
+import { CONFIG } from './config/networks';
 
 const AnimatedOdometer = ({ value, className = '' }: { value: string, className?: string }) => {
   const [target, setTarget] = useState(value.replace(/[0-9]/g, '0'));
@@ -119,6 +121,9 @@ export default function App() {
   const [isAccountsOpen, setIsAccountsOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ name: string; chains: ChainAccount[] }[]>([]);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [activityHistory, setActivityHistory] = useState<TransactionRecord[]>([]);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -298,6 +303,29 @@ export default function App() {
     const totalGainPercent = prevTotalUsd > 0 ? (totalGain / prevTotalUsd) * 100 : 0;
     setTotalPercentChange(totalGainPercent);
   }, [accounts.length, ethAccount, solAccount, btcAccount, isTestnet]);
+
+  // ---- Fetch Activity History ----
+  useEffect(() => {
+    if (!isActivityOpen || allAccounts.length === 0) return;
+    const loadHistory = async () => {
+      setIsActivityLoading(true);
+      try {
+        const activeGroup = allAccounts[activeAccountIndex];
+        if (activeGroup) {
+          const allHistories = await Promise.all(
+            activeGroup.chains.map(chainAccount => fetchAccountHistory(chainAccount, isTestnet))
+          );
+          const combined = allHistories.flat().sort((a, b) => b.timestamp - a.timestamp);
+          setActivityHistory(combined);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsActivityLoading(false);
+      }
+    };
+    loadHistory();
+  }, [isActivityOpen, activeAccountIndex, allAccounts, isTestnet]);
 
   useEffect(() => {
     fetchBalances();
@@ -729,23 +757,78 @@ export default function App() {
       {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[200]">
           <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
-            <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
+            <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen && !isActivityOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); setIsActivityOpen(false); }} />
             <NavItem 
               icon="swap" 
               active={isSwapOpen} 
-              onClick={() => { setIsSwapOpen(!isSwapOpen); handleCloseSettings(); }} 
+              onClick={() => { setIsSwapOpen(!isSwapOpen); handleCloseSettings(); setIsActivityOpen(false); }} 
               iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSwapOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
             />
-            <NavItem icon="clock" onClick={() => { handleCloseSettings(); setIsSwapOpen(false); }} />
+            <NavItem 
+              icon="clock" 
+              active={isActivityOpen}
+              onClick={() => { isActivityOpen ? setIsActivityOpen(false) : setIsActivityOpen(true); handleCloseSettings(); setIsSwapOpen(false); }} 
+            />
             <NavItem 
               icon="settings" 
               active={isSettingsOpen} 
-              onClick={() => { isSettingsOpen ? handleCloseSettings() : setIsSettingsOpen(true); setIsSwapOpen(false); }} 
+              onClick={() => { isSettingsOpen ? handleCloseSettings() : setIsSettingsOpen(true); setIsSwapOpen(false); setIsActivityOpen(false); }} 
               iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSettingsOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
             />
           </nav>
         </div>
       )}
+
+      {/* ---- Activity Sliding Panel ---- */}
+      <div 
+        className="absolute inset-0 z-[100] flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] bg-black/20 backdrop-blur-[40px]"
+        style={{ transform: isActivityOpen ? 'translateY(0)' : 'translateY(-100%)' }}
+      >
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-6 pt-6 pb-24">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black text-white">Activity</h2>
+            <button onClick={() => setIsActivityOpen(false)} className="haptic-btn w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {isActivityLoading ? (
+              <div className="text-zinc-500 text-center py-10 text-sm animate-pulse font-medium">Loading history...</div>
+            ) : activityHistory.length === 0 ? (
+              <div className="text-zinc-500 text-center py-10 text-sm font-medium">No activity found</div>
+            ) : (
+              activityHistory.map((tx) => (
+                <a 
+                  key={tx.id}
+                  href={tx.explorerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:bg-white/[0.04] transition-colors active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'Send' ? 'bg-white/10 text-white' : tx.type === 'Receive' ? 'bg-[#00ff66]/10 text-[#00ff66]' : 'bg-blue-500/10 text-blue-500'}`}>
+                      {tx.type === 'Send' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></svg>}
+                      {tx.type === 'Receive' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="17" y1="7" x2="7" y2="17" /><polyline points="17 17 7 17 7 7" /></svg>}
+                      {tx.type === 'Transaction' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white mb-0.5">{tx.type} {tx.ticker}</div>
+                      <div className="text-[11px] font-medium text-zinc-500">
+                        {new Date(tx.timestamp * 1000).toLocaleDateString()} • {tx.status}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-white">{tx.amount !== 'N/A' ? `${tx.amount} ${tx.ticker}` : 'N/A'}</div>
+                    <div className="text-[10px] font-medium text-zinc-500 mt-0.5">{tx.chain}</div>
+                  </div>
+                </a>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* ---- Accounts Sliding Panel ---- */}
       <div 
@@ -1746,7 +1829,14 @@ function NavItem({ icon, active = false, onClick, iconClass = '' }: { icon: stri
     <button onClick={onClick} className={`haptic-btn w-12 h-12 rounded-full flex items-center justify-center transition-colors ${active ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>
       {icon === 'home' && <svg {...p}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" /><path d="M9 22V12h6v10" /></svg>}
       {icon === 'swap' && <svg {...p}><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg>}
-      {icon === 'clock' && <svg {...p}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>}
+      {icon === 'clock' && (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <g className="transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-center" style={{ transform: active ? 'rotate(360deg)' : 'rotate(0deg)' }}>
+            <path d="M12 6v6l4 2" />
+          </g>
+        </svg>
+      )}
       {icon === 'settings' && <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}
     </button>
   );

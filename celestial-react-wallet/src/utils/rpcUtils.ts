@@ -1,0 +1,73 @@
+import { ethers } from 'ethers';
+import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { CONFIG } from '../config/networks';
+
+export async function fetchETHBalance(address: string): Promise<string> {
+  try {
+    const provider = new ethers.JsonRpcProvider(CONFIG.ALCHEMY_ETH_URL);
+    const balanceWei = await provider.getBalance(address);
+    const balanceEth = ethers.formatEther(balanceWei);
+    return parseFloat(balanceEth).toFixed(4).replace(/\.?0+$/, '');
+  } catch (error) {
+    console.error("Error fetching ETH balance:", error);
+    return "0.00";
+  }
+}
+
+export async function fetchSOLBalance(address: string): Promise<string> {
+  try {
+    const connection = new Connection(CONFIG.HELIUS_SOL_URL);
+    const balance = await connection.getBalance(new PublicKey(address));
+    return (balance / LAMPORTS_PER_SOL).toFixed(4).replace(/\.?0+$/, '');
+  } catch (error) {
+    console.error("Error fetching SOL balance:", error);
+    return "0.00";
+  }
+}
+
+export async function fetchBTCBalance(address: string): Promise<string> {
+  try {
+    const res = await fetch(`${CONFIG.MEMPOOL_BTC_URL}${address}`);
+    if (!res.ok) throw new Error("Failed to fetch BTC balance");
+    const data = await res.json();
+    const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
+    return balance.toFixed(8).replace(/\.?0+$/, '');
+  } catch (error) {
+    console.error("Error fetching BTC balance:", error);
+    return "0.00";
+  }
+}
+
+export async function fetchLivePrices(): Promise<{ 
+  prices: { eth: number, sol: number, btc: number },
+  changes: { eth: number, sol: number, btc: number }
+}> {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,solana,bitcoin&vs_currencies=usd&include_24hr_change=true', {
+      headers: { 
+        'x-cg-demo-api-key': CONFIG.COINGECKO_API_KEY, 
+        'accept': 'application/json' 
+      }
+    });
+    if (!res.ok) throw new Error("Failed to fetch prices");
+    const data = await res.json();
+    return {
+      prices: {
+        eth: data.ethereum?.usd || 0,
+        sol: data.solana?.usd || 0,
+        btc: data.bitcoin?.usd || 0
+      },
+      changes: {
+        eth: data.ethereum?.usd_24h_change || 0,
+        sol: data.solana?.usd_24h_change || 0,
+        btc: data.bitcoin?.usd_24h_change || 0
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching prices:", error);
+    return { 
+      prices: { eth: 0, sol: 0, btc: 0 },
+      changes: { eth: 0, sol: 0, btc: 0 }
+    };
+  }
+}

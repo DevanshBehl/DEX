@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
+import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices } from './utils/rpcUtils';
 
 // ---- Components -------------------------------------------------------------
 
@@ -67,7 +68,6 @@ interface VaultInfo {
 const MOCK_TOKENS: MockToken[] = [
   { symbol: 'ETH', name: 'Ethereum', balance: '1.45', usdValue: '$4,350.00', change: '+2.4%', positive: true, color: '#627eea', neon: 'rgba(98,126,234,0.4)' },
   { symbol: 'SOL', name: 'Solana', balance: '45.2', usdValue: '$6,420.00', change: '+5.1%', positive: true, color: '#14F195', neon: 'rgba(20,241,149,0.4)' },
-  { symbol: 'USDC', name: 'USD Coin', balance: '1,240.00', usdValue: '$1,240.00', change: '0.0%', positive: true, color: '#2775ca', neon: 'rgba(39,117,202,0.4)' },
   { symbol: 'BTC', name: 'Bitcoin', balance: '0.045', usdValue: '$2,850.00', change: '-1.2%', positive: false, color: '#F7931A', neon: 'rgba(247,147,26,0.4)' },
 ];
 
@@ -142,6 +142,53 @@ export default function App() {
   }, [rawSeedPhrase, accountCount]);
 
   const accounts = allAccounts[activeAccountIndex]?.chains || [];
+  const ethAccount = accounts.find(c => c.chain === 'EVM')?.address;
+  const solAccount = accounts.find(c => c.chain === 'Solana')?.address;
+  const btcAccount = accounts.find(c => c.chain === 'Bitcoin')?.address;
+
+  const [balances, setBalances] = useState({ eth: "0.00", sol: "0.00", btc: "0.00" });
+  const [prices, setPrices] = useState({ eth: 0, sol: 0, btc: 0 });
+  const [changes, setChanges] = useState({ eth: 0, sol: 0, btc: 0 });
+  const [totalUsdValue, setTotalUsdValue] = useState(0.00);
+  const [totalUsdChange, setTotalUsdChange] = useState(0.00);
+  const [totalPercentChange, setTotalPercentChange] = useState(0.00);
+
+  useEffect(() => {
+    async function loadData() {
+      const [liveData, eth, sol, btc] = await Promise.all([
+        fetchLivePrices(),
+        ethAccount ? fetchETHBalance(ethAccount) : Promise.resolve("0.00"),
+        solAccount ? fetchSOLBalance(solAccount) : Promise.resolve("0.00"),
+        btcAccount ? fetchBTCBalance(btcAccount) : Promise.resolve("0.00")
+      ]);
+
+      setPrices(liveData.prices);
+      setChanges(liveData.changes);
+      setBalances({ eth, sol, btc });
+
+      const ethUsd = parseFloat(eth) * liveData.prices.eth;
+      const solUsd = parseFloat(sol) * liveData.prices.sol;
+      const btcUsd = parseFloat(btc) * liveData.prices.btc;
+
+      const totalUsd = ethUsd + solUsd + btcUsd;
+      setTotalUsdValue(totalUsd);
+
+      const ethGain = ethUsd - (ethUsd / (1 + liveData.changes.eth / 100));
+      const solGain = solUsd - (solUsd / (1 + liveData.changes.sol / 100));
+      const btcGain = btcUsd - (btcUsd / (1 + liveData.changes.btc / 100));
+      
+      const totalGain = ethGain + solGain + btcGain;
+      setTotalUsdChange(totalGain);
+      
+      const prevTotalUsd = totalUsd - totalGain;
+      const totalGainPercent = prevTotalUsd > 0 ? (totalGain / prevTotalUsd) * 100 : 0;
+      setTotalPercentChange(totalGainPercent);
+    }
+    
+    if (accounts.length > 0) {
+      loadData();
+    }
+  }, [ethAccount, solAccount, btcAccount, accounts]);
 
   // ---- Boot: Check vault state ----------------------------------------------
 
@@ -443,16 +490,28 @@ export default function App() {
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold mt-1.5 mr-1 text-zinc-400">$</span>
           <span className="text-[2.75rem] font-black tracking-tighter leading-none">
-            <AnimatedOdometer value="12,010" />
+            <AnimatedOdometer value={parseInt(totalUsdValue.toFixed(2).split('.')[0]).toLocaleString('en-US')} />
           </span>
           <span className="text-2xl font-bold text-zinc-400">
-            .<AnimatedOdometer value="00" />
+            .<AnimatedOdometer value={totalUsdValue.toFixed(2).split('.')[1]} />
           </span>
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00ff66" strokeWidth="3" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
-          <span className="text-sm font-bold text-[#00ff66]">
-            +<AnimatedOdometer value="245.12" /> (2.4%)
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={totalUsdChange >= 0 ? "#00ff66" : "#ff0055"} strokeWidth="3" strokeLinecap="round">
+            {totalUsdChange >= 0 ? (
+              <>
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                <polyline points="17 6 23 6 23 12" />
+              </>
+            ) : (
+              <>
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+                <polyline points="17 18 23 18 23 12" />
+              </>
+            )}
+          </svg>
+          <span className={`text-sm font-bold ${totalUsdChange >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>
+            {totalUsdChange >= 0 ? '+' : '-'}$<AnimatedOdometer value={Math.abs(totalUsdChange).toFixed(2)} /> ({totalUsdChange >= 0 ? '+' : ''}{totalPercentChange.toFixed(1)}%)
           </span>
           <span className="text-xs font-semibold text-zinc-500 ml-1 bg-zinc-900 px-2 py-0.5 rounded-full">Today</span>
         </div>
@@ -491,7 +550,30 @@ export default function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-1 pb-24">
-          {MOCK_TOKENS.map((token) => (
+          {MOCK_TOKENS.map((token) => {
+            let currentBalance = token.balance;
+            let currentUsd = token.usdValue;
+            let currentChange = token.change;
+            let currentPositive = token.positive;
+            
+            if (token.symbol === 'ETH') {
+              currentBalance = balances.eth;
+              currentUsd = `$${(parseFloat(balances.eth) * prices.eth).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              currentChange = `${changes.eth >= 0 ? '+' : ''}${changes.eth.toFixed(1)}%`;
+              currentPositive = changes.eth >= 0;
+            } else if (token.symbol === 'SOL') {
+              currentBalance = balances.sol;
+              currentUsd = `$${(parseFloat(balances.sol) * prices.sol).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              currentChange = `${changes.sol >= 0 ? '+' : ''}${changes.sol.toFixed(1)}%`;
+              currentPositive = changes.sol >= 0;
+            } else if (token.symbol === 'BTC') {
+              currentBalance = balances.btc;
+              currentUsd = `$${(parseFloat(balances.btc) * prices.btc).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              currentChange = `${changes.btc >= 0 ? '+' : ''}${changes.btc.toFixed(1)}%`;
+              currentPositive = changes.btc >= 0;
+            }
+
+            return (
             <div key={token.symbol} className="token-row group relative overflow-hidden shrink-0">
               {/* Subtle hover bleed */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: `radial-gradient(circle at 10% 50%, ${token.color} 0%, transparent 80%)` }} />
@@ -505,22 +587,22 @@ export default function App() {
               <div className="flex-1 min-w-0 relative z-10">
                 <div className="flex items-center justify-between">
                   <span className="text-base font-bold text-white">{token.name}</span>
-                  <span className="text-base font-bold text-white">{token.usdValue}</span>
+                  <span className="text-base font-bold text-white">{currentUsd}</span>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
                   <span className="text-xs font-medium text-zinc-400">
-                    {token.balance} {token.symbol}
+                    {currentBalance} {token.symbol}
                   </span>
                   <span
                     className="text-xs font-bold"
-                    style={{ color: token.positive ? '#00ff66' : '#ff0055' }}
+                    style={{ color: currentPositive ? '#00ff66' : '#ff0055' }}
                   >
-                    {token.change}
+                    {currentChange}
                   </span>
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 

@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>celestial-react-wallet</title>
+    <style>
+      /* Force Chrome to open the popup at the exact DEX mode dimensions instantly */
+      body {
+        margin: 0;
+        padding: 0;
+        width: 360px;
+        height: 600px;
+        background-color: #0b0b0e; /* Match the pure premium dark mode background */
+        color: white;
+        overflow-x: hidden;
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -12,7 +12,7 @@ interface TokenPageProps {
   change: number;
 }
 
-const TIMEFRAMES = ['1D', '1W', '1M', 'YTD', 'ALL'] as const;
+const TIMEFRAMES = ['1H', '1D', '1W', '1M', 'YTD'] as const;
 type Timeframe = typeof TIMEFRAMES[number];
 
 export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, balance, price, change }) => {
@@ -30,6 +30,7 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
 
   useEffect(() => {
     let days = '1';
+    if (timeframe === '1H') days = '1'; // CoinGecko free tier minimum is 1 day
     if (timeframe === '1W') days = '7';
     if (timeframe === '1M') days = '30';
     if (timeframe === 'YTD') {
@@ -37,7 +38,6 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
       const startOfYear = new Date(now.getFullYear(), 0, 1);
       days = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)).toString();
     }
-    if (timeframe === 'ALL') days = 'max';
 
     setChartLoading(true);
     setChartError('');
@@ -63,7 +63,13 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
   };
 
   const usdValue = (parseFloat(balance) * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const positive = change >= 0;
+
+  // Compute trend from chart data for the selected timeframe
+  const trendUp = chartData.length >= 2 && chartData[chartData.length - 1].value >= chartData[0].value;
+  const trendPercent = chartData.length >= 2
+    ? ((chartData[chartData.length - 1].value - chartData[0].value) / chartData[0].value) * 100
+    : change;
+  const trendPositive = chartData.length >= 2 ? trendUp : change >= 0;
 
   return (
     <div className="absolute inset-0 bg-[#000] z-50 flex flex-col animate-fade-in pb-24 overflow-y-auto">
@@ -85,10 +91,10 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
       <div className="px-6 py-8 flex flex-col items-center">
         <div className="text-4xl font-black text-white tracking-tighter mb-2">${usdValue}</div>
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-bold ${positive ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>
-            {positive ? '+' : ''}{change.toFixed(2)}%
+          <span className={`text-sm font-bold ${trendPositive ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>
+            {trendPositive ? '+' : ''}{trendPercent.toFixed(2)}%
           </span>
-          <span className="text-xs text-zinc-500 font-semibold px-2 py-0.5 bg-white/5 rounded-full">24h</span>
+          <span className="text-xs text-zinc-500 font-semibold px-2 py-0.5 bg-white/5 rounded-full">{timeframe}</span>
         </div>
         <div className="text-sm font-medium text-zinc-400 mt-2">
           {balance} {symbol}
@@ -109,7 +115,7 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
           <LineChart width={356} height={200} data={chartData}>
             <XAxis dataKey="time" hide />
             <YAxis domain={['dataMin', 'dataMax']} hide />
-            <Line type="monotone" dataKey="value" stroke={chartData.length >= 2 && chartData[chartData.length - 1].value >= chartData[0].value ? "#00ff66" : "#ff0055"} strokeWidth={2.5} dot={false} isAnimationActive={true} />
+            <Line type="monotone" dataKey="value" stroke={trendPositive ? "#00ff66" : "#ff0055"} strokeWidth={2.5} dot={false} isAnimationActive={true} />
           </LineChart>
         )}
       </div>

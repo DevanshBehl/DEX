@@ -76,7 +76,7 @@ const MOCK_TOKENS: MockToken[] = [
 // ---- App Component ----------------------------------------------------------
 
 export default function App() {
-  const rawSeedPhrase = "grid satisfy sad social rely pull siren path donate song side april";
+  const [rawSeedPhrase, setRawSeedPhrase] = useState('');
   const [walletState, setWalletState] = useState<WalletState>('loading');
   const [vaults, setVaults] = useState<VaultInfo[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState('');
@@ -109,10 +109,7 @@ export default function App() {
   const [revealedSeed, setRevealedSeed] = useState('');
   const [revealedPrivateKey, setRevealedPrivateKey] = useState('');
   const [isRevealing, setIsRevealing] = useState(false);
-  const [accountCount, setAccountCount] = useState(() => {
-    const saved = localStorage.getItem('celestial_account_count');
-    return saved ? parseInt(saved, 10) : 1;
-  });
+  const [accountCount, setAccountCount] = useState(1);
   const [activeAccountIndex, setActiveAccountIndex] = useState(() => {
     const saved = localStorage.getItem('celestial_active_account');
     return saved ? parseInt(saved, 10) : 0;
@@ -138,6 +135,23 @@ export default function App() {
     setTxHash(null);
     setSlideX(0);
     setIsDragging(false);
+  };
+
+  const handleAddAccount = async () => {
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'VAULT_ADD_ACCOUNT' }, (response: any) => {
+        if (response?.success && response.accountCount) {
+          setAccountCount(response.accountCount);
+        } else {
+          console.error("Failed to add account:", response?.error);
+          if (response?.error && response.error.includes('Unknown message')) {
+            alert('Please reload the extension from chrome://extensions to apply background script updates.');
+          }
+        }
+      });
+    } else {
+      setAccountCount(prev => prev + 1);
+    }
   };
 
   const getSliderMax = () => {
@@ -229,10 +243,6 @@ export default function App() {
   // ---- Persist State --------------------------------------------------------
 
   useEffect(() => {
-    localStorage.setItem('celestial_account_count', accountCount.toString());
-  }, [accountCount]);
-
-  useEffect(() => {
     localStorage.setItem('celestial_active_account', activeAccountIndex.toString());
   }, [activeAccountIndex]);
 
@@ -249,6 +259,7 @@ export default function App() {
   // ---- Derive Accounts ------------------------------------------------------
 
   useEffect(() => {
+    if (!rawSeedPhrase) return;
     const derived = [];
     for (let i = 0; i < accountCount; i++) {
       derived.push({
@@ -349,6 +360,12 @@ export default function App() {
             } else if (!response.isUnlocked) {
               setWalletState('locked');
             } else {
+              if (response.mnemonic) {
+                setRawSeedPhrase(response.mnemonic);
+              }
+              if (response.accountCount) {
+                setAccountCount(response.accountCount);
+              }
               setWalletState('unlocked');
             }
           } else {
@@ -400,6 +417,12 @@ export default function App() {
               return;
             }
             if (response.success) {
+              if (response.mnemonic) {
+                setRawSeedPhrase(response.mnemonic);
+              }
+              if (response.accountCount) {
+                setAccountCount(response.accountCount);
+              }
               setWalletState('unlocked');
               setPassword('');
             } else {
@@ -935,7 +958,7 @@ export default function App() {
 
         <div className="p-6 border-t border-white/5 bg-transparent">
           <button 
-            onClick={() => setAccountCount(prev => prev + 1)} 
+            onClick={handleAddAccount} 
             className="w-full py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl flex items-center justify-center gap-2 border border-white/10 transition-colors active:scale-[0.98] backdrop-blur-md"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>

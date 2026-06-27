@@ -13,6 +13,7 @@
 let sessionKey = null;   // CryptoKey — non-extractable, memory-only
 let isUnlocked = false;
 let activeVaultId = null;
+let activeMnemonic = null;
 
 // ---- Crypto helpers (matching landing page implementation) ------------------
 
@@ -82,6 +83,10 @@ async function handleMessage(message) {
       if (!vault || !vault.salt || !vault.mnemonic || !vault.id) {
         return { success: false, error: 'Invalid vault payload' };
       }
+      
+      // Initialize accountCount to 1 for the new vault
+      vault.accountCount = 1;
+
       const result = await chrome.storage.local.get('celestial/vaults');
       const vaults = result['celestial/vaults'] || [];
       
@@ -118,8 +123,9 @@ async function handleMessage(message) {
         sessionKey = key;
         isUnlocked = true;
         activeVaultId = vault.id;
+        activeMnemonic = mnemonic;
 
-        return { success: true, mnemonic };
+        return { success: true, mnemonic, accountCount: vault.accountCount || 1 };
       } catch {
         return { success: false, error: 'Wrong password' };
       }
@@ -129,6 +135,7 @@ async function handleMessage(message) {
       sessionKey = null;
       isUnlocked = false;
       activeVaultId = null;
+      activeMnemonic = null;
       return { success: true };
     }
 
@@ -136,13 +143,31 @@ async function handleMessage(message) {
       const result = await chrome.storage.local.get('celestial/vaults');
       const vaults = result['celestial/vaults'] || [];
       const hasVault = vaults.length > 0;
+      
+      const activeVault = vaults.find(v => v.id === activeVaultId);
+      
       return { 
         success: true, 
         hasVault, 
         isUnlocked,
         activeVaultId,
+        mnemonic: isUnlocked ? activeMnemonic : undefined,
+        accountCount: isUnlocked ? (activeVault?.accountCount || 1) : undefined,
         vaults: vaults.map(v => ({ id: v.id, name: v.name }))
       };
+    }
+
+    case 'VAULT_ADD_ACCOUNT': {
+      if (!isUnlocked || !activeVaultId) return { success: false, error: 'Vault locked' };
+      const result = await chrome.storage.local.get('celestial/vaults');
+      const vaults = result['celestial/vaults'] || [];
+      const vIdx = vaults.findIndex(v => v.id === activeVaultId);
+      if (vIdx >= 0) {
+        vaults[vIdx].accountCount = (vaults[vIdx].accountCount || 1) + 1;
+        await chrome.storage.local.set({ 'celestial/vaults': vaults });
+        return { success: true, accountCount: vaults[vIdx].accountCount };
+      }
+      return { success: false, error: 'Active vault not found' };
     }
 
     default:

@@ -74,3 +74,23 @@ export async function fetchLivePrices(): Promise<{
     };
   }
 }
+
+export async function fetchChartData(coinId: string, days: string): Promise<{ time: number; value: number }[]> {
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`, {
+      headers: { 
+        'x-cg-demo-api-key': CONFIG.COINGECKO_API_KEY, 
+        'accept': 'application/json' 
+      }
+    });
+    if (!res.ok) throw new Error("Failed to fetch chart data");
+    const data = await res.json();
+    return data.prices.map(([timestamp, price]: [number, number]) => ({
+      time: timestamp,
+      value: price,
+    }));
+  } catch (error) {
+    console.error("Error fetching chart data:", error);
+    return [];
+  }
+}

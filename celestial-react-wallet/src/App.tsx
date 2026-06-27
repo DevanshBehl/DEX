@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
 import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices } from './utils/rpcUtils';
+import { TokenPage } from './components/TokenPage';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
 import { fetchAccountHistory } from './utils/historyUtils';
 import type { TransactionRecord } from './types';
@@ -89,6 +90,7 @@ export default function App() {
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [sendScreen, setSendScreen] = useState<'pick' | 'form'>('pick');
   const [sendAsset, setSendAsset] = useState<'ETH' | 'SOL' | 'BTC'>('ETH');
+  const [activeTokenPage, setActiveTokenPage] = useState<ChainAccount | null>(null);
   const [sendAddress, setSendAddress] = useState('');
   const [sendAmount, setSendAmount] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -744,7 +746,14 @@ export default function App() {
             }
 
             return (
-            <div key={token.symbol} className="token-row group relative overflow-hidden shrink-0">
+            <div 
+              key={token.symbol} 
+              className="token-row group relative overflow-hidden shrink-0 cursor-pointer"
+              onClick={() => {
+                const chainAccount = accounts.find(c => c.chain === (token.symbol === 'ETH' ? 'EVM' : token.symbol === 'SOL' ? 'Solana' : 'Bitcoin'));
+                if (chainAccount) setActiveTokenPage(chainAccount);
+              }}
+            >
               {/* Subtle hover bleed */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: `radial-gradient(circle at 10% 50%, ${token.color} 0%, transparent 80%)` }} />
               
@@ -777,7 +786,7 @@ export default function App() {
       </div>
 
       {/* ---- Floating Bottom Nav ---- */}
-      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && (
+      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && !activeTokenPage && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[200]">
           <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
             <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen && !isActivityOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); setIsActivityOpen(false); }} />
@@ -1658,8 +1667,23 @@ export default function App() {
           </div>
         )}
         </div>
-
       </div>
+
+      {/* ---- Token Page ---- */}
+      {activeTokenPage && (
+        <TokenPage 
+          account={activeTokenPage}
+          onClose={() => setActiveTokenPage(null)}
+          onSend={(asset) => {
+            setSendAsset(asset);
+            setIsSendOpen(true);
+            setActiveTokenPage(null);
+          }}
+          balance={activeTokenPage.chain === 'EVM' ? balances.eth : activeTokenPage.chain === 'Solana' ? balances.sol : balances.btc}
+          price={activeTokenPage.chain === 'EVM' ? prices.eth : activeTokenPage.chain === 'Solana' ? prices.sol : prices.btc}
+          change={activeTokenPage.chain === 'EVM' ? changes.eth : activeTokenPage.chain === 'Solana' ? changes.sol : changes.btc}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,8 @@ import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
 import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices } from './utils/rpcUtils';
 import { TokenPage } from './components/TokenPage';
+import { ReceiveModal } from './components/ReceiveModal';
+import { SwapModal } from './components/SwapModal';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
 import { fetchAccountHistory } from './utils/historyUtils';
 import type { TransactionRecord } from './types';
@@ -91,6 +93,8 @@ export default function App() {
   const [sendScreen, setSendScreen] = useState<'pick' | 'form'>('pick');
   const [sendAsset, setSendAsset] = useState<'ETH' | 'SOL' | 'BTC'>('ETH');
   const [activeTokenPage, setActiveTokenPage] = useState<ChainAccount | null>(null);
+  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
+  const [receiveInitialAccount, setReceiveInitialAccount] = useState<ChainAccount | null>(null);
   const [sendAddress, setSendAddress] = useState('');
   const [sendAmount, setSendAmount] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -694,7 +698,7 @@ export default function App() {
         <div className="flex items-center justify-between bg-[#0a0a0a] p-1.5 rounded-2xl border border-white/5 shadow-2xl">
           {[
             { label: 'Send', onClick: () => { setIsSendOpen(true); setIsSwapOpen(false); setIsSettingsOpen(false); setIsAccountsOpen(false); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> },
-            { label: 'Receive', onClick: () => {}, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="7 13 12 18 17 13" /><line x1="12" y1="18" x2="12" y2="6" /><path d="M20 21H4" /></svg> },
+            { label: 'Receive', onClick: () => { setIsReceiveOpen(true); setReceiveInitialAccount(null); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="7 13 12 18 17 13" /><line x1="12" y1="18" x2="12" y2="6" /><path d="M20 21H4" /></svg> },
             { label: 'Swap', onClick: () => { setIsSwapOpen(true); setIsSendOpen(false); setIsSettingsOpen(false); setIsAccountsOpen(false); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg> },
             { label: 'Buy', onClick: () => {}, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
           ].map((action) => (
@@ -1203,59 +1207,6 @@ export default function App() {
         )}
       </div>
 
-      {/* ---- Swap Sliding Panel ---- */}
-      <div 
-        className="absolute inset-0 bg-[#0a0a0a] z-[100] flex flex-col pt-8 px-6 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
-        style={{ transform: isSwapOpen ? 'translateY(0)' : 'translateY(100%)' }}
-      >
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-black text-white">Swap Tokens</h2>
-          <button onClick={() => setIsSwapOpen(false)} className="haptic-btn w-8 h-8 rounded-full bg-[#111111] border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-2 relative">
-          {/* From Token */}
-          <div className="bg-[#111111] border border-white/5 p-4 rounded-3xl">
-            <span className="text-xs font-bold text-zinc-500 mb-2 block">You pay</span>
-            <div className="flex items-center justify-between">
-              <input type="text" placeholder="0" className="bg-transparent text-4xl font-black text-white outline-none w-1/2" />
-              <button className="haptic-btn flex items-center gap-2 bg-[#18181b] border border-white/10 px-3 py-1.5 rounded-full">
-                <div className="w-5 h-5 rounded-full bg-[#627eea] flex items-center justify-center text-[8px] font-black">ET</div>
-                <span className="font-bold">ETH</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
-              </button>
-            </div>
-            <span className="text-xs font-medium text-zinc-500 mt-2 block">Balance: 1.45 ETH</span>
-          </div>
-
-          {/* Swap Arrow Button */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <button className="haptic-btn w-10 h-10 rounded-xl bg-[#00f0ff] text-black flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.3)]">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg>
-            </button>
-          </div>
-
-          {/* To Token */}
-          <div className="bg-[#111111] border border-white/5 p-4 rounded-3xl">
-            <span className="text-xs font-bold text-zinc-500 mb-2 block">You receive</span>
-            <div className="flex items-center justify-between">
-              <input type="text" placeholder="0" className="bg-transparent text-4xl font-black text-zinc-500 outline-none w-1/2" readOnly />
-              <button className="haptic-btn flex items-center gap-2 bg-[#18181b] border border-white/10 px-3 py-1.5 rounded-full">
-                <div className="w-5 h-5 rounded-full bg-[#2775ca] flex items-center justify-center text-[8px] font-black">US</div>
-                <span className="font-bold">USDC</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
-              </button>
-            </div>
-            <span className="text-xs font-medium text-zinc-500 mt-2 block">Balance: 1,240.00 USDC</span>
-          </div>
-        </div>
-        
-        <div className="mt-auto mb-24">
-          <button className="btn-primary">Review Swap</button>
-        </div>
-      </div>
 
       {/* ---- Settings Sliding Panel ---- */}
       <div 
@@ -1679,11 +1630,34 @@ export default function App() {
             setIsSendOpen(true);
             setActiveTokenPage(null);
           }}
+          onReceive={() => {
+            setReceiveInitialAccount(activeTokenPage);
+            setIsReceiveOpen(true);
+          }}
           balance={activeTokenPage.chain === 'EVM' ? balances.eth : activeTokenPage.chain === 'Solana' ? balances.sol : balances.btc}
           price={activeTokenPage.chain === 'EVM' ? prices.eth : activeTokenPage.chain === 'Solana' ? prices.sol : prices.btc}
           change={activeTokenPage.chain === 'EVM' ? changes.eth : activeTokenPage.chain === 'Solana' ? changes.sol : changes.btc}
         />
       )}
+
+      {/* ---- Receive Modal ---- */}
+      <ReceiveModal
+        isOpen={isReceiveOpen}
+        onClose={() => setIsReceiveOpen(false)}
+        accounts={accounts}
+        initialAccount={receiveInitialAccount}
+        balances={balances}
+        prices={prices}
+        changes={changes}
+      />
+
+      {/* ---- Swap Modal ---- */}
+      <SwapModal
+        isOpen={isSwapOpen}
+        onClose={() => setIsSwapOpen(false)}
+        evmAccount={accounts.find(a => a.chain === 'EVM') || null}
+        ethBalance={balances.eth}
+      />
     </div>
   );
 }

@@ -24,6 +24,22 @@ export async function sendEVMTransaction(privateKey: string, toAddress: string, 
   }
 }
 
+export async function sendEVMContractTransaction(privateKey: string, txData: { to: string, data: string, value: string, gasPrice?: string }, rpcUrl: string): Promise<string> {
+  try {
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const wallet = new ethers.Wallet(privateKey, provider);
+    const txResponse = await wallet.sendTransaction({
+      to: txData.to,
+      data: txData.data,
+      value: BigInt(txData.value || '0'),
+      gasPrice: txData.gasPrice ? BigInt(txData.gasPrice) : undefined
+    });
+    return txResponse.hash;
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to send EVM contract transaction");
+  }
+}
+
 export async function sendSolanaTransaction(privateKey: string, toAddress: string, amountSol: string, rpcUrl: string): Promise<string> {
   try {
     const connection = new Connection(rpcUrl, 'confirmed');

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis } from 'recharts';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { fetchChartData } from '../utils/rpcUtils';
 import type { ChainAccount } from '../utils/walletUtils';
 
@@ -7,6 +7,7 @@ interface TokenPageProps {
   account: ChainAccount;
   onClose: () => void;
   onSend: (asset: 'ETH' | 'SOL' | 'BTC') => void;
+  onReceive: () => void;
   balance: string;
   price: number;
   change: number;
@@ -15,12 +16,13 @@ interface TokenPageProps {
 const TIMEFRAMES = ['1H', '1D', '1W', '1M', 'YTD'] as const;
 type Timeframe = typeof TIMEFRAMES[number];
 
-export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, balance, price, change }) => {
+export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, onReceive, balance, price, change }) => {
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [chartData, setChartData] = useState<{ time: number; value: number }[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [hoveredData, setHoveredData] = useState<{ price: number; time: number } | null>(null);
 
   // Map chain to CoinGecko ID
   const coinId = account.chain === 'EVM' ? 'ethereum' : account.chain === 'Solana' ? 'solana' : 'bitcoin';
@@ -43,9 +45,14 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
     setChartError('');
     fetchChartData(coinId, days)
       .then((data) => {
-        console.log('[TokenPage] Chart data received:', data.length, 'points');
-        setChartData(data);
-        if (data.length === 0) {
+        let chartPoints = data;
+        if (timeframe === '1H' && data.length > 0) {
+          const lastTime = data[data.length - 1].time;
+          chartPoints = data.filter(d => d.time >= lastTime - 60 * 60 * 1000);
+        }
+        console.log('[TokenPage] Chart data received:', chartPoints.length, 'points');
+        setChartData(chartPoints);
+        if (chartPoints.length === 0) {
           setChartError('No data returned from API');
         }
       })
@@ -71,6 +78,58 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
     : change;
   const trendPositive = chartData.length >= 2 ? trendUp : change >= 0;
 
+  // --- Interactive scrubbing logic ---
+  const startPrice = chartData.length > 0 ? chartData[0].value : price;
+  const isHovering = hoveredData !== null;
+
+  // Dynamic color: compare hovered price against first data point
+  const activeColor = useMemo(() => {
+    if (isHovering) {
+      return hoveredData!.price >= startPrice ? '#00ff66' : '#ff0055';
+    }
+    return trendPositive ? '#00ff66' : '#ff0055';
+  }, [isHovering, hoveredData, startPrice, trendPositive]);
+
+  // Display price: hovered price or live unit price
+  const displayPrice = isHovering
+    ? `$${hoveredData!.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Compute dollar change for idle subtext
+  const endPrice = chartData.length >= 2 ? chartData[chartData.length - 1].value : price;
+  const dollarChange = chartData.length >= 2 ? endPrice - startPrice : 0;
+  const hoveredDollarChange = isHovering ? hoveredData!.price - startPrice : null;
+
+  // Display subtext: formatted time when hovering, or % change when idle
+  const formatHoveredTime = useCallback((timestamp: number) => {
+    const date = new Date(timestamp);
+    if (timeframe === '1H' || timeframe === '1D') {
+      return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(date);
+    }
+    if (timeframe === '1W') {
+      return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).format(date);
+    }
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+  }, [timeframe]);
+
+  const hoveredChangePercent = isHovering && startPrice > 0
+    ? ((hoveredData!.price - startPrice) / startPrice) * 100
+    : null;
+
+  const handleChartMouseMove = useCallback((e: any) => {
+    if (e?.activePayload && e.activePayload.length > 0) {
+      const currentPrice = e.activePayload[0].value;
+      const currentTime = e.activePayload[0].payload.time || e.activePayload[0].payload.timestamp;
+      if (currentPrice) {
+        setHoveredData({ price: currentPrice, time: currentTime });
+      }
+    }
+  }, []);
+
+  const handleChartMouseLeave = useCallback(() => {
+    setHoveredData(null);
+  }, []);
+
   return (
     <div className="absolute inset-0 bg-[#000] z-50 flex flex-col animate-fade-in pb-24 overflow-y-auto">
       {/* Header */}
@@ -87,17 +146,33 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
         </div>
       </div>
 
-      {/* Balance */}
+      {/* Unit Price — reacts to chart hover */}
       <div className="px-6 py-8 flex flex-col items-center">
-        <div className="text-4xl font-black text-white tracking-tighter mb-2">${usdValue}</div>
+        <div className="text-4xl font-black tracking-tighter mb-2" style={{ color: isHovering ? activeColor : '#fff' }}>
+          {displayPrice}
+        </div>
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-bold ${trendPositive ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>
-            {trendPositive ? '+' : ''}{trendPercent.toFixed(2)}%
-          </span>
-          <span className="text-xs text-zinc-500 font-semibold px-2 py-0.5 bg-white/5 rounded-full">{timeframe}</span>
+          {isHovering ? (
+            <>
+              <span className="text-sm font-bold" style={{ color: activeColor }}>
+                {hoveredDollarChange !== null && `${hoveredDollarChange >= 0 ? '+' : '-'}$${Math.abs(hoveredDollarChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                {hoveredChangePercent !== null && ` (${hoveredChangePercent >= 0 ? '+' : ''}${hoveredChangePercent.toFixed(2)}%)`}
+              </span>
+              <span className="text-xs text-zinc-400 font-semibold px-2 py-0.5 bg-white/5 rounded-full">
+                {formatHoveredTime(hoveredData!.time)}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className={`text-sm font-bold ${trendPositive ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>
+                {dollarChange >= 0 ? '+' : '-'}${Math.abs(dollarChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({trendPositive ? '+' : ''}{trendPercent.toFixed(2)}%)
+              </span>
+              <span className="text-xs text-zinc-500 font-semibold px-2 py-0.5 bg-white/5 rounded-full">{timeframe}</span>
+            </>
+          )}
         </div>
         <div className="text-sm font-medium text-zinc-400 mt-2">
-          {balance} {symbol}
+          {balance} {symbol} · ${usdValue}
         </div>
       </div>
 
@@ -112,10 +187,20 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
             <span className="text-xs text-zinc-500">{chartError || 'Chart data unavailable'}</span>
           </div>
         ) : (
-          <LineChart width={356} height={200} data={chartData}>
+          <LineChart
+            width={356}
+            height={200}
+            data={chartData}
+            onMouseMove={handleChartMouseMove}
+            onMouseLeave={handleChartMouseLeave}
+          >
             <XAxis dataKey="time" hide />
             <YAxis domain={['dataMin', 'dataMax']} hide />
-            <Line type="monotone" dataKey="value" stroke={trendPositive ? "#00ff66" : "#ff0055"} strokeWidth={2.5} dot={false} isAnimationActive={true} />
+            <Tooltip
+              content={<></>}
+              cursor={{ stroke: '#ffffff', strokeWidth: 1, strokeOpacity: 0.3, strokeDasharray: '4 4' }}
+            />
+            <Line type="monotone" dataKey="value" stroke={activeColor} strokeWidth={2.5} dot={false} isAnimationActive={true} />
           </LineChart>
         )}
       </div>
@@ -135,7 +220,7 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
 
       {/* Actions */}
       <div className="px-6 flex gap-4 mb-8">
-        <button className="flex-1 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold transition-colors">
+        <button onClick={onReceive} className="flex-1 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold transition-colors">
           Receive
         </button>
         <button 

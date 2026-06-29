@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { CONFIG } from '../config/networks';
 
-export async function fetchETHBalance(address: string, isTestnet: boolean = false): Promise<string> {
+export async function fetchETHBalance(address: string, isTestnet: boolean = false, retries = 2): Promise<string> {
   try {
     const rpcUrl = isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL;
     const provider = new ethers.JsonRpcProvider(rpcUrl);
@@ -10,24 +10,32 @@ export async function fetchETHBalance(address: string, isTestnet: boolean = fals
     const balanceEth = ethers.formatEther(balanceWei);
     return parseFloat(balanceEth).toFixed(4).replace(/\.?0+$/, '');
   } catch (error) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, 500));
+      return fetchETHBalance(address, isTestnet, retries - 1);
+    }
     console.error("Error fetching ETH balance:", error);
     return "0.00";
   }
 }
 
-export async function fetchSOLBalance(address: string, isTestnet: boolean = false): Promise<string> {
+export async function fetchSOLBalance(address: string, isTestnet: boolean = false, retries = 2): Promise<string> {
   try {
     const rpcUrl = isTestnet ? CONFIG.HELIUS_DEVNET_URL : CONFIG.HELIUS_SOL_URL;
     const connection = new Connection(rpcUrl, 'confirmed');
     const balance = await connection.getBalance(new PublicKey(address));
     return (balance / LAMPORTS_PER_SOL).toFixed(4).replace(/\.?0+$/, '');
   } catch (error) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, 500));
+      return fetchSOLBalance(address, isTestnet, retries - 1);
+    }
     console.error("Error fetching SOL balance:", error);
     return "0.00";
   }
 }
 
-export async function fetchBTCBalance(address: string, isTestnet: boolean = false): Promise<string> {
+export async function fetchBTCBalance(address: string, isTestnet: boolean = false, retries = 2): Promise<string> {
   try {
     const rpcUrl = isTestnet ? CONFIG.MEMPOOL_TESTNET_URL : CONFIG.MEMPOOL_BTC_URL;
     const res = await fetch(`${rpcUrl}${address}`);
@@ -36,6 +44,10 @@ export async function fetchBTCBalance(address: string, isTestnet: boolean = fals
     const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
     return balance.toFixed(8).replace(/\.?0+$/, '');
   } catch (error) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, 500));
+      return fetchBTCBalance(address, isTestnet, retries - 1);
+    }
     console.error("Error fetching BTC balance:", error);
     return "0.00";
   }

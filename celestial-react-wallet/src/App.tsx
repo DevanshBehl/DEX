@@ -288,15 +288,23 @@ export default function App() {
   const [totalUsdChange, setTotalUsdChange] = useState(0.00);
   const [totalPercentChange, setTotalPercentChange] = useState(0.00);
   const [isTestnet, setIsTestnet] = useState<boolean>(false);
+  const fetchIdRef = useRef(0);
 
   const fetchBalances = useCallback(async () => {
     if (accounts.length === 0) return;
+    
+    const currentFetchId = ++fetchIdRef.current;
+    
+    setBalances({ eth: "...", sol: "...", btc: "..." });
+
     const [liveData, eth, sol, btc] = await Promise.all([
       fetchLivePrices(),
       ethAccount ? fetchETHBalance(ethAccount, isTestnet) : Promise.resolve("0.00"),
       solAccount ? fetchSOLBalance(solAccount, isTestnet) : Promise.resolve("0.00"),
       btcAccount ? fetchBTCBalance(btcAccount, isTestnet) : Promise.resolve("0.00")
     ]);
+
+    if (currentFetchId !== fetchIdRef.current) return;
 
     setPrices(liveData.prices);
     setChanges(liveData.changes);
@@ -734,17 +742,17 @@ export default function App() {
             
             if (token.symbol === 'ETH') {
               currentBalance = balances.eth;
-              currentUsd = `$${(parseFloat(balances.eth) * prices.eth).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              currentUsd = balances.eth === "..." ? "$..." : `$${(parseFloat(balances.eth) * prices.eth).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
               currentChange = `${changes.eth >= 0 ? '+' : ''}${changes.eth.toFixed(1)}%`;
               currentPositive = changes.eth >= 0;
             } else if (token.symbol === 'SOL') {
               currentBalance = balances.sol;
-              currentUsd = `$${(parseFloat(balances.sol) * prices.sol).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              currentUsd = balances.sol === "..." ? "$..." : `$${(parseFloat(balances.sol) * prices.sol).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
               currentChange = `${changes.sol >= 0 ? '+' : ''}${changes.sol.toFixed(1)}%`;
               currentPositive = changes.sol >= 0;
             } else if (token.symbol === 'BTC') {
               currentBalance = balances.btc;
-              currentUsd = `$${(parseFloat(balances.btc) * prices.btc).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              currentUsd = balances.btc === "..." ? "$..." : `$${(parseFloat(balances.btc) * prices.btc).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
               currentChange = `${changes.btc >= 0 ? '+' : ''}${changes.btc.toFixed(1)}%`;
               currentPositive = changes.btc >= 0;
             }

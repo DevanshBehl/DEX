@@ -91,9 +91,11 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
   }, [isHovering, hoveredData, startPrice, trendPositive]);
 
   // Display price: hovered price or live unit price
+  // Use the latest chart data point as the most accurate current price, falling back to the price prop
+  const currentUnitPrice = chartData.length > 0 ? chartData[chartData.length - 1].value : price;
   const displayPrice = isHovering
     ? `$${hoveredData!.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    : `$${currentUnitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Compute dollar change for idle subtext
   const endPrice = chartData.length >= 2 ? chartData[chartData.length - 1].value : price;

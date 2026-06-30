@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { fetchChartData } from '../utils/rpcUtils';
 import type { ChainAccount } from '../utils/walletUtils';
+import btcLogo from '../assets/btc.svg';
+import ethLogo from '../assets/eth.svg';
+import solLogo from '../assets/sol.svg';
 
 interface TokenPageProps {
   account: ChainAccount;
@@ -24,11 +27,9 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
   const [copied, setCopied] = useState(false);
   const [hoveredData, setHoveredData] = useState<{ price: number; time: number } | null>(null);
 
-  // Map chain to CoinGecko ID
   const coinId = account.chain === 'EVM' ? 'ethereum' : account.chain === 'Solana' ? 'solana' : 'bitcoin';
   const symbol = account.chain === 'EVM' ? 'ETH' : account.chain === 'Solana' ? 'SOL' : 'BTC';
   const name = account.chain === 'EVM' ? 'Ethereum' : account.chain === 'Solana' ? 'Solana' : 'Bitcoin';
-  const color = account.chain === 'EVM' ? '#627eea' : account.chain === 'Solana' ? '#14F195' : '#f7931a';
 
   useEffect(() => {
     let days = '1';
@@ -135,16 +136,16 @@ export const TokenPage: React.FC<TokenPageProps> = ({ account, onClose, onSend, 
   return (
     <div className="absolute inset-0 bg-[#000] z-50 flex flex-col animate-fade-in pb-24 overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center px-6 py-6 border-b border-white/5">
-        <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors mr-4 shrink-0">
+      <div className="relative flex flex-col items-center justify-center px-4 py-4 border-b border-white/5 min-h-[88px]">
+        <button onClick={onClose} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors shrink-0">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: color }}>
-            <span className="text-white text-xs font-bold">{symbol.slice(0, 2)}</span>
-          </div>
+        <div className="flex items-center gap-1.5">
           <h1 className="text-xl font-bold text-white">{name}</h1>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#00ff66" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#00ff66" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+        </div>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden mt-2">
+          <img src={symbol === 'ETH' ? ethLogo : symbol === 'SOL' ? solLogo : btcLogo} alt={symbol} className="w-full h-full" />
         </div>
       </div>
 

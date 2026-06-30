@@ -54,6 +54,10 @@ const AnimatedOdometer = ({ value, className = '' }: { value: string, className?
 
 type WalletState = 'loading' | 'uninitialized' | 'locked' | 'unlocked';
 
+import btcLogo from './assets/btc.svg';
+import ethLogo from './assets/eth.svg';
+import solLogo from './assets/sol.svg';
+
 interface MockToken {
   symbol: string;
   name: string;
@@ -63,6 +67,7 @@ interface MockToken {
   positive: boolean;
   color: string;
   neon: string;
+  logo: string;
 }
 
 interface VaultInfo {
@@ -71,9 +76,9 @@ interface VaultInfo {
 }
 
 const MOCK_TOKENS: MockToken[] = [
-  { symbol: 'ETH', name: 'Ethereum', balance: '1.45', usdValue: '$4,350.00', change: '+2.4%', positive: true, color: '#627eea', neon: 'rgba(98,126,234,0.4)' },
-  { symbol: 'SOL', name: 'Solana', balance: '45.2', usdValue: '$6,420.00', change: '+5.1%', positive: true, color: '#14F195', neon: 'rgba(20,241,149,0.4)' },
-  { symbol: 'BTC', name: 'Bitcoin', balance: '0.045', usdValue: '$2,850.00', change: '-1.2%', positive: false, color: '#F7931A', neon: 'rgba(247,147,26,0.4)' },
+  { symbol: 'ETH', name: 'Ethereum', balance: '1.45', usdValue: '$4,350.00', change: '+2.4%', positive: true, color: '#627eea', neon: 'rgba(98,126,234,0.4)', logo: ethLogo },
+  { symbol: 'SOL', name: 'Solana', balance: '45.2', usdValue: '$6,420.00', change: '+5.1%', positive: true, color: '#14F195', neon: 'rgba(20,241,149,0.4)', logo: solLogo },
+  { symbol: 'BTC', name: 'Bitcoin', balance: '0.045', usdValue: '$2,850.00', change: '-1.2%', positive: false, color: '#F7931A', neon: 'rgba(247,147,26,0.4)', logo: btcLogo },
 ];
 
 // ---- App Component ----------------------------------------------------------
@@ -288,14 +293,15 @@ export default function App() {
   const [totalUsdChange, setTotalUsdChange] = useState(0.00);
   const [totalPercentChange, setTotalPercentChange] = useState(0.00);
   const [isTestnet, setIsTestnet] = useState<boolean>(false);
-  const fetchIdRef = useRef(0);
+  const isTestnetRef = useRef(isTestnet);
+  useEffect(() => {
+    isTestnetRef.current = isTestnet;
+  }, [isTestnet]);
 
   const fetchBalances = useCallback(async () => {
     if (accounts.length === 0) return;
     
-    const currentFetchId = ++fetchIdRef.current;
-    
-    setBalances({ eth: "...", sol: "...", btc: "..." });
+    const networkAtFetch = isTestnet;
 
     const [liveData, eth, sol, btc] = await Promise.all([
       fetchLivePrices(),
@@ -303,8 +309,9 @@ export default function App() {
       solAccount ? fetchSOLBalance(solAccount, isTestnet) : Promise.resolve("0.00"),
       btcAccount ? fetchBTCBalance(btcAccount, isTestnet) : Promise.resolve("0.00")
     ]);
+    console.log("Fetched balances on", isTestnet ? "Testnet" : "Mainnet", { eth, sol, btc, liveData });
 
-    if (currentFetchId !== fetchIdRef.current) return;
+    if (networkAtFetch !== isTestnetRef.current) return;
 
     setPrices(liveData.prices);
     setChanges(liveData.changes);
@@ -589,9 +596,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Background Neon Bleed */}
-      <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-[#00f0ff] opacity-10 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-[#bd00ff] opacity-10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="flex-1 relative w-full flex flex-col min-h-0">
+        {/* Background Neon Bleed */}
+        <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-[#00f0ff] opacity-10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-[#bd00ff] opacity-10 rounded-full blur-[80px] pointer-events-none" />
 
       {/* ---- Header ---- */}
       <header className="flex items-center justify-between px-6 py-4 z-50 relative flex-shrink-0">
@@ -770,10 +778,10 @@ export default function App() {
               <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: `radial-gradient(circle at 10% 50%, ${token.color} 0%, transparent 80%)` }} />
               
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black text-white flex-shrink-0 relative z-10 shadow-lg"
-                style={{ background: token.color, boxShadow: `0 4px 20px ${token.neon}` }}
+                className="w-12 h-12 flex items-center justify-center flex-shrink-0 relative z-10 shadow-lg rounded-full overflow-hidden"
+                style={{ boxShadow: `0 4px 20px ${token.neon}` }}
               >
-                {token.symbol.slice(0, 2)}
+                <img src={token.logo} alt={token.symbol} className="w-full h-full" />
               </div>
               <div className="flex-1 min-w-0 relative z-10">
                 <div className="flex items-center justify-between">
@@ -1666,6 +1674,7 @@ export default function App() {
         evmAccount={accounts.find(a => a.chain === 'EVM') || null}
         ethBalance={balances.eth}
       />
+      </div>
     </div>
   );
 }

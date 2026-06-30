@@ -29,6 +29,11 @@
   --animate-drift: drift 15s linear infinite;
   --animate-check-draw: check-draw 0.6s ease-out forwards;
   --animate-ring-expand: ring-expand 0.8s ease-out forwards;
+  
+  /* New Animations */
+  --animate-fade-in-up: fade-in-up 0.8s ease-out forwards;
+  --animate-slide-in-right: slide-in-right 0.8s ease-out forwards;
+  --animate-pulse-glow: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @layer base {
@@ -302,6 +307,39 @@
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 15px rgba(0,0,0, 0.1);
+  }
+  50% {
+    opacity: .7;
+    box-shadow: 0 0 25px rgba(0,0,0, 0.2);
   }
 }
 

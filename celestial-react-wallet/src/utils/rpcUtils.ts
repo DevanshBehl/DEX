@@ -53,10 +53,18 @@ export async function fetchBTCBalance(address: string, isTestnet: boolean = fals
   }
 }
 
+let cachedPrices: any = null;
+let lastFetchTime = 0;
+
 export async function fetchLivePrices(): Promise<{ 
   prices: { eth: number, sol: number, btc: number },
   changes: { eth: number, sol: number, btc: number }
 }> {
+  const now = Date.now();
+  if (cachedPrices && now - lastFetchTime < 60000) {
+    return cachedPrices;
+  }
+
   try {
     const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,solana,bitcoin&vs_currencies=usd&include_24hr_change=true', {
       headers: { 
@@ -66,7 +74,7 @@ export async function fetchLivePrices(): Promise<{
     });
     if (!res.ok) throw new Error("Failed to fetch prices");
     const data = await res.json();
-    return {
+    cachedPrices = {
       prices: {
         eth: data.ethereum?.usd || 0,
         sol: data.solana?.usd || 0,
@@ -78,8 +86,11 @@ export async function fetchLivePrices(): Promise<{
         btc: data.bitcoin?.usd_24h_change || 0
       }
     };
+    lastFetchTime = now;
+    return cachedPrices;
   } catch (error) {
     console.error("Error fetching prices:", error);
+    if (cachedPrices) return cachedPrices;
     return { 
       prices: { eth: 0, sol: 0, btc: 0 },
       changes: { eth: 0, sol: 0, btc: 0 }

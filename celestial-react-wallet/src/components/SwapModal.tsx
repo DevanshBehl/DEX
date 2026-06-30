@@ -12,8 +12,10 @@ interface SwapModalProps {
   ethBalance: string;
 }
 
+import ethLogo from '../assets/eth.svg';
+
 const TOKENS = [
-  { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18, logo: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
+  { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18, logo: ethLogo },
   { symbol: 'WETH', name: 'Wrapped ETH', address: '0xfff9976782d46cc05630d1f6ebab18b2324d6b14', decimals: 18, logo: 'https://assets.coingecko.com/coins/images/2518/small/weth.png' },
   { symbol: 'UNI', name: 'Uniswap', address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', decimals: 18, logo: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png' }
 ];

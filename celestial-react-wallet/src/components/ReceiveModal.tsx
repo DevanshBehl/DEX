@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { ChainAccount } from '../utils/walletUtils';
+import btcLogo from '../assets/btc.svg';
+import ethLogo from '../assets/eth.svg';
+import solLogo from '../assets/sol.svg';
 
 interface ReceiveModalProps {
   isOpen: boolean;
@@ -61,8 +64,8 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
               onClick={() => setSelectedToken(acc)}
               className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
             >
-              <div className="w-11 h-11 rounded-full bg-[#627eea] flex items-center justify-center flex-shrink-0">
-                <svg width="18" height="18" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
+              <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src={ethLogo} alt="Ethereum" className="w-full h-full" />
               </div>
               <div className="flex flex-col items-start flex-1 min-w-0">
                 <span className="text-sm font-bold text-white">Ethereum</span>
@@ -86,8 +89,8 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
               onClick={() => setSelectedToken(acc)}
               className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
             >
-              <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center border border-[#14F195]/30 flex-shrink-0">
-                <svg width="20" height="20" viewBox="0 0 397 311" fill="url(#solana-grad-send)"><defs><linearGradient id="solana-grad-send" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#00FFA3" /><stop offset="100%" stopColor="#DC1FFF" /></linearGradient></defs><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+              <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src={solLogo} alt="Solana" className="w-full h-full" />
               </div>
               <div className="flex flex-col items-start flex-1 min-w-0">
                 <span className="text-sm font-bold text-white">Solana</span>
@@ -111,8 +114,8 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
               onClick={() => setSelectedToken(acc)}
               className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
             >
-              <div className="w-11 h-11 rounded-full bg-[#f7931a] flex items-center justify-center flex-shrink-0">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M14.4 7.7c.6-.4 1-.9 1.1-1.6.2-1.3-1-1.9-2.6-2l-1.5-.1-.4-1.6h-1.5l.4 1.5H8.7l-.4-1.5H6.8l.4 1.5H5v1.4h1.4c.5 0 .7.3.6.8l-1.5 5.8c-.1.2-.2.3-.4.3H4v1.4h1.7l-.4 1.6h1.5l.4-1.6h1.2l-.4 1.6h1.5l.4-1.6c2.1 0 3.7-.5 4-2.1.2-1-.3-1.6-1-1.9 1-.2 1.6-.8 1.5-1.9zm-4.7 4.5l1-.1c.8-.1 1.6 0 1.7.9.1.9-.6 1-1.4 1.1l-1 .1-.3-2zm.4-3.5l.9-.1c.7 0 1.4.1 1.5.8 0 .8-.6.9-1.3 1l-.9.1-.2-1.8z" /></svg>
+              <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src={btcLogo} alt="Bitcoin" className="w-full h-full" />
               </div>
               <div className="flex flex-col items-start flex-1 min-w-0">
                 <span className="text-sm font-bold text-white">Bitcoin</span>
@@ -133,7 +136,6 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
   const renderQRCode = (acc: ChainAccount) => {
     const chainName = acc.chain === 'EVM' ? 'Ethereum' : acc.chain === 'Solana' ? 'Solana' : 'Bitcoin';
     const symbol = acc.chain === 'EVM' ? 'ETH' : acc.chain === 'Solana' ? 'SOL' : 'BTC';
-    const color = acc.chain === 'EVM' ? '#627eea' : acc.chain === 'Solana' ? '#14F195' : '#f7931a';
 
     return (
       <div className="flex flex-col flex-1 animate-fade-in overflow-y-auto pb-24">
@@ -160,7 +162,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
               bgColor="#ffffff"
               fgColor="#000000"
               imageSettings={{
-                src: `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='${encodeURIComponent(color)}'/><text x='16' y='21' text-anchor='middle' font-size='14' font-weight='bold' fill='white' font-family='sans-serif'>${symbol.slice(0, 2)}</text></svg>`,
+                src: symbol === 'ETH' ? ethLogo : symbol === 'SOL' ? solLogo : btcLogo,
                 height: 28,
                 width: 28,
                 excavate: true,
@@ -170,8 +172,8 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
 
           {/* Chain Label */}
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: color }}>
-              <span className="text-white text-[8px] font-bold">{symbol.slice(0, 2)}</span>
+            <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+              <img src={symbol === 'ETH' ? ethLogo : symbol === 'SOL' ? solLogo : btcLogo} alt={symbol} className="w-full h-full" />
             </div>
             <span className="text-sm font-semibold text-zinc-400">Your {chainName} Address</span>
           </div>

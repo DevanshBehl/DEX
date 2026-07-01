@@ -207,3 +207,94 @@
 * {
   scrollbar-width: none;
 }
+
+/* ---- Premium Font Families ---- */
+.font-display {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+.font-inter {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* ---- Balance Hero Enhancements ---- */
+.balance-label {
+  font-family: 'Inter', sans-serif !important;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.balance-amount {
+  font-family: 'Space Grotesk', sans-serif !important;
+  letter-spacing: -0.03em;
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
+}
+
+.balance-dollar {
+  font-family: 'Space Grotesk', sans-serif !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.25) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.balance-cents {
+  font-family: 'Space Grotesk', sans-serif !important;
+  letter-spacing: -0.02em;
+}
+
+/* ---- Portfolio Chart ---- */
+.portfolio-chart-container {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.portfolio-chart-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,240,255,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.chart-time-pill {
+  font-family: 'Inter', sans-serif !important;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #71717a;
+  background: transparent;
+  border: none;
+  text-transform: uppercase;
+}
+.chart-time-pill:hover {
+  color: #a1a1aa;
+}
+.chart-time-pill.active {
+  color: #ffffff;
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 0 12px rgba(0,240,255,0.1);
+}
+
+.chart-tooltip-card {
+  background: rgba(10,10,10,0.95) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+  backdrop-filter: blur(12px);
+}
+
+@keyframes chart-glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.chart-glow {
+  animation: chart-glow-pulse 3s ease-in-out infinite;
+}

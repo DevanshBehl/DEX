@@ -2,13 +2,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
-import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices } from './utils/rpcUtils';
+import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices, fetchPortfolioHistory } from './utils/rpcUtils';
 import { TokenPage } from './components/TokenPage';
 import { ReceiveModal } from './components/ReceiveModal';
 import { SwapModal } from './components/SwapModal';
+import { ActivityTab } from './components/ActivityTab';
+import { NFTTab } from './components/NFTTab';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
-import { fetchAccountHistory } from './utils/historyUtils';
-import type { TransactionRecord } from './types';
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -131,8 +131,7 @@ export default function App() {
   const [allAccounts, setAllAccounts] = useState<{ name: string; chains: ChainAccount[] }[]>([]);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
-  const [activityHistory, setActivityHistory] = useState<TransactionRecord[]>([]);
-  const [isActivityLoading, setIsActivityLoading] = useState(false);
+  const [isNFTsOpen, setIsNFTsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -296,42 +295,31 @@ export default function App() {
   const [chartTimeRange, setChartTimeRange] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1W');
   const [isTestnet, setIsTestnet] = useState<boolean>(false);
 
-  // Generate portfolio chart data based on current value and time range
-  const portfolioChartData = React.useMemo(() => {
-    if (totalUsdValue <= 0) return [];
-    const pointCounts: Record<string, number> = { '1D': 24, '1W': 7, '1M': 30, '3M': 90, '1Y': 52, 'ALL': 104 };
-    const labels: Record<string, (i: number, total: number) => string> = {
-      '1D': (i) => `${i}:00`,
-      '1W': (i) => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i] || `D${i}`,
-      '1M': (i) => `${i + 1}`,
-      '3M': (i) => `D${i + 1}`,
-      '1Y': (i) => `W${i + 1}`,
-      'ALL': (i) => `W${i + 1}`,
+  // Fetch real portfolio history from CoinGecko
+  const [portfolioChartData, setPortfolioChartData] = useState<{ time: string; value: number }[]>([]);
+  const [isChartLoading, setIsChartLoading] = useState(false);
+
+  useEffect(() => {
+    if (balances.eth === '0.00' && balances.sol === '0.00' && balances.btc === '0.00') return;
+    const holdings = {
+      eth: parseFloat(balances.eth) || 0,
+      sol: parseFloat(balances.sol) || 0,
+      btc: parseFloat(balances.btc) || 0,
     };
-    const count = pointCounts[chartTimeRange] || 24;
-    const volatility: Record<string, number> = { '1D': 0.008, '1W': 0.02, '1M': 0.04, '3M': 0.08, '1Y': 0.15, 'ALL': 0.25 };
-    const vol = volatility[chartTimeRange] || 0.02;
-    const data: { time: string; value: number }[] = [];
-    // Work backwards from current value  
-    const changePercent = totalPercentChange / 100;
-    const startValue = totalUsdValue / (1 + changePercent * (chartTimeRange === '1D' ? 1 : chartTimeRange === '1W' ? 1.5 : 2));
-    
-    // Use a seed based on chartTimeRange so data doesn't jump around
-    let seed = chartTimeRange.charCodeAt(0) * 137 + chartTimeRange.length * 31;
-    const pseudoRandom = () => { seed = (seed * 16807 + 7) % 2147483647; return (seed % 1000) / 1000; };
-    
-    let val = startValue;
-    const trend = (totalUsdValue - startValue) / count;
-    for (let i = 0; i < count; i++) {
-      const noise = (pseudoRandom() - 0.48) * val * vol;
-      val = val + trend + noise;
-      if (val < startValue * 0.7) val = startValue * 0.75 + pseudoRandom() * startValue * 0.05;
-      data.push({ time: labels[chartTimeRange](i, count), value: Math.max(0, val) });
-    }
-    // Ensure last point matches actual current value
-    if (data.length > 0) data[data.length - 1].value = totalUsdValue;
-    return data;
-  }, [totalUsdValue, totalPercentChange, chartTimeRange]);
+    if (holdings.eth === 0 && holdings.sol === 0 && holdings.btc === 0) return;
+
+    let cancelled = false;
+    setIsChartLoading(true);
+    fetchPortfolioHistory(holdings, chartTimeRange).then(data => {
+      if (!cancelled) {
+        setPortfolioChartData(data);
+        setIsChartLoading(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setIsChartLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [balances.eth, balances.sol, balances.btc, chartTimeRange]);
   const isTestnetRef = useRef(isTestnet);
   useEffect(() => {
     isTestnetRef.current = isTestnet;
@@ -374,29 +362,6 @@ export default function App() {
     const totalGainPercent = prevTotalUsd > 0 ? (totalGain / prevTotalUsd) * 100 : 0;
     setTotalPercentChange(totalGainPercent);
   }, [accounts.length, ethAccount, solAccount, btcAccount, isTestnet]);
-
-  // ---- Fetch Activity History ----
-  useEffect(() => {
-    if (!isActivityOpen || allAccounts.length === 0) return;
-    const loadHistory = async () => {
-      setIsActivityLoading(true);
-      try {
-        const activeGroup = allAccounts[activeAccountIndex];
-        if (activeGroup) {
-          const allHistories = await Promise.all(
-            activeGroup.chains.map(chainAccount => fetchAccountHistory(chainAccount, isTestnet))
-          );
-          const combined = allHistories.flat().sort((a, b) => b.timestamp - a.timestamp);
-          setActivityHistory(combined);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsActivityLoading(false);
-      }
-    };
-    loadHistory();
-  }, [isActivityOpen, activeAccountIndex, allAccounts, isTestnet]);
 
   useEffect(() => {
     fetchBalances();
@@ -749,66 +714,75 @@ export default function App() {
       </div>
 
       {/* ---- Portfolio Chart ---- */}
-      {portfolioChartData.length > 0 && (
-        <div className="px-4 pb-2 z-10">
-          <div className="portfolio-chart-container">
-            <ResponsiveContainer width="100%" height={100}>
-              <AreaChart data={portfolioChartData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0.25} />
-                    <stop offset="50%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0.08} />
-                    <stop offset="100%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0.5} />
-                    <stop offset="50%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={1} />
-                    <stop offset="100%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={1} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="time" hide />
-                <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
-                <Tooltip
-                  contentStyle={{
-                    background: 'rgba(10,10,10,0.95)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                    padding: '8px 12px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-                  }}
-                  labelStyle={{ color: '#71717a', fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, marginBottom: '2px' }}
-                  itemStyle={{ color: '#ffffff', fontSize: '13px', fontFamily: 'Space Grotesk', fontWeight: 700 }}
-                  formatter={(value: unknown) => [`$${Number(value).toFixed(2)}`, '']}
-                  cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="url(#lineGradient)"
-                  strokeWidth={2}
-                  fill="url(#portfolioGradient)"
-                  animationDuration={800}
-                  animationEasing="ease-out"
-                  dot={false}
-                  activeDot={{ r: 4, fill: totalUsdChange >= 0 ? '#00ff66' : '#ff0055', stroke: '#000', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-            {/* Time Range Selector */}
-            <div className="flex items-center justify-center gap-1 mt-1 pb-1">
-              {(['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setChartTimeRange(range)}
-                  className={`chart-time-pill ${chartTimeRange === range ? 'active' : ''}`}
-                >
-                  {range}
-                </button>
-              ))}
+      <div className="px-4 pb-2 z-10">
+        <div className="portfolio-chart-container">
+          {isChartLoading && portfolioChartData.length === 0 ? (
+            <div className="flex items-center justify-center" style={{ height: 100 }}>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-zinc-700 animate-pulse" />
+                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-inter">Loading chart...</span>
+              </div>
             </div>
+          ) : portfolioChartData.length > 0 ? (
+            <div style={{ opacity: isChartLoading ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
+              <ResponsiveContainer width="100%" height={100}>
+                <AreaChart data={portfolioChartData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0.25} />
+                      <stop offset="50%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0.08} />
+                      <stop offset="100%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={0.5} />
+                      <stop offset="50%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={1} />
+                      <stop offset="100%" stopColor={totalUsdChange >= 0 ? '#00ff66' : '#ff0055'} stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="time" hide />
+                  <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(10,10,10,0.95)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '12px',
+                      padding: '8px 12px',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                    }}
+                    labelStyle={{ color: '#71717a', fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, marginBottom: '2px' }}
+                    itemStyle={{ color: '#ffffff', fontSize: '13px', fontFamily: 'Space Grotesk', fontWeight: 700 }}
+                    formatter={(value: unknown) => [`$${Number(value).toFixed(2)}`, '']}
+                    cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="url(#lineGradient)"
+                    strokeWidth={2}
+                    fill="url(#portfolioGradient)"
+                    animationDuration={800}
+                    animationEasing="ease-out"
+                    dot={false}
+                    activeDot={{ r: 4, fill: totalUsdChange >= 0 ? '#00ff66' : '#ff0055', stroke: '#000', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : null}
+          {/* Time Range Selector */}
+          <div className="flex items-center justify-center gap-1 mt-1 pb-1">
+            {(['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const).map((range) => (
+              <button
+                key={range}
+                onClick={() => setChartTimeRange(range)}
+                className={`chart-time-pill ${chartTimeRange === range ? 'active' : ''}`}
+              >
+                {range}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </div>
 
       {/* ---- Action Island ---- */}
       <div className="px-6 mb-4 z-10">
@@ -837,7 +811,7 @@ export default function App() {
         <div className="flex items-center justify-between px-2 mb-4">
           <div className="flex gap-4">
             <span className="text-sm font-bold text-white border-b-2 border-[#00f0ff] pb-1">Tokens</span>
-            <span className="text-sm font-bold text-zinc-600 pb-1 hover:text-zinc-400 cursor-pointer transition-colors">NFTs</span>
+            <span className="text-sm font-bold text-zinc-600 pb-1 hover:text-zinc-400 cursor-pointer transition-colors" onClick={() => setIsNFTsOpen(true)}>NFTs</span>
           </div>
           <span className="text-xs font-bold text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded-md">{MOCK_TOKENS.length}</span>
         </div>
@@ -933,55 +907,20 @@ export default function App() {
       )}
 
       {/* ---- Activity Sliding Panel ---- */}
-      <div 
-        className="absolute inset-0 z-[100] flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] bg-black/20 backdrop-blur-[40px]"
-        style={{ transform: isActivityOpen ? 'translateY(0)' : 'translateY(-100%)' }}
-      >
-        <div className="flex-1 overflow-y-auto scrollbar-hide px-6 pt-6 pb-24">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-black text-white">Activity</h2>
-            <button onClick={() => setIsActivityOpen(false)} className="haptic-btn w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </button>
-          </div>
+      <ActivityTab 
+        isOpen={isActivityOpen} 
+        onClose={() => setIsActivityOpen(false)} 
+        activeAccountGroup={allAccounts[activeAccountIndex]} 
+        isTestnet={isTestnet} 
+      />
 
-          <div className="flex flex-col gap-3">
-            {isActivityLoading ? (
-              <div className="text-zinc-500 text-center py-10 text-sm animate-pulse font-medium">Loading history...</div>
-            ) : activityHistory.length === 0 ? (
-              <div className="text-zinc-500 text-center py-10 text-sm font-medium">No activity found</div>
-            ) : (
-              activityHistory.map((tx) => (
-                <a 
-                  key={tx.id}
-                  href={tx.explorerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:bg-white/[0.04] transition-colors active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'Send' ? 'bg-white/10 text-white' : tx.type === 'Receive' ? 'bg-[#00ff66]/10 text-[#00ff66]' : 'bg-blue-500/10 text-blue-500'}`}>
-                      {tx.type === 'Send' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></svg>}
-                      {tx.type === 'Receive' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="17" y1="7" x2="7" y2="17" /><polyline points="17 17 7 17 7 7" /></svg>}
-                      {tx.type === 'Transaction' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-white mb-0.5">{tx.type} {tx.ticker}</div>
-                      <div className="text-[11px] font-medium text-zinc-500">
-                        {new Date(tx.timestamp * 1000).toLocaleDateString()} • {tx.status}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-white">{tx.amount !== 'N/A' ? `${tx.amount} ${tx.ticker}` : 'N/A'}</div>
-                    <div className="text-[10px] font-medium text-zinc-500 mt-0.5">{tx.chain}</div>
-                  </div>
-                </a>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      {/* ---- NFTs Sliding Panel ---- */}
+      <NFTTab 
+        isOpen={isNFTsOpen} 
+        onClose={() => setIsNFTsOpen(false)} 
+        activeAccountGroup={allAccounts[activeAccountIndex]} 
+        isTestnet={isTestnet} 
+      />
 
       {/* ---- Accounts Sliding Panel ---- */}
       <div 

@@ -24,17 +24,14 @@ export async function fetchAccountHistory(account: ChainAccount, isTestnet: bool
 }
 
 async function fetchEVMHistory(address: string, isTestnet: boolean): Promise<TransactionRecord[]> {
-  const subdomain = isTestnet ? 'api-sepolia' : 'api';
-  const url = `https://${subdomain}.etherscan.io/api?module=account&action=txlist&address=${address}&sort=desc&apikey=${CONFIG.ETHERSCAN_API_KEY}`;
+  const subdomain = isTestnet ? 'eth-sepolia' : 'eth';
+  const url = `https://${subdomain}.blockscout.com/api?module=account&action=txlist&address=${address}&sort=desc`;
   
   const res = await fetch(url);
-  if (!res.ok) throw new Error("Etherscan API error");
+  if (!res.ok) throw new Error("Blockscout API error");
   const data = await res.json();
-  if (data.status !== "1" && data.message !== "No transactions found") {
-    // sometimes Etherscan returns 0 status if no txs, gracefully return empty
-    if (data.result && typeof data.result === 'string') {
-      return [];
-    }
+  if (data.message === "No transactions found") {
+    return [];
   }
 
   const txs: any[] = Array.isArray(data.result) ? data.result : [];
@@ -114,6 +111,7 @@ async function fetchBitcoinHistory(address: string, isTestnet: boolean): Promise
     const netAmount = userOutputs - userInputs;
     const isSend = netAmount < 0;
     const amountBtc = Math.abs(netAmount) / 100000000;
+    const amountStr = amountBtc > 0 ? amountBtc.toFixed(8).replace(/\.?0+$/, '') : '0';
     
     const explorerUrl = isTestnet 
       ? `https://mempool.space/testnet/tx/${tx.txid}` 
@@ -123,7 +121,7 @@ async function fetchBitcoinHistory(address: string, isTestnet: boolean): Promise
       id: tx.txid,
       chain: 'Bitcoin',
       type: isSend ? 'Send' : 'Receive',
-      amount: amountBtc.toFixed(8).replace(/\.?0+$/, ''),
+      amount: amountStr,
       ticker: 'BTC',
       timestamp: tx.status.block_time || Math.floor(Date.now() / 1000),
       status: tx.status.confirmed ? 'Success' : 'Pending',

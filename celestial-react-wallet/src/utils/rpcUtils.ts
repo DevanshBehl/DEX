@@ -117,3 +117,99 @@ export async function fetchChartData(coinId: string, days: string): Promise<{ ti
     return [];
   }
 }
+
+// ---- Portfolio History (combined multi-coin chart) ----
+
+const portfolioCache: Record<string, { data: { time: string; value: number }[]; ts: number }> = {};
+
+export async function fetchPortfolioHistory(
+  holdings: { eth: number; sol: number; btc: number },
+  timeRange: string
+): Promise<{ time: string; value: number }[]> {
+  const daysMap: Record<string, string> = {
+    '1D': '1', '1W': '7', '1M': '30', '3M': '90', '1Y': '365', 'ALL': 'max',
+  };
+  const days = daysMap[timeRange] || '7';
+  
+  // Cache key based on range (holdings change infrequently)
+  const cacheKey = `${timeRange}_${holdings.eth.toFixed(4)}_${holdings.sol.toFixed(4)}_${holdings.btc.toFixed(4)}`;
+  const cached = portfolioCache[cacheKey];
+  if (cached && Date.now() - cached.ts < 120000) { // 2 min cache
+    return cached.data;
+  }
+
+  try {
+    const [ethHistory, solHistory, btcHistory] = await Promise.all([
+      holdings.eth > 0 ? fetchChartData('ethereum', days) : Promise.resolve([]),
+      holdings.sol > 0 ? fetchChartData('solana', days) : Promise.resolve([]),
+      holdings.btc > 0 ? fetchChartData('bitcoin', days) : Promise.resolve([]),
+    ]);
+
+    // Find the dataset with the most points to use as the time base
+    const baseHistory = [ethHistory, solHistory, btcHistory].reduce(
+      (longest, arr) => arr.length > longest.length ? arr : longest, []
+    );
+
+    if (baseHistory.length === 0) return [];
+
+    // Helper to find the closest price in a dataset for a given timestamp
+    const findPrice = (history: { time: number; value: number }[], targetTime: number): number => {
+      if (history.length === 0) return 0;
+      let lo = 0, hi = history.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (history[mid].time < targetTime) lo = mid + 1;
+        else hi = mid;
+      }
+      // Check neighbors for closest match
+      if (lo > 0 && Math.abs(history[lo - 1].time - targetTime) < Math.abs(history[lo].time - targetTime)) {
+        return history[lo - 1].value;
+      }
+      return history[lo].value;
+    };
+
+    // Format time labels based on range
+    const formatTime = (ts: number): string => {
+      const d = new Date(ts);
+      if (timeRange === '1D') return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      if (timeRange === '1W') return d.toLocaleDateString('en-US', { weekday: 'short' });
+      if (timeRange === '1M') return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (timeRange === '3M') return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (timeRange === '1Y') return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    };
+
+    // Downsample to max ~60 points for performance
+    const maxPoints = 60;
+    const step = Math.max(1, Math.floor(baseHistory.length / maxPoints));
+
+    const result: { time: string; value: number }[] = [];
+    for (let i = 0; i < baseHistory.length; i += step) {
+      const ts = baseHistory[i].time;
+      const ethPrice = findPrice(ethHistory, ts);
+      const solPrice = findPrice(solHistory, ts);
+      const btcPrice = findPrice(btcHistory, ts);
+      const portfolioValue = holdings.eth * ethPrice + holdings.sol * solPrice + holdings.btc * btcPrice;
+      result.push({ time: formatTime(ts), value: portfolioValue });
+    }
+
+    // Always include the last data point
+    const lastTs = baseHistory[baseHistory.length - 1].time;
+    const lastLabel = formatTime(lastTs);
+    if (result.length === 0 || result[result.length - 1].time !== lastLabel) {
+      const ethPrice = findPrice(ethHistory, lastTs);
+      const solPrice = findPrice(solHistory, lastTs);
+      const btcPrice = findPrice(btcHistory, lastTs);
+      result.push({
+        time: lastLabel,
+        value: holdings.eth * ethPrice + holdings.sol * solPrice + holdings.btc * btcPrice,
+      });
+    }
+
+    portfolioCache[cacheKey] = { data: result, ts: Date.now() };
+    return result;
+  } catch (error) {
+    console.error("Error fetching portfolio history:", error);
+    return [];
+  }
+}

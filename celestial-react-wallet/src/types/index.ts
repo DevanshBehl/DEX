@@ -8,3 +8,11 @@ export interface TransactionRecord {
   status: 'Success' | 'Failed' | 'Pending';
   explorerUrl: string; // Direct link to view the tx on-chain
 }
+
+export interface NFTRecord {
+  id: string; // Contract Address + Token ID
+  chain: 'Ethereum' | 'Solana';
+  name: string; // e.g., "Bored Ape #1234"
+  collectionName: string; // e.g., "Bored Ape Yacht Club"
+  imageUrl: string; // The parsed image URL (must handle ipfs:// conversion if necessary)
+}

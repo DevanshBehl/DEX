@@ -3,7 +3,7 @@
   "name": "Celestial Wallet",
   "version": "1.0.0",
   "description": "A non-custodial HD wallet — your keys, your crypto, your future.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab", "scripting"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },

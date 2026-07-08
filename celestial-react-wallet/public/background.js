@@ -170,7 +170,155 @@ async function handleMessage(message) {
       return { success: false, error: 'Active vault not found' };
     }
 
+    // ---- EIP-1193 Web3 Requests (from content script) -----------------------
+
+    case 'WEB3_REQUEST': {
+      const { method, params, origin } = payload || {};
+      return handleWeb3Request(method, params, origin);
+    }
+
+    // ---- Solana Requests (from content script) ------------------------------
+    
+    case 'SOLANA_REQUEST': {
+      const { method, origin } = payload || {};
+      if (method === 'connect') {
+        if (!isUnlocked) {
+          return { error: 'Wallet is locked. Please unlock Celestial Wallet first.' };
+        }
+        if (connectedAccounts.length === 0) {
+          return { error: 'No accounts available. Please open the wallet.' };
+        }
+        return new Promise((resolve, reject) => {
+          const requestId = Date.now().toString();
+          pendingConnectionRequests.set(requestId, { resolve, reject, origin, type: 'sol' });
+          chrome.windows.create({
+            url: chrome.runtime.getURL(`index.html?request=connect&origin=${encodeURIComponent(origin || 'Unknown')}&id=${requestId}`),
+            type: 'popup',
+            width: 380,
+            height: 600,
+            focused: true
+          });
+        });
+      }
+      return { success: false, error: 'Unknown method' };
+    }
+
+    // ---- Account addresses pushed from popup after unlock -------------------
+
+    case 'ACCOUNTS_UPDATE': {
+      if (!isUnlocked) return { success: false, error: 'Vault locked' };
+      connectedAccounts = payload?.accounts || [];
+      return { success: true };
+    }
+
+    // ---- Connection Approvals (from React Popup) ----------------------------
+
+    case 'CONNECTION_RESPOND': {
+      const { id, success } = payload;
+      const req = pendingConnectionRequests.get(id.toString());
+      if (req) {
+        if (success) {
+          if (req.type === 'eth') {
+            const evm = connectedAccounts.map(a => a.chains.find(c => c.chain === 'EVM')?.address).filter(Boolean);
+            req.resolve({ result: evm });
+          } else if (req.type === 'sol') {
+            const sol = connectedAccounts[0]?.chains.find(c => c.chain === 'Solana')?.address;
+            req.resolve({ result: { publicKey: sol } });
+          }
+        } else {
+          req.resolve({ error: { code: 4001, message: 'User rejected the request.' } });
+        }
+        pendingConnectionRequests.delete(id.toString());
+      }
+      return { success: true };
+    }
+
     default:
       return { success: false, error: `Unknown message type: ${type}` };
+  }
+}
+
+// ---- EIP-1193 Web3 Request Handler ------------------------------------------
+
+// Mock address for Phase 1 testing — will be replaced with real derivation
+const MOCK_ETH_ADDRESS = '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18';
+
+// In-memory connected accounts (set by popup via ACCOUNTS_UPDATE, or mock)
+let connectedAccounts = [];
+
+// Pending connection requests waiting for user approval
+const pendingConnectionRequests = new Map();
+let nextReqId = 1;
+
+async function handleWeb3Request(method, params, origin) {
+  switch (method) {
+    case 'eth_requestAccounts': {
+      // Phase 2: Open popup for user approval
+      if (!isUnlocked) {
+        return {
+          error: {
+            code: 4100,
+            message: 'Wallet is locked. Please unlock Celestial Wallet first.',
+          },
+        };
+      }
+
+      // If no accounts are derived yet (shouldn't happen if unlocked)
+      if (connectedAccounts.length === 0) {
+        return {
+          error: {
+            code: 4100,
+            message: 'No accounts available. Please open the wallet.',
+          },
+        };
+      }
+
+      return new Promise((resolve) => {
+        const reqId = nextReqId++;
+        pendingConnectionRequests.set(reqId.toString(), {
+          resolve,
+          origin,
+          type: 'eth'
+        });
+
+        chrome.windows.create({
+          url: `index.html?request=connect&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
+          type: 'popup',
+          width: 360,
+          height: 600,
+          focused: true
+        });
+      });
+    }
+
+    case 'eth_accounts': {
+      // Return connected accounts without prompting
+      if (!isUnlocked) {
+        return { result: [] };
+      }
+
+      const accounts = connectedAccounts.length > 0
+        ? connectedAccounts
+        : [MOCK_ETH_ADDRESS];
+
+      return { result: accounts };
+    }
+
+    case 'eth_chainId': {
+      return { result: '0x1' }; // Ethereum Mainnet
+    }
+
+    case 'net_version': {
+      return { result: '1' }; // Ethereum Mainnet
+    }
+
+    default: {
+      return {
+        error: {
+          code: 4200,
+          message: `Celestial does not yet support the method: ${method}`,
+        },
+      };
+    }
   }
 }

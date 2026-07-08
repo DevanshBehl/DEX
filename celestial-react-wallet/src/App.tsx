@@ -9,6 +9,7 @@ import { SwapModal } from './components/SwapModal';
 import { ActivityTab } from './components/ActivityTab';
 import { NFTTab } from './components/NFTTab';
 import { BuyModal } from './components/BuyModal';
+import { ConnectionModal } from './components/ConnectionModal';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -136,6 +137,35 @@ export default function App() {
   const [isBuyOpen, setIsBuyOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
+
+  // ---- EIP-1193 Connection Requests ----
+  const [connectionRequest, setConnectionRequest] = useState<{ id: string, origin: string } | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reqType = params.get('request');
+    const reqId = params.get('id');
+    const origin = params.get('origin');
+    
+    if (reqType === 'connect' && reqId) {
+      setConnectionRequest({ id: reqId, origin: origin || 'Unknown App' });
+    }
+  }, []);
+
+  const handleConnectionRespond = (success: boolean) => {
+    if (!connectionRequest) return;
+    
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({
+        type: 'CONNECTION_RESPOND',
+        payload: { id: connectionRequest.id, success }
+      }, () => {
+        window.close(); // Close the popup window
+      });
+    } else {
+      setConnectionRequest(null);
+    }
+  };
 
   const resetSend = () => {
     setSendScreen('pick');
@@ -282,6 +312,19 @@ export default function App() {
     }
     setAllAccounts(derived);
   }, [rawSeedPhrase, accountCount]);
+
+  // ---- Sync Accounts to Background ------------------------------------------
+
+  useEffect(() => {
+    if (allAccounts.length === 0) return;
+    
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({
+        type: 'ACCOUNTS_UPDATE',
+        payload: { accounts: allAccounts }
+      });
+    }
+  }, [allAccounts]);
 
   const accounts = allAccounts[activeAccountIndex]?.chains || [];
   const ethAccount = accounts.find(c => c.chain === 'EVM')?.address;
@@ -596,6 +639,15 @@ export default function App() {
   return (
     <div className="flex flex-col h-[600px] bg-[#000000] relative overflow-hidden text-white font-sans animate-fade-in">
       
+      {/* Overlay for EIP-1193 Connection Requests */}
+      {connectionRequest && (
+        <ConnectionModal
+          origin={connectionRequest.origin}
+          onApprove={() => handleConnectionRespond(true)}
+          onReject={() => handleConnectionRespond(false)}
+        />
+      )}
+
       {isTestnet && (
         <div className="w-full bg-[#ffaa00] text-black text-[10px] font-black uppercase tracking-[0.2em] py-1.5 text-center flex-shrink-0 z-[200]">
           You are currently on Testnet

@@ -8,6 +8,7 @@ import { ReceiveModal } from './components/ReceiveModal';
 import { SwapModal } from './components/SwapModal';
 import { ActivityTab } from './components/ActivityTab';
 import { NFTTab } from './components/NFTTab';
+import { BuyModal } from './components/BuyModal';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -132,6 +133,7 @@ export default function App() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [isNFTsOpen, setIsNFTsOpen] = useState(false);
+  const [isBuyOpen, setIsBuyOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -791,7 +793,7 @@ export default function App() {
             { label: 'Send', onClick: () => { setIsSendOpen(true); setIsSwapOpen(false); setIsSettingsOpen(false); setIsAccountsOpen(false); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> },
             { label: 'Receive', onClick: () => { setIsReceiveOpen(true); setReceiveInitialAccount(null); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="7 13 12 18 17 13" /><line x1="12" y1="18" x2="12" y2="6" /><path d="M20 21H4" /></svg> },
             { label: 'Swap', onClick: () => { setIsSwapOpen(true); setIsSendOpen(false); setIsSettingsOpen(false); setIsAccountsOpen(false); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg> },
-            { label: 'Buy', onClick: () => {}, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
+            { label: 'Buy', onClick: () => { setIsBuyOpen(true); setIsSendOpen(false); setIsSwapOpen(false); setIsSettingsOpen(false); setIsAccountsOpen(false); }, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
           ].map((action) => (
             <button key={action.label} onClick={action.onClick} className="haptic-btn flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-[#18181b] group">
               <div className="text-zinc-300 group-hover:text-white transition-colors">
@@ -1713,6 +1715,13 @@ export default function App() {
         onClose={() => setIsSwapOpen(false)}
         evmAccount={accounts.find(a => a.chain === 'EVM') || null}
         ethBalance={balances.eth}
+      />
+
+      {/* ---- Buy Modal ---- */}
+      <BuyModal
+        isOpen={isBuyOpen}
+        onClose={() => setIsBuyOpen(false)}
+        accounts={accounts}
       />
       </div>
     </div>

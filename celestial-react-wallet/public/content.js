@@ -16,6 +16,21 @@ script.src = chrome.runtime.getURL('inpage.js');
 script.onload = () => script.remove();
 (document.head || document.documentElement).appendChild(script);
 
+// ---- Message relay (background ↔ webpage) -----------------------------------
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'CELESTIAL_NETWORK_CHANGED') {
+    window.postMessage(
+      {
+        target: 'celestial-inpage',
+        type: 'CELESTIAL_NETWORK_CHANGED',
+        chainId: message.chainId,
+      },
+      '*',
+    );
+  }
+});
+
 // ---- Message relay (webpage ↔ background) -----------------------------------
 
 window.addEventListener('message', (event) => {

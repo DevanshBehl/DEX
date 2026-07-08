@@ -233,6 +233,43 @@ async function handleMessage(message) {
       return { success: true };
     }
 
+    case 'TX_RESOLVED': {
+      const { id, result } = payload;
+      const req = pendingTxRequests.get(id.toString());
+      if (req) {
+        req.resolve({ result });
+        pendingTxRequests.delete(id.toString());
+        chrome.storage.local.remove(`tx_${id}`);
+      }
+      return { success: true };
+    }
+
+    case 'TX_REJECTED': {
+      const { id } = payload;
+      const req = pendingTxRequests.get(id.toString());
+      if (req) {
+        req.resolve({ error: { code: 4001, message: 'User rejected the transaction.' } });
+        pendingTxRequests.delete(id.toString());
+        chrome.storage.local.remove(`tx_${id}`);
+      }
+      return { success: true };
+    }
+
+    case 'NETWORK_CHANGE': {
+      const { isTestnet, rpcUrl } = payload;
+      chrome.storage.local.set({ isTestnet, rpcUrl }, () => {
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'CELESTIAL_NETWORK_CHANGED',
+              chainId: isTestnet ? '0xaa36a7' : '0x1'
+            }).catch(() => {});
+          });
+        });
+      });
+      return { success: true };
+    }
+
     default:
       return { success: false, error: `Unknown message type: ${type}` };
   }
@@ -248,23 +285,14 @@ let connectedAccounts = [];
 
 // Pending connection requests waiting for user approval
 const pendingConnectionRequests = new Map();
+const pendingTxRequests = new Map();
 let nextReqId = 1;
 
 async function handleWeb3Request(method, params, origin) {
   switch (method) {
     case 'eth_requestAccounts': {
-      // Phase 2: Open popup for user approval
-      if (!isUnlocked) {
-        return {
-          error: {
-            code: 4100,
-            message: 'Wallet is locked. Please unlock Celestial Wallet first.',
-          },
-        };
-      }
-
       // If no accounts are derived yet (shouldn't happen if unlocked)
-      if (connectedAccounts.length === 0) {
+      if (connectedAccounts.length === 0 && isUnlocked) {
         return {
           error: {
             code: 4100,
@@ -281,12 +309,16 @@ async function handleWeb3Request(method, params, origin) {
           type: 'eth'
         });
 
-        chrome.windows.create({
-          url: `index.html?request=connect&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
-          type: 'popup',
-          width: 360,
-          height: 600,
-          focused: true
+        chrome.runtime.sendMessage({ type: 'INCOMING_CONNECT', id: reqId, origin }, (response) => {
+          if (chrome.runtime.lastError || !response || !response.received) {
+            chrome.windows.create({
+              url: `index.html?request=connect&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
+              type: 'popup',
+              width: 360,
+              height: 600,
+              focused: true
+            });
+          }
         });
       });
     }
@@ -305,20 +337,80 @@ async function handleWeb3Request(method, params, origin) {
     }
 
     case 'eth_chainId': {
-      return { result: '0x1' }; // Ethereum Mainnet
+      const result = await chrome.storage.local.get('isTestnet');
+      return { result: result.isTestnet ? '0xaa36a7' : '0x1' };
+    }
+
+    case 'eth_sendTransaction': {
+      return new Promise((resolve) => {
+        const reqId = nextReqId++;
+        pendingTxRequests.set(reqId.toString(), {
+          resolve,
+          origin
+        });
+
+        const txPayload = params[0];
+        
+        // Store payload for the popup to read
+        chrome.storage.local.set({ [`tx_${reqId}`]: txPayload }, () => {
+          chrome.runtime.sendMessage({ type: 'INCOMING_SIGN_TX', id: reqId, origin }, (response) => {
+            if (chrome.runtime.lastError || !response || !response.received) {
+              chrome.windows.create({
+                url: `index.html?request=sign-tx&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
+                type: 'popup',
+                width: 360,
+                height: 600,
+                focused: true
+              });
+            }
+          });
+        });
+      });
     }
 
     case 'net_version': {
-      return { result: '1' }; // Ethereum Mainnet
+      const result = await chrome.storage.local.get('isTestnet');
+      return { result: result.isTestnet ? '11155111' : '1' };
+    }
+
+    case 'wallet_switchEthereumChain':
+    case 'wallet_addEthereumChain': {
+      // Return null on success per EIP-3326. We handle switching internally.
+      return { result: null };
     }
 
     default: {
-      return {
-        error: {
-          code: 4200,
-          message: `Celestial does not yet support the method: ${method}`,
-        },
-      };
+      return new Promise(async (resolve) => {
+        try {
+          const storage = await chrome.storage.local.get('rpcUrl');
+          const rpcUrl = storage.rpcUrl || 'https://eth-mainnet.g.alchemy.com/v2/demo';
+          
+          const res = await fetch(rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method,
+              params
+            })
+          });
+          
+          const data = await res.json();
+          if (data.error) {
+            resolve({ error: data.error });
+          } else {
+            resolve({ result: data.result });
+          }
+        } catch (err) {
+          resolve({
+            error: {
+              code: 4200,
+              message: `Celestial fallback RPC failed for method ${method}: ${err.message}`
+            }
+          });
+        }
+      });
     }
   }
 }

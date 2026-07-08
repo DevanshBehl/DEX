@@ -10,6 +10,7 @@ import { ActivityTab } from './components/ActivityTab';
 import { NFTTab } from './components/NFTTab';
 import { BuyModal } from './components/BuyModal';
 import { ConnectionModal } from './components/ConnectionModal';
+import { SignTransactionView } from './components/SignTransactionView';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -140,6 +141,7 @@ export default function App() {
 
   // ---- EIP-1193 Connection Requests ----
   const [connectionRequest, setConnectionRequest] = useState<{ id: string, origin: string } | null>(null);
+  const [signTxRequest, setSignTxRequest] = useState<{ id: string, origin: string } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -149,6 +151,22 @@ export default function App() {
     
     if (reqType === 'connect' && reqId) {
       setConnectionRequest({ id: reqId, origin: origin || 'Unknown App' });
+    } else if (reqType === 'sign-tx' && reqId) {
+      setSignTxRequest({ id: reqId, origin: origin || 'Unknown App' });
+    }
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+      const listener = (message: any, _sender: any, sendResponse: any) => {
+        if (message.type === 'INCOMING_CONNECT') {
+          setConnectionRequest({ id: message.id, origin: message.origin || 'Unknown App' });
+          sendResponse({ received: true });
+        } else if (message.type === 'INCOMING_SIGN_TX') {
+          setSignTxRequest({ id: message.id, origin: message.origin || 'Unknown App' });
+          sendResponse({ received: true });
+        }
+      };
+      chrome.runtime.onMessage.addListener(listener);
+      return () => chrome.runtime.onMessage.removeListener(listener);
     }
   }, []);
 
@@ -338,20 +356,42 @@ export default function App() {
   const [totalUsdChange, setTotalUsdChange] = useState(0.00);
   const [totalPercentChange, setTotalPercentChange] = useState(0.00);
   const [chartTimeRange, setChartTimeRange] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1W');
-  const [isTestnet, setIsTestnet] = useState<boolean>(false);
+  const [isTestnet, setIsTestnet] = useState<boolean>(() => {
+    const saved = localStorage.getItem('celestial_is_testnet');
+    return saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('celestial_is_testnet', isTestnet.toString());
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage({ 
+        type: 'NETWORK_CHANGE', 
+        payload: { 
+          isTestnet,
+          rpcUrl: isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL
+        } 
+      }).catch(() => {});
+    }
+  }, [isTestnet]);
 
   // Fetch real portfolio history from CoinGecko
   const [portfolioChartData, setPortfolioChartData] = useState<{ time: string; value: number }[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(false);
 
   useEffect(() => {
-    if (balances.eth === '0.00' && balances.sol === '0.00' && balances.btc === '0.00') return;
+    if (balances.eth === '0.00' && balances.sol === '0.00' && balances.btc === '0.00') {
+      setPortfolioChartData([]);
+      return;
+    }
     const holdings = {
       eth: parseFloat(balances.eth) || 0,
       sol: parseFloat(balances.sol) || 0,
       btc: parseFloat(balances.btc) || 0,
     };
-    if (holdings.eth === 0 && holdings.sol === 0 && holdings.btc === 0) return;
+    if (holdings.eth === 0 && holdings.sol === 0 && holdings.btc === 0) {
+      setPortfolioChartData([]);
+      return;
+    }
 
     let cancelled = false;
     setIsChartLoading(true);
@@ -374,7 +414,25 @@ export default function App() {
     if (accounts.length === 0) return;
     
     const networkAtFetch = isTestnet;
+    const cacheKey = isTestnet ? 'celestial_balances_testnet' : 'celestial_balances_mainnet';
 
+    // 1. Immediately apply cached data for instant UI
+    try {
+      const cachedStr = localStorage.getItem(cacheKey);
+      if (cachedStr) {
+        const cached = JSON.parse(cachedStr);
+        if (cached.balances) setBalances(cached.balances);
+        if (cached.prices) setPrices(cached.prices);
+        if (cached.changes) setChanges(cached.changes);
+        if (cached.totalUsd !== undefined) setTotalUsdValue(cached.totalUsd);
+        if (cached.totalUsdChange !== undefined) setTotalUsdChange(cached.totalUsdChange);
+        if (cached.totalPercentChange !== undefined) setTotalPercentChange(cached.totalPercentChange);
+      }
+    } catch (e) {
+      console.error("Error reading cache", e);
+    }
+
+    // 2. Fetch fresh data
     const [liveData, eth, sol, btc] = await Promise.all([
       fetchLivePrices(),
       ethAccount ? fetchETHBalance(ethAccount, isTestnet) : Promise.resolve("0.00"),
@@ -406,6 +464,16 @@ export default function App() {
     const prevTotalUsd = totalUsd - totalGain;
     const totalGainPercent = prevTotalUsd > 0 ? (totalGain / prevTotalUsd) * 100 : 0;
     setTotalPercentChange(totalGainPercent);
+
+    // 3. Update the cache with fresh data
+    localStorage.setItem(cacheKey, JSON.stringify({
+      balances: { eth, sol, btc },
+      prices: liveData.prices,
+      changes: liveData.changes,
+      totalUsd,
+      totalUsdChange: totalGain,
+      totalPercentChange: totalGainPercent
+    }));
   }, [accounts.length, ethAccount, solAccount, btcAccount, isTestnet]);
 
   useEffect(() => {
@@ -648,6 +716,17 @@ export default function App() {
         />
       )}
 
+      {/* Overlay for Transaction Signing Requests */}
+      {signTxRequest && accounts.find(c => c.chain === 'EVM') && (
+        <SignTransactionView
+          id={signTxRequest.id}
+          origin={signTxRequest.origin}
+          privateKey={accounts.find(c => c.chain === 'EVM')!.privateKey}
+          providerUrl={isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL}
+          networkName={isTestnet ? 'Ethereum Sepolia' : 'Ethereum Mainnet'}
+        />
+      )}
+
       {isTestnet && (
         <div className="w-full bg-[#ffaa00] text-black text-[10px] font-black uppercase tracking-[0.2em] py-1.5 text-center flex-shrink-0 z-[200]">
           You are currently on Testnet
@@ -723,11 +802,6 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Network Pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#111111] border border-white/5">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#00ff66] shadow-[0_0_8px_rgba(0,255,102,0.5)]" />
-            <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">ETH</span>
-          </div>
           <button onClick={handleLock} className="haptic-btn text-zinc-400 hover:text-white" title="Lock">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
           </button>

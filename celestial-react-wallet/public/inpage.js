@@ -103,10 +103,8 @@
       // Handle locally-resolvable methods first (no round-trip needed)
       switch (method) {
         case 'eth_chainId':
-          return this._chainId;
-
         case 'net_version':
-          return this._networkVersion;
+          return this._sendToBackground(method, params);
 
         case 'eth_accounts':
           return [...this._accounts];
@@ -301,17 +299,24 @@
   // Listen for responses from the content script
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
-    if (event.data?.target !== 'celestial-inpage') return;
 
-    if (event.data.type === 'CELESTIAL_PROVIDER_RESPONSE') {
-      provider._handleResponse(
-        event.data.id,
-        event.data.error,
-        event.data.result,
-      );
+    if (event.data?.target === 'celestial-inpage' && event.data?.type === 'CELESTIAL_PROVIDER_RESPONSE') {
+      const { id, error, result } = event.data;
+      if (window.ethereum && window.ethereum._handleResponse) {
+        window.ethereum._handleResponse(id, error, result);
+      }
     }
-    
-    if (event.data.type === 'CELESTIAL_SOLANA_RESPONSE') {
+
+    if (event.data?.target === 'celestial-inpage' && event.data?.type === 'CELESTIAL_NETWORK_CHANGED') {
+      const { chainId } = event.data;
+      if (window.ethereum) {
+        window.ethereum._chainId = chainId;
+        window.ethereum._networkVersion = chainId === '0x1' ? '1' : '11155111';
+        window.ethereum.emit('chainChanged', chainId);
+      }
+    }
+
+    if (event.data?.target === 'celestial-inpage' && event.data?.type === 'CELESTIAL_SOLANA_RESPONSE') {
       const pending = _pendingRequests.get(event.data.id);
       if (!pending) return;
       _pendingRequests.delete(event.data.id);

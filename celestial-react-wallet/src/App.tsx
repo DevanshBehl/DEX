@@ -15,6 +15,12 @@ import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } fro
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { LandingPage } from './components/InstaPay/LandingPage';
+import { BottomNav, type TabId } from './components/InstaPay/BottomNav';
+import { HomeView } from './components/InstaPay/HomeView';
+import { StatisticView } from './components/InstaPay/StatisticView';
+import { SendMoneyView } from './components/InstaPay/SendMoneyView';
+
 const AnimatedOdometer = ({ value, className = '' }: { value: string, className?: string }) => {
   const [target, setTarget] = useState(value.replace(/[0-9]/g, '0'));
 
@@ -90,6 +96,7 @@ const MOCK_TOKENS: MockToken[] = [
 export default function App() {
   const [rawSeedPhrase, setRawSeedPhrase] = useState('');
   const [walletState, setWalletState] = useState<WalletState>('loading');
+  const [activeTab, setActiveTab] = useState<TabId>('home');
   const [vaults, setVaults] = useState<VaultInfo[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState('');
   const [password, setPassword] = useState('');
@@ -173,7 +180,7 @@ export default function App() {
   const handleConnectionRespond = (success: boolean) => {
     if (!connectionRequest) return;
     
-    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    if (typeof chrome !== 'undefined' && chrome.runtime?.id) {
       chrome.runtime.sendMessage({
         type: 'CONNECTION_RESPOND',
         payload: { id: connectionRequest.id, success }
@@ -336,7 +343,7 @@ export default function App() {
   useEffect(() => {
     if (allAccounts.length === 0) return;
     
-    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    if (typeof chrome !== 'undefined' && chrome.runtime?.id) {
       chrome.runtime.sendMessage({
         type: 'ACCOUNTS_UPDATE',
         payload: { accounts: allAccounts }
@@ -363,7 +370,7 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('celestial_is_testnet', isTestnet.toString());
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
+    if (typeof chrome !== 'undefined' && chrome.runtime?.id) {
       chrome.runtime.sendMessage({ 
         type: 'NETWORK_CHANGE', 
         payload: { 
@@ -682,7 +689,7 @@ export default function App() {
   }
 
   if (walletState === 'uninitialized') {
-    return <UninitializedScreen />;
+    return <LandingPage onSetupComplete={() => setWalletState('unlocked')} />;
   }
 
   if (walletState === 'locked') {
@@ -704,13 +711,29 @@ export default function App() {
 
   // ---- Unlocked: Dashboard (Obsidian) ---------------------------------------
 
+  // INSTAPAY UI INTERCEPT
+  if (true) {
+    return (
+      <div className="flex flex-col h-[600px] bg-[#161618] relative overflow-hidden text-white font-sans animate-fade-in">
+        {activeTab === 'home' && <HomeView />}
+        {activeTab === 'statistic' && <StatisticView />}
+        {activeTab === 'target' && <SendMoneyView onBack={() => setActiveTab('home')} />}
+        
+        {/* Only show bottom nav if we are not in the send money view (or if we want it everywhere we can keep it) */}
+        {activeTab !== 'target' && (
+          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[600px] bg-[#000000] relative overflow-hidden text-white font-sans animate-fade-in">
       
       {/* Overlay for EIP-1193 Connection Requests */}
       {connectionRequest && (
         <ConnectionModal
-          origin={connectionRequest.origin}
+          origin={connectionRequest!.origin}
           onApprove={() => handleConnectionRespond(true)}
           onReject={() => handleConnectionRespond(false)}
         />
@@ -719,8 +742,8 @@ export default function App() {
       {/* Overlay for Transaction Signing Requests */}
       {signTxRequest && accounts.find(c => c.chain === 'EVM') && (
         <SignTransactionView
-          id={signTxRequest.id}
-          origin={signTxRequest.origin}
+          id={signTxRequest!.id}
+          origin={signTxRequest!.origin}
           privateKey={accounts.find(c => c.chain === 'EVM')!.privateKey}
           providerUrl={isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL}
           networkName={isTestnet ? 'Ethereum Sepolia' : 'Ethereum Mainnet'}
@@ -1411,7 +1434,7 @@ export default function App() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
               </button>
               <h2 className="text-xl font-black text-white">
-                {settingsMode.startsWith('seed') ? 'Recovery Phrase' : settingsMode === 'account_details' && selectedManageAccountIndex !== null ? allAccounts[selectedManageAccountIndex]?.name : settingsMode === 'delete_confirm' || settingsMode === 'delete_password' ? 'Delete Account' : settingsMode === 'networks' ? 'Networks' : 'Manage Accounts'}
+                {settingsMode.startsWith('seed') ? 'Recovery Phrase' : settingsMode === 'account_details' && selectedManageAccountIndex !== null ? allAccounts[selectedManageAccountIndex!]?.name : settingsMode === 'delete_confirm' || settingsMode === 'delete_password' ? 'Delete Account' : settingsMode === 'networks' ? 'Networks' : 'Manage Accounts'}
               </h2>
             </div>
           )}
@@ -1564,13 +1587,13 @@ export default function App() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">{allAccounts[selectedManageAccountIndex].name}</h3>
-                <p className="text-xs font-medium text-zinc-500">{allAccounts[selectedManageAccountIndex].chains.length} chains · Index {selectedManageAccountIndex}</p>
+                <h3 className="text-lg font-black text-white">{allAccounts[selectedManageAccountIndex!].name}</h3>
+                <p className="text-xs font-medium text-zinc-500">{allAccounts[selectedManageAccountIndex!].chains.length} chains · Index {selectedManageAccountIndex}</p>
               </div>
             </div>
 
             {/* Chain Cards */}
-            {allAccounts[selectedManageAccountIndex].chains.map(chain => {
+            {allAccounts[selectedManageAccountIndex!].chains.map(chain => {
               const chainColor = chain.chain === 'EVM' ? '#627eea' : chain.chain === 'Solana' ? '#14F195' : '#f7931a';
               return (
               <div key={chain.chain} className="flex flex-col gap-3 bg-[#111111] border border-white/5 p-4 rounded-2xl relative overflow-hidden">
@@ -1657,7 +1680,7 @@ export default function App() {
               <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.15)]">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               </div>
-              <h3 className="text-lg font-black text-white mb-2">Delete {allAccounts[selectedManageAccountIndex].name}?</h3>
+              <h3 className="text-lg font-black text-white mb-2">Delete {allAccounts[selectedManageAccountIndex!].name}?</h3>
               <p className="text-sm text-zinc-400 font-medium leading-relaxed">This will remove the account from your wallet. You can always re-derive it later using the same seed phrase and account index.</p>
             </div>
             <div className="p-4 bg-[#ff0055]/10 border border-[#ff0055]/30 rounded-2xl">
@@ -1687,7 +1710,7 @@ export default function App() {
               <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.1)]">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
               </div>
-              <p className="text-sm text-zinc-400 font-medium">Enter your password to confirm deletion of <span className="font-bold text-white">{allAccounts[selectedManageAccountIndex].name}</span>.</p>
+              <p className="text-sm text-zinc-400 font-medium">Enter your password to confirm deletion of <span className="font-bold text-white">{allAccounts[selectedManageAccountIndex!].name}</span>.</p>
             </div>
             <div className="flex flex-col gap-3">
               <input
@@ -1761,7 +1784,7 @@ export default function App() {
               <div className="w-16 h-16 bg-[#111111] rounded-[20px] border border-[#ff0055]/30 mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(255,0,85,0.1)]">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>
               </div>
-              <p className="text-sm text-zinc-400 font-medium">Enter your password to reveal the <span className="font-bold text-white">{selectedManageChain.chain}</span> private key. Never share this with anyone.</p>
+              <p className="text-sm text-zinc-400 font-medium">Enter your password to reveal the <span className="font-bold text-white">{selectedManageChain!.chain}</span> private key. Never share this with anyone.</p>
             </div>
             <div className="flex flex-col gap-3">
               <input
@@ -1784,7 +1807,7 @@ export default function App() {
         {settingsMode === 'key_revealed' && selectedManageChain && (
           <div className="flex flex-col gap-6 animate-fade-in mt-2">
             <div className="p-4 bg-[#ff0055]/10 border border-[#ff0055]/30 rounded-2xl">
-              <p className="text-xs font-bold text-[#ff0055] text-center">WARNING: Anyone with this private key can steal your {selectedManageChain.chain} assets. Do not share it.</p>
+              <p className="text-xs font-bold text-[#ff0055] text-center">WARNING: Anyone with this private key can steal your {selectedManageChain!.chain} assets. Do not share it.</p>
             </div>
             <div className="p-4 bg-[#111111] border border-[#ff0055]/20 rounded-xl relative group">
               <p className="text-sm font-mono text-white break-all text-center selection:bg-[#ff0055]/30">{revealedPrivateKey}</p>
@@ -1807,7 +1830,7 @@ export default function App() {
       {/* ---- Token Page ---- */}
       {activeTokenPage && (
         <TokenPage 
-          account={activeTokenPage}
+          account={activeTokenPage!}
           onClose={() => setActiveTokenPage(null)}
           onSend={(asset) => {
             setSendAsset(asset);
@@ -1818,9 +1841,9 @@ export default function App() {
             setReceiveInitialAccount(activeTokenPage);
             setIsReceiveOpen(true);
           }}
-          balance={activeTokenPage.chain === 'EVM' ? balances.eth : activeTokenPage.chain === 'Solana' ? balances.sol : balances.btc}
-          price={activeTokenPage.chain === 'EVM' ? prices.eth : activeTokenPage.chain === 'Solana' ? prices.sol : prices.btc}
-          change={activeTokenPage.chain === 'EVM' ? changes.eth : activeTokenPage.chain === 'Solana' ? changes.sol : changes.btc}
+          balance={activeTokenPage!.chain === 'EVM' ? balances.eth : activeTokenPage!.chain === 'Solana' ? balances.sol : balances.btc}
+          price={activeTokenPage!.chain === 'EVM' ? prices.eth : activeTokenPage!.chain === 'Solana' ? prices.sol : prices.btc}
+          change={activeTokenPage!.chain === 'EVM' ? changes.eth : activeTokenPage!.chain === 'Solana' ? changes.sol : changes.btc}
         />
       )}
 
@@ -1839,7 +1862,7 @@ export default function App() {
       <SwapModal
         isOpen={isSwapOpen}
         onClose={() => setIsSwapOpen(false)}
-        evmAccount={accounts.find(a => a.chain === 'EVM') || null}
+        evmAccount={accounts.find(a => a.chain === 'EVM')!}
         ethBalance={balances.eth}
       />
 
@@ -1871,39 +1894,6 @@ function LoadingScreen() {
   );
 }
 
-function UninitializedScreen() {
-  function handleOpenSetup() {
-    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-      chrome.tabs.create({ url: 'http://localhost:5173' });
-    } else {
-      window.open('http://localhost:5173', '_blank');
-    }
-  }
-
-  return (
-    <div className="w-[360px] h-[600px] flex flex-col items-center justify-center px-8 bg-black relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-64 h-64 bg-[#00f0ff] opacity-[0.05] rounded-full blur-[80px]" />
-
-      <div className="flex flex-col items-center gap-8 text-center z-10 animate-slide-up">
-        <div className="relative w-20 h-20 bg-[#111111] rounded-[24px] border border-white/5 flex items-center justify-center shadow-2xl">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <h1 className="text-3xl font-black text-white tracking-tight">Celestial</h1>
-          <p className="text-sm text-zinc-400 leading-relaxed font-medium">
-            Vault uninitialized. Please set up your wallet via the web portal.
-          </p>
-        </div>
-
-        <button onClick={handleOpenSetup} className="btn-primary w-full">
-          Open Setup Portal
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function LockedScreen({
   vaults,

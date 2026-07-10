@@ -1,4 +1,6 @@
 /**
+ * 
+ * 
  * Celestial Wallet — Inpage Provider (EIP-1193)
  *
  * Injected into every webpage by content.js.

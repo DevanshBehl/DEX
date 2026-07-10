@@ -9,14 +9,14 @@
 
   /* Obsidian Core Canvas */
   --color-obsidian: #000000;
-  --color-obsidian-surface: #0a0a0a;
-  --color-obsidian-elevated: #111111;
-  --color-obsidian-border: #262626;
+  --color-obsidian-surface: #1B1D22;
+  --color-obsidian-elevated: #282A31;
+  --color-obsidian-border: #3A3D46;
 
-  /* Neon Accents */
+  /* Neon/InstaPay Accents */
   --color-neon-cyan: #00f0ff;
   --color-neon-pink: #ff0055;
-  --color-neon-green: #00ff66;
+  --color-neon-green: #D4FF00; /* Main InstaPay color */
   --color-neon-purple: #bd00ff;
 
   /* Text */
@@ -210,10 +210,18 @@
 
 /* ---- Premium Font Families ---- */
 .font-display {
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: 'Outfit', 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 .font-inter {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* --- InstaPay Card --- */
+.instapay-card {
+  background: linear-gradient(135deg, #E2FF46 0%, #B8E600 100%);
+  color: #000;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px -10px rgba(212, 255, 0, 0.4);
 }
 
 /* ---- Balance Hero Enhancements ---- */

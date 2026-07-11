@@ -277,12 +277,12 @@ export default function Page() {
   );
 
   return (
-    <main ref={mainRef} className="relative bg-white">
+    <main ref={mainRef} className="relative bg-[#0b0b0e]">
       {/* ============================ NAV ============================ */}
-      <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-white/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[#0b0b0e]/70 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-baseline gap-1.5">
-            <span className="wordmark text-lg text-black">Celestial</span>
+            <span className="wordmark text-lg text-white">Celestial</span>
             <span className="wordmark text-lg text-[var(--muted)]">Perps</span>
           </div>
           <div className="hidden items-center gap-8 md:flex">
@@ -290,7 +290,7 @@ export default function Page() {
               <a
                 key={l}
                 href="#"
-                className="text-sm font-medium text-[var(--ink-2)] transition-colors hover:text-black"
+                className="text-sm font-medium text-[var(--ink-2)] transition-colors hover:text-white"
               >
                 {l}
               </a>
@@ -304,7 +304,7 @@ export default function Page() {
       </header>
 
       {/* ============================ HERO ============================ */}
-      <section className="relative overflow-hidden px-6 pt-24 pb-6 text-center md:pt-32">
+      <section className="relative overflow-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#3700b3]/20 via-[#0b0b0e] to-[#0b0b0e] px-6 pt-24 pb-6 text-center md:pt-32">
         {/* ambient blockchain logos, scattered through the hero's empty sides */}
         <div className="pointer-events-none absolute inset-0 z-0 hidden md:block">
           {CHAIN_LOGOS.map((logo, i) => {

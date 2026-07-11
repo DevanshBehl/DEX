@@ -15,11 +15,6 @@ import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } fro
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { LandingPage } from './components/InstaPay/LandingPage';
-import { BottomNav, type TabId } from './components/InstaPay/BottomNav';
-import { HomeView } from './components/InstaPay/HomeView';
-import { StatisticView } from './components/InstaPay/StatisticView';
-import { SendMoneyView } from './components/InstaPay/SendMoneyView';
 
 const AnimatedOdometer = ({ value, className = '' }: { value: string, className?: string }) => {
   const [target, setTarget] = useState(value.replace(/[0-9]/g, '0'));
@@ -96,7 +91,6 @@ const MOCK_TOKENS: MockToken[] = [
 export default function App() {
   const [rawSeedPhrase, setRawSeedPhrase] = useState('');
   const [walletState, setWalletState] = useState<WalletState>('loading');
-  const [activeTab, setActiveTab] = useState<TabId>('home');
   const [vaults, setVaults] = useState<VaultInfo[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState('');
   const [password, setPassword] = useState('');
@@ -689,7 +683,7 @@ export default function App() {
   }
 
   if (walletState === 'uninitialized') {
-    return <LandingPage onSetupComplete={() => setWalletState('unlocked')} />;
+    return <UninitializedScreen />;
   }
 
   if (walletState === 'locked') {
@@ -710,22 +704,6 @@ export default function App() {
   }
 
   // ---- Unlocked: Dashboard (Obsidian) ---------------------------------------
-
-  // INSTAPAY UI INTERCEPT
-  if (true) {
-    return (
-      <div className="flex flex-col h-[600px] bg-[#161618] relative overflow-hidden text-white font-sans animate-fade-in">
-        {activeTab === 'home' && <HomeView />}
-        {activeTab === 'statistic' && <StatisticView />}
-        {activeTab === 'target' && <SendMoneyView onBack={() => setActiveTab('home')} />}
-        
-        {/* Only show bottom nav if we are not in the send money view (or if we want it everywhere we can keep it) */}
-        {activeTab !== 'target' && (
-          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-[600px] bg-[#000000] relative overflow-hidden text-white font-sans animate-fade-in">
@@ -1894,6 +1872,40 @@ function LoadingScreen() {
   );
 }
 
+
+function UninitializedScreen() {
+  function handleOpenSetup() {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs.create({ url: 'http://localhost:5173' });
+    } else {
+      window.open('http://localhost:5173', '_blank');
+    }
+  }
+
+  return (
+    <div className="w-[360px] h-[600px] flex flex-col items-center justify-center px-8 bg-black relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-64 h-64 bg-[#00f0ff] opacity-[0.05] rounded-full blur-[80px]" />
+
+      <div className="flex flex-col items-center gap-8 text-center z-10 animate-slide-up">
+        <div className="relative w-20 h-20 bg-[#111111] rounded-[24px] border border-white/5 flex items-center justify-center shadow-2xl">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h1 className="text-3xl font-black text-white tracking-tight">Celestial</h1>
+          <p className="text-sm text-zinc-400 leading-relaxed font-medium">
+            Vault uninitialized. Please set up your wallet via the web portal.
+          </p>
+        </div>
+
+        <button onClick={handleOpenSetup} className="btn-primary w-full">
+          Open Setup Portal
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function LockedScreen({
   vaults,

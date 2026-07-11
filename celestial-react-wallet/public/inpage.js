@@ -6,7 +6,11 @@
  *
  * Injected into every webpage by content.js.
  * Implements the EIP-1193 Ethereum Provider interface so dApps
- * (Uniswap, OpenSea, etc.) can detect and interact with Celestial.
+ * (Uniswap, OpenSea, etc.) can detect and in
+ * 
+ * 
+ * 
+ * teract with Celestial.
  *
  * Message flow:
  *   dApp calls window.ethereum.request(...)

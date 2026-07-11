@@ -277,9 +277,9 @@ export default function Page() {
   );
 
   return (
-    <main ref={mainRef} className="relative bg-[#0b0b0e]">
+    <main ref={mainRef} className="relative bg-black">
       {/* ============================ NAV ============================ */}
-      <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[#0b0b0e]/70 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-black/70 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-baseline gap-1.5">
             <span className="wordmark text-lg text-white">Celestial</span>
@@ -304,7 +304,7 @@ export default function Page() {
       </header>
 
       {/* ============================ HERO ============================ */}
-      <section className="relative overflow-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#3700b3]/20 via-[#0b0b0e] to-[#0b0b0e] px-6 pt-24 pb-6 text-center md:pt-32">
+      <section className="relative overflow-hidden bg-black px-6 pt-24 pb-6 text-center md:pt-32">
         {/* ambient blockchain logos, scattered through the hero's empty sides */}
         <div className="pointer-events-none absolute inset-0 z-0 hidden md:block">
           {CHAIN_LOGOS.map((logo, i) => {
@@ -337,10 +337,10 @@ export default function Page() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl">
-          <h1 className="hero-stagger mx-auto max-w-4xl text-5xl font-black leading-[0.98] tracking-tight text-black md:text-7xl lg:text-8xl">
+          <h1 className="hero-stagger mx-auto max-w-4xl text-5xl font-black leading-[0.98] tracking-tight text-white md:text-7xl lg:text-8xl">
             Trade Perps.
             <br />
-            <span className="text-[var(--muted)]">Stay Sovereign.</span>
+            <span className="text-white">Stay Sovereign.</span>
           </h1>
 
           <p className="hero-stagger mx-auto mt-6 max-w-xl text-lg text-[var(--ink-2)]">
@@ -366,7 +366,7 @@ export default function Page() {
       <section className="relative mx-auto max-w-6xl px-6 pt-10 pb-24">
         <div
           ref={termRef}
-          className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-black/10 bg-[#0b0b0d] shadow-[0_50px_120px_-40px_rgba(0,0,0,0.55)]"
+          className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#121212]/80 backdrop-blur-xl shadow-[0_50px_120px_-40px_rgba(0,0,0,0.75)]"
         >
           {/* window bar */}
           <div className="flex h-12 items-center gap-4 border-b border-white/10 px-4">
@@ -621,7 +621,7 @@ export default function Page() {
       <section className="relative mx-auto max-w-6xl px-6 py-20">
         <div className="reveal mx-auto max-w-2xl">
           <span className="eyebrow">Why Celestial Perps</span>
-          <h2 className="mt-4 text-4xl font-black tracking-tight text-black md:text-5xl">
+          <h2 className="mt-4 text-4xl font-black tracking-tight text-white md:text-5xl">
             The exchange that never
             <br className="hidden md:block" /> holds your funds.
           </h2>
@@ -630,10 +630,10 @@ export default function Page() {
         <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="reveal card p-8">
-              <span className="grid h-11 w-11 place-items-center rounded-xl border border-[var(--line)] bg-[var(--bg-soft)] text-black">
+              <span className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/5 text-[#22c55e]">
                 <f.icon className="h-5 w-5" strokeWidth={1.75} />
               </span>
-              <h3 className="mt-6 text-lg font-bold tracking-tight text-black">
+              <h3 className="mt-6 text-lg font-bold tracking-tight text-white">
                 {f.title}
               </h3>
               <p className="mt-2.5 text-[15px] leading-relaxed text-[var(--ink-2)]">
@@ -646,9 +646,9 @@ export default function Page() {
 
       {/* ============================ CTA ============================ */}
       <section className="relative mx-auto max-w-6xl px-6 pb-24">
-        <div className="reveal flex flex-col items-center justify-between gap-6 rounded-2xl border border-[var(--line)] bg-[var(--bg-soft)] px-8 py-12 text-center md:flex-row md:text-left">
+        <div className="reveal flex flex-col items-center justify-between gap-6 rounded-2xl border border-white/10 bg-[#121212]/80 backdrop-blur-xl px-8 py-12 text-center md:flex-row md:text-left">
           <div>
-            <h2 className="text-3xl font-black tracking-tight text-black md:text-4xl">
+            <h2 className="text-3xl font-black tracking-tight text-white md:text-4xl">
               Ready to trade sovereign?
             </h2>
             <p className="mt-2 text-[var(--ink-2)]">

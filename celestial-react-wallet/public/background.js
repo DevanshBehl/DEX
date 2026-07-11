@@ -182,21 +182,24 @@ async function handleMessage(message) {
     case 'SOLANA_REQUEST': {
       const { method, origin } = payload || {};
       if (method === 'connect') {
-        if (!isUnlocked) {
-          return { error: 'Wallet is locked. Please unlock Celestial Wallet first.' };
-        }
-        if (connectedAccounts.length === 0) {
-          return { error: 'No accounts available. Please open the wallet.' };
-        }
-        return new Promise((resolve, reject) => {
-          const requestId = Date.now().toString();
-          pendingConnectionRequests.set(requestId, { resolve, reject, origin, type: 'sol' });
-          chrome.windows.create({
-            url: chrome.runtime.getURL(`index.html?request=connect&origin=${encodeURIComponent(origin || 'Unknown')}&id=${requestId}`),
-            type: 'popup',
-            width: 380,
-            height: 600,
-            focused: true
+        // Mirror the EVM eth_requestAccounts flow: open the approval popup (which
+        // also lets the user unlock) instead of hard-failing when the wallet is
+        // locked or accounts haven't been synced yet. The Solana address is read
+        // at approval time, by which point the popup has pushed ACCOUNTS_UPDATE.
+        return new Promise((resolve) => {
+          const reqId = nextReqId++;
+          pendingConnectionRequests.set(reqId.toString(), { resolve, origin, type: 'sol' });
+
+          chrome.runtime.sendMessage({ type: 'INCOMING_CONNECT', id: reqId, origin }, (response) => {
+            if (chrome.runtime.lastError || !response || !response.received) {
+              chrome.windows.create({
+                url: `index.html?request=connect&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
+                type: 'popup',
+                width: 360,
+                height: 600,
+                focused: true
+              });
+            }
           });
         });
       }
@@ -223,7 +226,11 @@ async function handleMessage(message) {
             req.resolve({ result: evm });
           } else if (req.type === 'sol') {
             const sol = connectedAccounts[0]?.chains.find(c => c.chain === 'Solana')?.address;
-            req.resolve({ result: { publicKey: sol } });
+            if (sol) {
+              req.resolve({ result: { publicKey: sol } });
+            } else {
+              req.resolve({ error: { code: 4100, message: 'No Solana account available. Please open the wallet.' } });
+            }
           }
         } else {
           req.resolve({ error: { code: 4001, message: 'User rejected the request.' } });

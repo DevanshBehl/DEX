@@ -181,17 +181,37 @@ function BookRow({ level, side, maxTotal }: { level: BookLevel; side: "ask" | "b
   const isAsk = side === "ask";
   const width = `${Math.min(100, (level.total / maxTotal) * 100)}%`;
   return (
-    <div className="relative flex items-center px-2 font-mono text-[11px] tabular-nums leading-[18px]">
+    <div className="group relative flex cursor-pointer items-center px-2 font-mono text-[11px] tabular-nums leading-[19px] transition-colors hover:bg-white/[0.04]">
       <div
-        className={`absolute inset-y-px right-0 ${isAsk ? "bg-[#ef4444]/10" : "bg-[#22c55e]/10"}`}
+        className={`absolute inset-y-px right-0 ${
+          isAsk
+            ? "bg-gradient-to-l from-[#ef4444]/20 to-[#ef4444]/[0.03]"
+            : "bg-gradient-to-l from-[#22c55e]/20 to-[#22c55e]/[0.03]"
+        }`}
         style={{ width }}
         aria-hidden
       />
-      <span className={`relative z-10 flex-1 ${isAsk ? "text-[#ef4444]" : "text-[#22c55e]"}`}>
+      <span className={`relative z-10 flex-1 ${isAsk ? "text-[#f87171]" : "text-[#34d399]"}`}>
         {fmtPrice(level.price)}
       </span>
-      <span className="relative z-10 flex-1 text-right text-white/80">{level.size.toFixed(3)}</span>
-      <span className="relative z-10 flex-1 text-right text-[#888]">{level.total.toFixed(2)}</span>
+      <span className="relative z-10 flex-1 text-right text-white/75">{level.size.toFixed(3)}</span>
+      <span className="relative z-10 flex-1 text-right text-[#777] group-hover:text-[#999]">
+        {level.total.toFixed(2)}
+      </span>
+    </div>
+  );
+}
+
+function BookSkeleton() {
+  return (
+    <div className="animate-pulse space-y-[3px] px-2 py-1">
+      {Array.from({ length: 9 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <div className="h-2 flex-1 rounded-sm bg-white/[0.05]" />
+          <div className="h-2 w-7 rounded-sm bg-white/[0.03]" />
+          <div className="h-2 w-7 rounded-sm bg-white/[0.03]" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -366,9 +386,12 @@ function SummaryRow({ label, value, color = "text-white" }: { label: string; val
   );
 }
 
-const PANEL = "rounded-lg border border-white/5 bg-[#121212]/80 backdrop-blur-sm";
+const PANEL =
+  "rounded-xl border border-white/[0.07] bg-gradient-to-b from-[#131313]/90 to-[#0d0d0d]/90 backdrop-blur-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.035),0_10px_30px_-18px_rgba(0,0,0,0.9)]";
 const TIMEFRAMES = ["1m", "5m", "15m", "1H", "4H", "1D"];
 const LEV_PRESETS = [2, 5, 10, 25, 50];
+const SIZE_PCTS = [25, 50, 75, 100];
+const MOCK_BALANCE = 12450; // available USDC (mock — swap for live wallet balance)
 
 /* ------------------------------------------------------------------ */
 /*  PAGE                                                               */
@@ -599,7 +622,9 @@ export default function TradePage() {
         {/* left cluster */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Orbit className="h-5 w-5 text-[#22c55e]" strokeWidth={2} />
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#22c55e]/10 ring-1 ring-inset ring-[#22c55e]/25">
+              <Orbit className="h-4 w-4 text-[#22c55e]" strokeWidth={2.25} />
+            </span>
             <span className="hidden text-sm font-bold tracking-tight sm:block">CELESTIAL PERPS</span>
           </div>
           <div className="relative">
@@ -644,29 +669,50 @@ export default function TradePage() {
         </div>
 
         {/* right cluster */}
-        <div className="flex items-center gap-4 sm:gap-6">
-          <Stat
-            label="Price"
-            value={currentPrice !== null ? `$${fmtPrice(currentPrice)}` : "—"}
-            color={priceUp ? "text-[#22c55e]" : "text-[#ef4444]"}
-          />
-          <Stat
-            label="24h Change"
-            value={ticker ? `${ticker.change >= 0 ? "+" : ""}${ticker.change.toFixed(2)}%` : "—"}
-            color={ticker && ticker.change >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"}
-            className="hidden sm:flex"
-          />
-          <Stat
-            label="24h Volume"
-            value={ticker ? fmtVol(ticker.volume) : "—"}
-            className="hidden md:flex"
-          />
-          <Stat
-            label="Funding"
-            value={STATS.funding}
-            color={STATS.fundingUp ? "text-[#22c55e]/80" : "text-[#ef4444]/80"}
-            className="hidden lg:flex"
-          />
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* live data-stream status */}
+          <span className="hidden items-center gap-1.5 rounded-md border border-white/[0.06] bg-[#0d0d0d] px-2 py-1 sm:flex">
+            <span className="relative flex h-1.5 w-1.5">
+              {currentPrice !== null && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e]/70" />
+              )}
+              <span
+                className="relative inline-flex h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: currentPrice !== null ? "#22c55e" : "#f7931a" }}
+              />
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#888]">
+              {currentPrice !== null ? "Live" : "Sync"}
+            </span>
+          </span>
+
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Stat
+              label="Price"
+              value={currentPrice !== null ? `$${fmtPrice(currentPrice)}` : "—"}
+              color={priceUp ? "text-[#22c55e]" : "text-[#ef4444]"}
+            />
+            <span className="hidden h-7 w-px bg-white/[0.07] sm:block" />
+            <Stat
+              label="24h Change"
+              value={ticker ? `${ticker.change >= 0 ? "+" : ""}${ticker.change.toFixed(2)}%` : "—"}
+              color={ticker && ticker.change >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"}
+              className="hidden sm:flex"
+            />
+            <span className="hidden h-7 w-px bg-white/[0.07] md:block" />
+            <Stat
+              label="24h Volume"
+              value={ticker ? fmtVol(ticker.volume) : "—"}
+              className="hidden md:flex"
+            />
+            <span className="hidden h-7 w-px bg-white/[0.07] lg:block" />
+            <Stat
+              label="Funding"
+              value={STATS.funding}
+              color={STATS.fundingUp ? "text-[#22c55e]/80" : "text-[#ef4444]/80"}
+              className="hidden lg:flex"
+            />
+          </div>
           {connectedWallet ? (
             <div className="relative">
               <button
@@ -822,10 +868,10 @@ export default function TradePage() {
             </div>
 
             {/* scroll body */}
-            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto">
+            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto overflow-x-auto">
               {tab === "positions" ? (
-                <table className="w-full min-w-[720px] text-left font-mono text-xs tabular-nums">
-                  <thead className="sticky top-0 bg-[#121212]/95 text-[10px] uppercase tracking-wide text-[#888] backdrop-blur-sm">
+                <table className="w-full min-w-[760px] text-left font-mono text-xs tabular-nums">
+                  <thead className="sticky top-0 z-10 bg-[#101010] text-[10px] uppercase tracking-wide text-[#888]">
                     <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:font-medium">
                       <th>Market</th>
                       <th>Side</th>
@@ -834,13 +880,18 @@ export default function TradePage() {
                       <th className="text-right">Mark Price</th>
                       <th className="text-right">Liq. Price</th>
                       <th className="text-right">Unrealized PnL</th>
+                      <th className="text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t border-white/5 transition-colors hover:bg-white/[0.02] [&>td]:px-3 [&>td]:py-2.5">
-                      <td className="font-semibold text-white">{POSITION.market}</td>
+                    <tr className="group border-t border-white/5 transition-colors hover:bg-white/[0.025] [&>td]:px-3 [&>td]:py-2.5">
+                      <td className="font-semibold text-white">
+                        <span className="relative flex items-center gap-2 before:absolute before:-left-3 before:h-4 before:w-0.5 before:rounded-full before:bg-[#22c55e]">
+                          {POSITION.market}
+                        </span>
+                      </td>
                       <td>
-                        <span className="text-[#22c55e]">
+                        <span className="rounded bg-[#22c55e]/10 px-1.5 py-0.5 text-[#22c55e]">
                           {POSITION.side} {POSITION.leverage}
                         </span>
                       </td>
@@ -852,12 +903,21 @@ export default function TradePage() {
                         {POSITION.pnl}{" "}
                         <span className="text-[#22c55e]/70">({POSITION.pnlPct})</span>
                       </td>
+                      <td className="text-right">
+                        <button
+                          type="button"
+                          className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-semibold text-[#888] transition-colors hover:border-[#ef4444]/40 hover:bg-[#ef4444]/10 hover:text-[#ef4444]"
+                        >
+                          Close
+                        </button>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
               ) : (
-                <div className="grid h-full place-items-center text-xs text-[#888]">
-                  No order history yet.
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-[#666]">
+                  <History className="h-6 w-6" strokeWidth={1.5} />
+                  <span className="text-xs">No order history yet</span>
                 </div>
               )}
             </div>
@@ -867,24 +927,31 @@ export default function TradePage() {
         {/* ---------------- MIDDLE: Order Book ---------------- */}
         <section className="order-3 min-h-[480px] lg:order-none lg:col-span-2 lg:min-h-0 col-span-12">
           <div className={`${PANEL} flex h-full flex-col overflow-hidden`}>
-            <div className="shrink-0 border-b border-white/5 px-2 py-2">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/5 px-2.5 py-2">
               <span className="text-xs font-semibold text-white">Order Book</span>
-              <div className="mt-1.5 flex items-center px-0 font-mono text-[10px] uppercase tracking-wide text-[#888]">
-                <span className="flex-1">Price</span>
-                <span className="flex-1 text-right">Size</span>
-                <span className="flex-1 text-right">Total</span>
-              </div>
+              <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-[#888]">
+                {activeMarket}
+              </span>
+            </div>
+            <div className="flex shrink-0 items-center border-b border-white/[0.04] px-2 py-1 font-mono text-[9px] uppercase tracking-wider text-[#777]">
+              <span className="flex-1">Price</span>
+              <span className="flex-1 text-right">Size</span>
+              <span className="flex-1 text-right">Total</span>
             </div>
 
             {/* asks — highest at top, tightest to spread at bottom */}
-            <div className="flex min-h-0 flex-1 flex-col justify-end overflow-y-auto">
-              {[...askBook.rows].reverse().map((lvl) => (
-                <BookRow key={`a-${lvl.price}`} level={lvl} side="ask" maxTotal={bookMax} />
-              ))}
+            <div className="thin-scroll flex min-h-0 flex-1 flex-col justify-end overflow-y-auto">
+              {askBook.rows.length === 0 ? (
+                <BookSkeleton />
+              ) : (
+                [...askBook.rows].reverse().map((lvl) => (
+                  <BookRow key={`a-${lvl.price}`} level={lvl} side="ask" maxTotal={bookMax} />
+                ))
+              )}
             </div>
 
-            {/* spread strip */}
-            <div className="flex shrink-0 items-center justify-between border-y border-white/5 bg-white/[0.02] px-2 py-1.5">
+            {/* spread strip — the order book's focal point */}
+            <div className="flex shrink-0 items-center justify-between border-y border-white/[0.08] bg-white/[0.025] px-2.5 py-2">
               <div className="flex items-center gap-1.5">
                 {priceUp ? (
                   <ArrowUp className="h-4 w-4 text-[#22c55e]" strokeWidth={2.5} />
@@ -899,16 +966,23 @@ export default function TradePage() {
                   {markPrice !== null && markPrice !== undefined ? fmtPrice(markPrice) : "—"}
                 </span>
               </div>
-              <span className="font-mono text-[10px] text-[#888]">
-                Spread {spread !== null ? spread.toFixed(2) : "—"}
-              </span>
+              <div className="flex flex-col items-end leading-tight">
+                <span className="text-[8px] uppercase tracking-wider text-[#777]">Spread</span>
+                <span className="font-mono text-[10px] text-[#aaa]">
+                  {spread !== null ? spread.toFixed(2) : "—"}
+                </span>
+              </div>
             </div>
 
             {/* bids */}
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-              {bidBook.rows.map((lvl) => (
-                <BookRow key={`b-${lvl.price}`} level={lvl} side="bid" maxTotal={bookMax} />
-              ))}
+            <div className="thin-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+              {bidBook.rows.length === 0 ? (
+                <BookSkeleton />
+              ) : (
+                bidBook.rows.map((lvl) => (
+                  <BookRow key={`b-${lvl.price}`} level={lvl} side="bid" maxTotal={bookMax} />
+                ))
+              )}
             </div>
           </div>
         </section>
@@ -919,36 +993,42 @@ export default function TradePage() {
             {/* scrollable form body */}
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
               {/* side toggle */}
-              <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/5 bg-[#000000] p-1">
+              <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/5 bg-black p-1">
                 <button
                   type="button"
                   onClick={() => setSide("long")}
-                  className={`rounded-md py-2 text-sm font-bold transition-colors ${
-                    isLong ? "bg-[#22c55e] text-black" : "text-[#888] hover:text-white"
+                  className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-bold transition-all ${
+                    isLong
+                      ? "bg-[#22c55e] text-black shadow-[0_4px_16px_-4px_rgba(34,197,94,0.55)]"
+                      : "text-[#888] hover:text-white"
                   }`}
                 >
+                  <TrendingUp className="h-4 w-4" strokeWidth={2.5} />
                   Long
                 </button>
                 <button
                   type="button"
                   onClick={() => setSide("short")}
-                  className={`rounded-md py-2 text-sm font-bold transition-colors ${
-                    !isLong ? "bg-[#ef4444] text-white" : "text-[#888] hover:text-white"
+                  className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-bold transition-all ${
+                    !isLong
+                      ? "bg-[#ef4444] text-white shadow-[0_4px_16px_-4px_rgba(239,68,68,0.55)]"
+                      : "text-[#888] hover:text-white"
                   }`}
                 >
+                  <TrendingDown className="h-4 w-4" strokeWidth={2.5} />
                   Short
                 </button>
               </div>
 
-              {/* order type */}
-              <div className="flex gap-4 border-b border-white/5 pb-2">
+              {/* order type — segmented control */}
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-black p-1 text-[11px] font-semibold">
                 {(["market", "limit"] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => setOrderType(t)}
-                    className={`text-xs font-semibold capitalize transition-colors ${
-                      orderType === t ? "text-white" : "text-[#888] hover:text-white"
+                    className={`rounded-md py-1.5 capitalize transition-colors ${
+                      orderType === t ? "bg-white/10 text-white" : "text-[#888] hover:text-white"
                     }`}
                   >
                     {t}
@@ -962,7 +1042,7 @@ export default function TradePage() {
                   <span className="mb-1 block text-[10px] uppercase tracking-wide text-[#888]">
                     Limit Price
                   </span>
-                  <div className="flex items-center rounded-lg border border-white/5 bg-[#000000] px-3">
+                  <div className="flex items-center rounded-lg border border-white/5 bg-black px-3 transition-colors focus-within:border-white/20">
                     <input
                       aria-label="Limit price"
                       value={limitPrice}
@@ -977,8 +1057,13 @@ export default function TradePage() {
 
               {/* pay */}
               <label className="block">
-                <span className="mb-1 block text-[10px] uppercase tracking-wide text-[#888]">Pay</span>
-                <div className="flex items-center rounded-lg border border-white/5 bg-[#000000] px-3">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wide text-[#888]">Pay</span>
+                  <span className="font-mono text-[10px] text-[#666]">
+                    Avail {MOCK_BALANCE.toLocaleString("en-US")} USDC
+                  </span>
+                </div>
+                <div className="flex items-center rounded-lg border border-white/5 bg-black px-3 transition-colors focus-within:border-white/20">
                   <input
                     aria-label="Pay amount in USDC"
                     value={pay}
@@ -988,12 +1073,28 @@ export default function TradePage() {
                   />
                   <span className="ml-2 text-xs text-[#888]">USDC</span>
                 </div>
+                <div className="mt-1.5 grid grid-cols-4 gap-1">
+                  {SIZE_PCTS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() =>
+                        setPay(
+                          Math.round((MOCK_BALANCE * p) / 100).toLocaleString("en-US")
+                        )
+                      }
+                      className="rounded-md border border-white/5 bg-black py-1 font-mono text-[10px] text-[#888] transition-colors hover:border-white/15 hover:text-white"
+                    >
+                      {p === 100 ? "Max" : `${p}%`}
+                    </button>
+                  ))}
+                </div>
               </label>
 
               {/* size */}
               <label className="block">
                 <span className="mb-1 block text-[10px] uppercase tracking-wide text-[#888]">Size</span>
-                <div className="flex items-center rounded-lg border border-white/5 bg-[#000000] px-3">
+                <div className="flex items-center rounded-lg border border-white/5 bg-black px-3 transition-colors focus-within:border-white/20">
                   <input
                     aria-label="Size in BTC"
                     value={size}
@@ -1001,7 +1102,7 @@ export default function TradePage() {
                     inputMode="decimal"
                     className="w-full bg-transparent py-2.5 text-right font-mono text-sm tabular-nums text-white outline-none"
                   />
-                  <span className="ml-2 text-xs text-[#888]">BTC</span>
+                  <span className="ml-2 text-xs text-[#888]">{marketOf(activeMarket).id.split("-")[0]}</span>
                 </div>
               </label>
 
@@ -1009,10 +1110,7 @@ export default function TradePage() {
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <span className="text-[10px] uppercase tracking-wide text-[#888]">Leverage</span>
-                  <span
-                    className="font-mono text-sm font-bold tabular-nums"
-                    style={{ color: accent }}
-                  >
+                  <span className="font-mono text-sm font-bold tabular-nums" style={{ color: accent }}>
                     {leverage}x
                   </span>
                 </div>
@@ -1028,6 +1126,11 @@ export default function TradePage() {
                   }}
                   className="h-1.5 w-full cursor-pointer appearance-none rounded-full outline-none [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow"
                 />
+                <div className="mt-1 flex justify-between font-mono text-[9px] text-[#666]">
+                  <span>1x</span>
+                  <span>25x</span>
+                  <span>50x</span>
+                </div>
                 <div className="mt-2 flex gap-1">
                   {LEV_PRESETS.map((p) => (
                     <button
@@ -1037,7 +1140,7 @@ export default function TradePage() {
                       className={`flex-1 rounded-md border py-1 font-mono text-[11px] transition-colors ${
                         leverage === p
                           ? "border-white/20 bg-white/10 text-white"
-                          : "border-white/5 bg-[#000000] text-[#888] hover:text-white"
+                          : "border-white/5 bg-black text-[#888] hover:text-white"
                       }`}
                     >
                       {p}x
@@ -1047,8 +1150,14 @@ export default function TradePage() {
               </div>
 
               {/* summary */}
-              <div className="space-y-1.5 rounded-lg border border-white/5 bg-[#000000] p-2.5">
-                <SummaryRow label="Entry Price" value={`$${STATS.price}`} />
+              <div className="space-y-1.5 rounded-lg border border-white/5 bg-black p-2.5">
+                <span className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wider text-[#666]">
+                  Order Summary
+                </span>
+                <SummaryRow
+                  label="Entry Price"
+                  value={currentPrice !== null ? `$${fmtPrice(currentPrice)}` : "—"}
+                />
                 <SummaryRow label="Liq. Price" value="$59,310.00" color="text-[#ef4444]/80" />
                 <SummaryRow label="Fees" value="$1.75" />
                 <SummaryRow label="Slippage" value="0.05%" />
@@ -1060,18 +1169,21 @@ export default function TradePage() {
               {connectedWallet ? (
                 <button
                   type="button"
-                  style={{ backgroundColor: accent }}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: accent, boxShadow: `0 8px 26px -8px ${accent}` }}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.99]"
                 >
                   {isLong ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  {isLong ? "Execute Long Trade" : "Execute Short Trade"}
+                  {isLong ? "Execute Long" : "Execute Short"} · {leverage}x
                 </button>
               ) : (
                 <button
                   type="button"
-                  onClick={() => { setConnectError(null); setShowConnectModal(true); }}
-                  style={{ backgroundColor: accent }}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
+                  onClick={() => {
+                    setConnectError(null);
+                    setShowConnectModal(true);
+                  }}
+                  style={{ backgroundColor: accent, boxShadow: `0 8px 26px -8px ${accent}` }}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.99]"
                 >
                   <Wallet className="h-4 w-4" strokeWidth={2.5} />
                   Connect Wallet to Trade

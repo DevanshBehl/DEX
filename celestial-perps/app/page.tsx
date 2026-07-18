@@ -15,6 +15,7 @@ import {
   Twitter,
   Linkedin,
   User,
+  Orbit,
 } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -167,6 +168,13 @@ const CHAIN_LOGOS: React.ReactNode[] = [
   </svg>,
 ];
 
+const HERO_STATS = [
+  { value: "$2.4B+", label: "Volume traded" },
+  { value: "180+", label: "Perp markets" },
+  { value: "50×", label: "Max leverage" },
+  { value: "Zero", label: "Custody" },
+];
+
 const FEATURES = [
   {
     icon: Fingerprint,
@@ -281,9 +289,14 @@ export default function Page() {
       {/* ============================ NAV ============================ */}
       <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-black/70 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-baseline gap-1.5">
-            <span className="wordmark text-lg text-white">Celestial</span>
-            <span className="wordmark text-lg text-[var(--muted)]">Perps</span>
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#22c55e]/10 ring-1 ring-inset ring-[#22c55e]/25">
+              <Orbit className="h-4.5 w-4.5 text-[#22c55e]" strokeWidth={2.25} />
+            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="wordmark text-lg text-white">Celestial</span>
+              <span className="wordmark text-lg text-[var(--muted)]">Perps</span>
+            </div>
           </div>
           <div className="hidden items-center gap-8 md:flex">
             {["Trade", "Markets", "Docs"].map((l) => (
@@ -337,6 +350,16 @@ export default function Page() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl">
+          <div className="hero-stagger mb-7 flex justify-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-xs font-medium text-[var(--ink-2)] backdrop-blur">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e]/70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+              </span>
+              Non-custodial perps · Live on mainnet
+            </span>
+          </div>
+
           <h1 className="hero-stagger mx-auto max-w-4xl text-5xl font-black leading-[0.98] tracking-tight text-white md:text-7xl lg:text-8xl">
             Trade Perps.
             <br />
@@ -358,6 +381,18 @@ export default function Page() {
               <Download className="h-4.5 w-4.5" />
               Download Wallet
             </button>
+          </div>
+
+          {/* trust / stats band */}
+          <div className="hero-stagger mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-x-8 gap-y-7 border-t border-white/10 pt-9 sm:grid-cols-4">
+            {HERO_STATS.map((s) => (
+              <div key={s.label} className="flex flex-col items-center">
+                <span className="font-mono text-2xl font-bold tracking-tight text-white md:text-3xl">
+                  {s.value}
+                </span>
+                <span className="mt-1.5 text-xs text-[var(--ink-2)]">{s.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

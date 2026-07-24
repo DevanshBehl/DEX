@@ -100,17 +100,22 @@ const STATS = {
   spread: "0.5",
 };
 
-const POSITION = {
-  market: "BTC-USD",
-  side: "Long",
-  leverage: "10x",
-  size: "0.75 BTC",
-  entry: "$65,900.00",
-  mark: "$67,432.10",
-  liq: "$59,310.00",
-  pnl: "+$1,149.08",
-  pnlPct: "+17.4%",
-};
+interface ActivePosition {
+  id: number;
+  market: string;
+  side: "Long" | "Short";
+  leverage: number;
+  sizeUsd: string;
+  sizeUsdNum: number;
+  collateralEth: string;
+  entryPrice: string;
+  entryPriceNum: number;
+  markPrice: string;
+  markPriceNum: number;
+  pnl: string;
+  pnlValue: number; // static pnl from contract
+  pnlPct: string;
+}
 
 /* ------------------------------------------------------------------ */
 /*  BINANCE MARKETS — live REST + WebSocket data source                */
@@ -414,6 +419,8 @@ export default function TradePage() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  const [activePositions, setActivePositions] = useState<ActivePosition[]>([]);
+  const [closingId, setClosingId] = useState<number | null>(null);
   const [connectedWallet, setConnectedWallet] = useState<ConnectedWallet | null>(null);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
@@ -612,24 +619,72 @@ export default function TradePage() {
     }
   };
 
-  // Fetch wallet balance when connected
+  // Fetch wallet balance and positions when connected
   useEffect(() => {
     if (!connectedWallet || connectedWallet.chain !== "Ethereum") {
       setWalletBalance(null);
+      setActivePositions([]);
       return;
     }
     let cancelled = false;
-    const fetchBalance = async () => {
+    const fetchData = async () => {
       try {
         const provider = new ethers.BrowserProvider((window as Web3Window).ethereum!);
         const bal = await provider.getBalance(connectedWallet.address);
         if (!cancelled) setWalletBalance(ethers.formatEther(bal));
-      } catch {
-        if (!cancelled) setWalletBalance(null);
+
+        // Fetch positions
+        const vault = new ethers.Contract(VAULT_CONTRACT_ADDRESS, CelestialVaultABI, provider);
+        const positionIds = await vault.getTraderPositions(connectedWallet.address);
+        
+        const positions: ActivePosition[] = [];
+        for (const pid of positionIds) {
+          const details = await vault.getPositionDetails(pid);
+          if (!details.isOpen) continue;
+          
+          let pnlUsd = 0n;
+          let currentPrice = 0n;
+          try {
+            pnlUsd = await vault.getUnrealisedPnl(pid);
+            currentPrice = await vault.getPrice(details.market);
+          } catch (e) {
+            console.warn("Could not fetch pnl/price for position", pid, e);
+          }
+          
+          const entryPriceNum = Number(details.entryPrice) / 1e8;
+          const currentPriceNum = Number(currentPrice) / 1e8;
+          const pnlValue = Number(pnlUsd) / 1e8;
+          const sizeUsdValue = Number(details.sizeUsd) / 1e8;
+          const pnlPct = sizeUsdValue > 0 ? (pnlValue / sizeUsdValue) * 100 : 0;
+          
+          positions.push({
+            id: Number(pid),
+            market: details.market,
+            side: Number(details.side) === 0 ? "Long" : "Short",
+            leverage: Number(details.leverage),
+            sizeUsd: "$" + sizeUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            sizeUsdNum: sizeUsdValue,
+            collateralEth: (Number(details.collateralEth) / 1e18).toLocaleString(undefined, { maximumFractionDigits: 4 }) + " ETH",
+            entryPrice: "$" + entryPriceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            entryPriceNum,
+            markPrice: "$" + currentPriceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            markPriceNum: currentPriceNum,
+            pnl: (pnlValue >= 0 ? "+$" : "-$") + Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            pnlValue,
+            pnlPct: (pnlPct >= 0 ? "+" : "") + pnlPct.toFixed(2) + "%",
+          });
+        }
+        
+        if (!cancelled) setActivePositions(positions);
+      } catch (err) {
+        if (!cancelled) {
+          setWalletBalance(null);
+          console.error("Failed to fetch balance/positions:", err);
+        }
       }
     };
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 15000);
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [connectedWallet]);
 
@@ -690,6 +745,29 @@ export default function TradePage() {
       }
     } finally {
       setIsExecuting(false);
+    }
+  };
+
+  // ── Close Trade ──
+  const closeTrade = async (positionId: number) => {
+    if (!connectedWallet) return;
+    try {
+      setClosingId(positionId);
+      const provider = new ethers.BrowserProvider((window as Web3Window).ethereum!);
+      const signer = await provider.getSigner();
+      const vault = new ethers.Contract(VAULT_CONTRACT_ADDRESS, CelestialVaultABI, signer);
+      
+      const tx = await vault.closePosition(positionId);
+      await tx.wait();
+      
+      alert(`Position #${positionId} closed successfully!`);
+      // The useEffect will pick up the closed state on next poll
+    } catch (error: unknown) {
+      console.error("Failed to close position:", error);
+      const msg = error instanceof Error ? error.message : "Transaction failed";
+      alert("Error closing position: " + (msg.includes("user rejected") ? "Rejected by user" : msg));
+    } finally {
+      setClosingId(null);
     }
   };
 
@@ -973,34 +1051,65 @@ export default function TradePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="group border-t border-white/5 transition-colors hover:bg-white/[0.025] [&>td]:px-3 [&>td]:py-2.5">
-                      <td className="font-semibold text-white">
-                        <span className="relative flex items-center gap-2 before:absolute before:-left-3 before:h-4 before:w-0.5 before:rounded-full before:bg-[#22c55e]">
-                          {POSITION.market}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="rounded bg-[#22c55e]/10 px-1.5 py-0.5 text-[#22c55e]">
-                          {POSITION.side} {POSITION.leverage}
-                        </span>
-                      </td>
-                      <td className="text-right text-white/90">{POSITION.size}</td>
-                      <td className="text-right text-white/90">{POSITION.entry}</td>
-                      <td className="text-right text-white/90">{POSITION.mark}</td>
-                      <td className="text-right text-[#ef4444]/80">{POSITION.liq}</td>
-                      <td className="text-right text-[#22c55e]">
-                        {POSITION.pnl}{" "}
-                        <span className="text-[#22c55e]/70">({POSITION.pnlPct})</span>
-                      </td>
-                      <td className="text-right">
-                        <button
-                          type="button"
-                          className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-semibold text-[#888] transition-colors hover:border-[#ef4444]/40 hover:bg-[#ef4444]/10 hover:text-[#ef4444]"
-                        >
-                          Close
-                        </button>
+                  {activePositions.length === 0 && (
+                    <tr className="[&>td]:px-3 [&>td]:py-2.5">
+                      <td colSpan={8} className="text-center text-[#888]">
+                        No open positions.
                       </td>
                     </tr>
+                  )}
+                  {activePositions.map((pos) => {
+                    // Calculate dynamic PnL using the live currentPrice if it's the active market
+                    const isCurrentMarket = pos.market === activeMarket;
+                    const liveMarkPrice = (isCurrentMarket && currentPrice !== null) ? currentPrice : pos.markPriceNum;
+                    
+                    const sizeInCoins = pos.entryPriceNum > 0 ? pos.sizeUsdNum / pos.entryPriceNum : 0;
+                    let dynamicPnl = 0;
+                    if (pos.side === "Long") {
+                      dynamicPnl = (liveMarkPrice - pos.entryPriceNum) * sizeInCoins;
+                    } else {
+                      dynamicPnl = (pos.entryPriceNum - liveMarkPrice) * sizeInCoins;
+                    }
+                    
+                    const dynamicPnlPct = pos.sizeUsdNum > 0 ? (dynamicPnl / pos.sizeUsdNum) * 100 : 0;
+                    const pnlColor = dynamicPnl >= 0 ? "text-[#22c55e]" : "text-[#ef4444]";
+                    const pnlSign = dynamicPnl >= 0 ? "+" : "";
+
+                    return (
+                      <tr key={pos.id} className="group border-t border-white/5 transition-colors hover:bg-white/[0.025] [&>td]:px-3 [&>td]:py-2.5">
+                        <td className="font-semibold text-white">
+                          <span className="relative flex items-center gap-2 before:absolute before:-left-3 before:h-4 before:w-0.5 before:rounded-full before:bg-[#22c55e]">
+                            {pos.market}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`rounded px-1.5 py-0.5 ${pos.side === "Long" ? "bg-[#22c55e]/10 text-[#22c55e]" : "bg-[#ef4444]/10 text-[#ef4444]"}`}>
+                            {pos.side} {pos.leverage}x
+                          </span>
+                        </td>
+                        <td className="text-right text-white/90">{pos.sizeUsd}</td>
+                        <td className="text-right text-white/90">{pos.entryPrice}</td>
+                        <td className="text-right text-white/90">
+                          ${liveMarkPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="text-right text-[#ef4444]/80">—</td>
+                        <td className={`text-right ${pnlColor}`}>
+                          {pnlSign}${Math.abs(dynamicPnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                          <span className="opacity-70">({pnlSign}{dynamicPnlPct.toFixed(2)}%)</span>
+                        </td>
+                        <td className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => closeTrade(pos.id)}
+                            disabled={closingId === pos.id}
+                            className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-semibold text-[#888] transition-colors hover:border-[#ef4444]/40 hover:bg-[#ef4444]/10 hover:text-[#ef4444] disabled:opacity-50"
+                          >
+                            {closingId === pos.id ? "Closing…" : "Close"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   </tbody>
                 </table>
               ) : (

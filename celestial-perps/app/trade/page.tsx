@@ -1,9 +1,14 @@
 "use client";
 
-// Celestial Perps — Trade terminal (V1 UI shell, mock data).
+// Celestial Perps — Trade terminal with live CelestialVault smart contract integration.
 // Pure Tailwind arbitrary values; no config additions required.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ethers } from "ethers";
+import CelestialVaultABI from "@/src/abis/CelestialVault.json";
+
+// Deployed CelestialVault contract on Sepolia
+const VAULT_CONTRACT_ADDRESS = "0x786f4037924772c79F39D49C302dC3D3eDd14b04";
 import {
   createChart,
   CandlestickSeries,
@@ -391,7 +396,6 @@ const PANEL =
 const TIMEFRAMES = ["1m", "5m", "15m", "1H", "4H", "1D"];
 const LEV_PRESETS = [2, 5, 10, 25, 50];
 const SIZE_PCTS = [25, 50, 75, 100];
-const MOCK_BALANCE = 12450; // available USDC (mock — swap for live wallet balance)
 
 /* ------------------------------------------------------------------ */
 /*  PAGE                                                               */
@@ -403,9 +407,13 @@ export default function TradePage() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [leverage, setLeverage] = useState(10);
   const [activeTf, setActiveTf] = useState("15m");
-  const [pay, setPay] = useState("2,500");
+  const [pay, setPay] = useState("0.01");
   const [size, setSize] = useState("0.037");
   const [limitPrice, setLimitPrice] = useState("67,400.0");
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [connectedWallet, setConnectedWallet] = useState<ConnectedWallet | null>(null);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
@@ -601,6 +609,87 @@ export default function TradePage() {
       setConnectedWallet(null);
       setShowAccountMenu(false);
       setConnectError(null);
+    }
+  };
+
+  // Fetch wallet balance when connected
+  useEffect(() => {
+    if (!connectedWallet || connectedWallet.chain !== "Ethereum") {
+      setWalletBalance(null);
+      return;
+    }
+    let cancelled = false;
+    const fetchBalance = async () => {
+      try {
+        const provider = new ethers.BrowserProvider((window as Web3Window).ethereum!);
+        const bal = await provider.getBalance(connectedWallet.address);
+        if (!cancelled) setWalletBalance(ethers.formatEther(bal));
+      } catch {
+        if (!cancelled) setWalletBalance(null);
+      }
+    };
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 15000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [connectedWallet]);
+
+  // ── Execute Trade: call openPosition on CelestialVault ──
+  const executeTrade = async (goLong: boolean) => {
+    if (!connectedWallet) {
+      setShowConnectModal(true);
+      return;
+    }
+    if (connectedWallet.chain !== "Ethereum") {
+      setTxError("This contract is deployed on Ethereum Sepolia. Please connect an EVM wallet.");
+      return;
+    }
+
+    try {
+      setIsExecuting(true);
+      setTxError(null);
+      setTxHash(null);
+
+      // 1. Connect to injected provider
+      const provider = new ethers.BrowserProvider((window as Web3Window).ethereum!);
+      const signer = await provider.getSigner();
+
+      // 2. Instantiate contract
+      const vault = new ethers.Contract(VAULT_CONTRACT_ADDRESS, CelestialVaultABI, signer);
+
+      // 3. Prepare params
+      const collateralValue = ethers.parseEther(pay || "0");
+      const sideEnum = goLong ? 0 : 1; // Side.Long = 0, Side.Short = 1
+      const market = activeMarket; // e.g. "ETH-USD" or "BTC-USD"
+
+      // 4. First deposit collateral, then open position
+      //    The contract requires: deposit ETH → then openPosition uses freeCollateral.
+      //    We deposit first, then open the position in one flow.
+      const depositTx = await vault.deposit({ value: collateralValue });
+      await depositTx.wait();
+
+      // 5. Open the position using deposited collateral
+      const openTx = await vault.openPosition(
+        market,
+        sideEnum,
+        collateralValue,
+        leverage
+      );
+      const receipt = await openTx.wait();
+      setTxHash(receipt.hash);
+
+    } catch (error: unknown) {
+      console.error("Trade execution failed:", error);
+      const msg = error instanceof Error ? error.message : "Transaction failed";
+      // Extract revert reason if available
+      if (msg.includes("user rejected")) {
+        setTxError("Transaction rejected by user.");
+      } else if (msg.includes("insufficient funds")) {
+        setTxError("Insufficient Sepolia ETH for gas + collateral.");
+      } else {
+        setTxError(msg.length > 120 ? msg.slice(0, 120) + "…" : msg);
+      }
+    } finally {
+      setIsExecuting(false);
     }
   };
 
@@ -1055,39 +1144,42 @@ export default function TradePage() {
                 </label>
               )}
 
-              {/* pay */}
+              {/* pay (ETH collateral) */}
               <label className="block">
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wide text-[#888]">Pay</span>
+                  <span className="text-[10px] uppercase tracking-wide text-[#888]">Collateral</span>
                   <span className="font-mono text-[10px] text-[#666]">
-                    Avail {MOCK_BALANCE.toLocaleString("en-US")} USDC
+                    {walletBalance !== null
+                      ? `Avail ${parseFloat(walletBalance).toFixed(4)} ETH`
+                      : connectedWallet ? "Loading…" : "Connect wallet"}
                   </span>
                 </div>
                 <div className="flex items-center rounded-lg border border-white/5 bg-black px-3 transition-colors focus-within:border-white/20">
                   <input
-                    aria-label="Pay amount in USDC"
+                    aria-label="Collateral amount in ETH"
                     value={pay}
                     onChange={(e) => setPay(e.target.value)}
                     inputMode="decimal"
+                    placeholder="0.01"
                     className="w-full bg-transparent py-2.5 text-right font-mono text-sm tabular-nums text-white outline-none"
                   />
-                  <span className="ml-2 text-xs text-[#888]">USDC</span>
+                  <span className="ml-2 text-xs text-[#888]">ETH</span>
                 </div>
                 <div className="mt-1.5 grid grid-cols-4 gap-1">
-                  {SIZE_PCTS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() =>
-                        setPay(
-                          Math.round((MOCK_BALANCE * p) / 100).toLocaleString("en-US")
-                        )
-                      }
-                      className="rounded-md border border-white/5 bg-black py-1 font-mono text-[10px] text-[#888] transition-colors hover:border-white/15 hover:text-white"
-                    >
-                      {p === 100 ? "Max" : `${p}%`}
-                    </button>
-                  ))}
+                  {SIZE_PCTS.map((p) => {
+                    const bal = walletBalance ? parseFloat(walletBalance) : 0;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPay((bal * p / 100).toFixed(4))}
+                        disabled={!walletBalance}
+                        className="rounded-md border border-white/5 bg-black py-1 font-mono text-[10px] text-[#888] transition-colors hover:border-white/15 hover:text-white disabled:opacity-40"
+                      >
+                        {p === 100 ? "Max" : `${p}%`}
+                      </button>
+                    );
+                  })}
                 </div>
               </label>
 
@@ -1164,16 +1256,47 @@ export default function TradePage() {
               </div>
             </div>
 
+            {/* tx feedback */}
+            {txHash && (
+              <div className="mx-3 mb-1 rounded-lg border border-[#22c55e]/20 bg-[#22c55e]/10 px-3 py-2">
+                <p className="text-xs font-semibold text-[#22c55e]">✓ Trade executed successfully!</p>
+                <a
+                  href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 block truncate font-mono text-[10px] text-[#22c55e]/70 underline"
+                >
+                  View on Etherscan →
+                </a>
+              </div>
+            )}
+            {txError && (
+              <div className="mx-3 mb-1 rounded-lg border border-[#ef4444]/20 bg-[#ef4444]/10 px-3 py-2">
+                <p className="text-xs text-[#ef4444]">{txError}</p>
+              </div>
+            )}
+
             {/* pinned action button */}
             <div className="shrink-0 border-t border-white/5 p-3">
               {connectedWallet ? (
                 <button
                   type="button"
+                  onClick={() => executeTrade(isLong)}
+                  disabled={isExecuting || !pay || parseFloat(pay) <= 0}
                   style={{ backgroundColor: accent, boxShadow: `0 8px 26px -8px ${accent}` }}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.99]"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {isLong ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  {isLong ? "Execute Long" : "Execute Short"} · {leverage}x
+                  {isExecuting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Executing…
+                    </>
+                  ) : (
+                    <>
+                      {isLong ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                      {isLong ? "Execute Long" : "Execute Short"} · {leverage}x
+                    </>
+                  )}
                 </button>
               ) : (
                 <button

@@ -2,7 +2,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
-import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices, fetchPortfolioHistory, fetchUSDCBalanceETH, fetchUSDCBalanceSOL } from './utils/rpcUtils';
+import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices, fetchPortfolioHistory } from './utils/rpcUtils';
+import { fetchERC20Assets, fetchSPLAssets } from './utils/tokenUtils';
+import type { WalletAsset } from './types';
+import { TokenIcon } from './components/TokenIcon';
 import { TokenPage } from './components/TokenPage';
 import { ReceiveModal } from './components/ReceiveModal';
 import { SwapModal } from './components/SwapModal';
@@ -11,7 +14,7 @@ import { NFTTab } from './components/NFTTab';
 import { BuyModal } from './components/BuyModal';
 import { ConnectionModal } from './components/ConnectionModal';
 import { SignTransactionView } from './components/SignTransactionView';
-import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction } from './utils/txUtils';
+import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction, sendERC20Transaction, sendSPLTokenTransaction } from './utils/txUtils';
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -62,7 +65,6 @@ type WalletState = 'loading' | 'uninitialized' | 'locked' | 'unlocked';
 import btcLogo from './assets/btc.svg';
 import ethLogo from './assets/eth.svg';
 import solLogo from './assets/sol.svg';
-import usdcLogo from './assets/usdc.svg';
 
 interface MockToken {
   symbol: string;
@@ -102,8 +104,8 @@ export default function App() {
   const [isSwapOpen, setIsSwapOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [sendScreen, setSendScreen] = useState<'pick' | 'form'>('pick');
-  const [sendAsset, setSendAsset] = useState<'ETH' | 'SOL' | 'BTC'>('ETH');
-  const [activeTokenPage, setActiveTokenPage] = useState<ChainAccount | null>(null);
+  const [sendAssetKey, setSendAssetKey] = useState<string>('native:ETH');
+  const [activeAssetKey, setActiveAssetKey] = useState<string | null>(null);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [receiveInitialAccount, setReceiveInitialAccount] = useState<ChainAccount | null>(null);
   const [sendAddress, setSendAddress] = useState('');
@@ -193,7 +195,7 @@ export default function App() {
 
   const resetSend = () => {
     setSendScreen('pick');
-    setSendAsset('ETH');
+    setSendAssetKey('native:ETH');
     setSendAddress('');
     setSendAmount('');
     setIsSending(false);
@@ -278,19 +280,29 @@ export default function App() {
       const activeAccountGroup = allAccounts[activeAccountIndex];
       if (!activeAccountGroup) throw new Error("No active account found");
       
-      const chainName = sendAsset === 'ETH' ? 'EVM' : sendAsset === 'SOL' ? 'Solana' : 'Bitcoin';
-      const account = activeAccountGroup.chains.find(a => a.chain === chainName);
+      const asset = allAssets.find(a => a.key === sendAssetKey);
+      if (!asset) throw new Error("Selected asset not found");
+      const account = activeAccountGroup.chains.find(a => a.chain === asset.chain);
       
-      if (!account) throw new Error(`No private key found for ${chainName}`);
+      if (!account) throw new Error(`No private key found for ${asset.chain}`);
+
+      const evmRpc = isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL;
+      const solRpc = isTestnet ? CONFIG.HELIUS_DEVNET_URL : CONFIG.HELIUS_SOL_URL;
 
       let hash = '';
-      if (sendAsset === 'ETH') {
-        const rpcUrl = isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL;
-        hash = await sendEVMTransaction(account.privateKey, sendAddress, sendAmount, rpcUrl);
-      } else if (sendAsset === 'SOL') {
-        const rpcUrl = isTestnet ? CONFIG.HELIUS_DEVNET_URL : CONFIG.HELIUS_SOL_URL;
-        hash = await sendSolanaTransaction(account.privateKey, sendAddress, sendAmount, rpcUrl);
-      } else if (sendAsset === 'BTC') {
+      if (asset.kind === 'erc20') {
+        hash = await sendERC20Transaction(account.privateKey, asset.contract!, sendAddress, sendAmount, asset.decimals, evmRpc);
+      } else if (asset.kind === 'spl') {
+        hash = await sendSPLTokenTransaction(
+          account.privateKey,
+          { mint: asset.contract!, programId: asset.programId!, decimals: asset.decimals, sourceTokenAccount: asset.tokenAccount },
+          sendAddress, sendAmount, solRpc,
+        );
+      } else if (asset.chain === 'EVM') {
+        hash = await sendEVMTransaction(account.privateKey, sendAddress, sendAmount, evmRpc);
+      } else if (asset.chain === 'Solana') {
+        hash = await sendSolanaTransaction(account.privateKey, sendAddress, sendAmount, solRpc);
+      } else if (asset.chain === 'Bitcoin') {
         hash = await sendBitcoinTransaction(account.privateKey, sendAddress, sendAmount, isTestnet ? 'testnet' : 'mainnet');
       }
 
@@ -380,7 +392,7 @@ export default function App() {
   const btcAccount = accounts.find(c => c.chain === 'Bitcoin')?.address;
 
   const [balances, setBalances] = useState({ eth: "0.00", sol: "0.00", btc: "0.00" });
-  const [usdcBalances, setUsdcBalances] = useState({ eth: "0.00", sol: "0.00" });
+  const [tokenAssets, setTokenAssets] = useState<WalletAsset[]>([]);
   const [prices, setPrices] = useState({ eth: 0, sol: 0, btc: 0 });
   const [changes, setChanges] = useState({ eth: 0, sol: 0, btc: 0 });
   const [totalUsdValue, setTotalUsdValue] = useState(0.00);
@@ -453,7 +465,7 @@ export default function App() {
       if (cachedStr) {
         const cached = JSON.parse(cachedStr);
         if (cached.balances) setBalances(cached.balances);
-        if (cached.usdcBalances) setUsdcBalances(cached.usdcBalances);
+        if (cached.tokenAssets) setTokenAssets(cached.tokenAssets);
         if (cached.prices) setPrices(cached.prices);
         if (cached.changes) setChanges(cached.changes);
         if (cached.totalUsd !== undefined) setTotalUsdValue(cached.totalUsd);
@@ -465,13 +477,13 @@ export default function App() {
     }
 
     // 2. Fetch fresh data
-    const [liveData, eth, sol, btc, usdcEth, usdcSol] = await Promise.all([
+    const [liveData, eth, sol, btc, erc20Assets, splAssets] = await Promise.all([
       fetchLivePrices(),
       ethAccount ? fetchETHBalance(ethAccount, isTestnet) : Promise.resolve("0.00"),
       solAccount ? fetchSOLBalance(solAccount, isTestnet) : Promise.resolve("0.00"),
       btcAccount ? fetchBTCBalance(btcAccount, isTestnet) : Promise.resolve("0.00"),
-      ethAccount ? fetchUSDCBalanceETH(ethAccount, isTestnet) : Promise.resolve("0.00"),
-      solAccount ? fetchUSDCBalanceSOL(solAccount, isTestnet) : Promise.resolve("0.00")
+      ethAccount ? fetchERC20Assets(ethAccount, isTestnet) : Promise.resolve([] as WalletAsset[]),
+      solAccount ? fetchSPLAssets(solAccount, isTestnet) : Promise.resolve([] as WalletAsset[])
     ]);
     console.log("Fetched balances on", isTestnet ? "Testnet" : "Mainnet", { eth, sol, btc, liveData });
 
@@ -480,23 +492,28 @@ export default function App() {
     setPrices(liveData.prices);
     setChanges(liveData.changes);
     setBalances({ eth, sol, btc });
-    setUsdcBalances({ eth: usdcEth, sol: usdcSol });
+    const tokens = [...erc20Assets, ...splAssets];
+    setTokenAssets(tokens);
 
     const ethUsd = parseFloat(eth) * liveData.prices.eth;
     const solUsd = parseFloat(sol) * liveData.prices.sol;
     const btcUsd = parseFloat(btc) * liveData.prices.btc;
 
-    // USDC is pegged at $1 and contributes no daily gain/loss
-    const usdcUsd = (parseFloat(usdcEth) || 0) + (parseFloat(usdcSol) || 0);
+    const priced = tokens.filter(t => t.hasPrice);
+    const tokensUsd = priced.reduce((sum, t) => sum + (parseFloat(t.balance) || 0) * t.price, 0);
+    const tokensGain = priced.reduce((sum, t) => {
+      const usd = (parseFloat(t.balance) || 0) * t.price;
+      return sum + (usd - usd / (1 + t.change / 100));
+    }, 0);
 
-    const totalUsd = ethUsd + solUsd + btcUsd + usdcUsd;
+    const totalUsd = ethUsd + solUsd + btcUsd + tokensUsd;
     setTotalUsdValue(totalUsd);
 
     const ethGain = ethUsd - (ethUsd / (1 + liveData.changes.eth / 100));
     const solGain = solUsd - (solUsd / (1 + liveData.changes.sol / 100));
     const btcGain = btcUsd - (btcUsd / (1 + liveData.changes.btc / 100));
     
-    const totalGain = ethGain + solGain + btcGain;
+    const totalGain = ethGain + solGain + btcGain + tokensGain;
     setTotalUsdChange(totalGain);
     
     const prevTotalUsd = totalUsd - totalGain;
@@ -506,7 +523,7 @@ export default function App() {
     // 3. Update the cache with fresh data
     localStorage.setItem(cacheKey, JSON.stringify({
       balances: { eth, sol, btc },
-      usdcBalances: { eth: usdcEth, sol: usdcSol },
+      tokenAssets: tokens,
       prices: liveData.prices,
       changes: liveData.changes,
       totalUsd,
@@ -518,6 +535,30 @@ export default function App() {
   useEffect(() => {
     fetchBalances();
   }, [fetchBalances]);
+
+  // ---- Unified asset list (native coins + discovered ERC-20 / SPL tokens) ----
+
+  const allAssets: WalletAsset[] = [
+    ...MOCK_TOKENS.map((token): WalletAsset => {
+      const k = token.symbol.toLowerCase() as 'eth' | 'sol' | 'btc';
+      const chain = token.symbol === 'ETH' ? 'EVM' : token.symbol === 'SOL' ? 'Solana' : 'Bitcoin';
+      return {
+        key: `native:${token.symbol}`,
+        kind: 'native',
+        chain,
+        symbol: token.symbol,
+        name: token.name,
+        logo: token.logo,
+        decimals: token.symbol === 'BTC' ? 8 : token.symbol === 'SOL' ? 9 : 18,
+        balance: balances[k],
+        price: prices[k],
+        change: changes[k],
+        hasPrice: true,
+        chart: { kind: 'coin', id: token.name.toLowerCase() },
+      };
+    }),
+    ...[...tokenAssets].sort((a, b) => (parseFloat(b.balance) * b.price) - (parseFloat(a.balance) * a.price)),
+  ];
 
   // ---- Boot: Check vault state ----------------------------------------------
 
@@ -745,55 +786,25 @@ export default function App() {
     );
   }
 
-  // ---- Token list rows (native assets + USDC when held) --------------------
+  // ---- Token list rows --------------------------------------------------------
 
   const fmtUsd = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const nativeKey = { ETH: 'eth', SOL: 'sol', BTC: 'btc' } as const;
-  const tokenRows = [
-    ...MOCK_TOKENS.map((token) => {
-      const k = nativeKey[token.symbol as keyof typeof nativeKey];
-      const bal = balances[k];
-      return {
-        key: token.symbol,
-        symbol: token.symbol,
-        name: token.name,
-        logo: token.logo,
-        chainBadge: null as string | null,
-        color: token.color,
-        neon: token.neon,
-        balance: bal,
-        usd: bal === "..." ? "$..." : fmtUsd(parseFloat(bal) * prices[k]),
-        change: `${changes[k] >= 0 ? '+' : ''}${changes[k].toFixed(1)}%`,
-        positive: changes[k] >= 0,
-        onClick: () => {
-          const chainAccount = accounts.find(c => c.chain === (token.symbol === 'ETH' ? 'EVM' : token.symbol === 'SOL' ? 'Solana' : 'Bitcoin'));
-          if (chainAccount) setActiveTokenPage(chainAccount);
-        },
-      };
-    }),
-    ...([
-      { chain: 'EVM', k: 'eth', label: isTestnet ? 'USDC · Sepolia' : 'USDC · Ethereum', badge: ethLogo },
-      { chain: 'Solana', k: 'sol', label: isTestnet ? 'USDC · Devnet' : 'USDC · Solana', badge: solLogo },
-    ] as const)
-      .filter(({ k }) => (parseFloat(usdcBalances[k]) || 0) > 0)
-      .map(({ chain, k, label, badge }) => ({
-        key: `USDC-${k}`,
-        symbol: 'USDC',
-        name: label,
-        logo: usdcLogo,
-        chainBadge: badge as string | null,
-        color: '#2775CA',
-        neon: 'rgba(39,117,202,0.4)',
-        balance: usdcBalances[k],
-        usd: fmtUsd(parseFloat(usdcBalances[k]) || 0),
-        change: '0.0%',
-        positive: true,
-        onClick: () => {
-          const chainAccount = accounts.find(c => c.chain === chain);
-          if (chainAccount) { setReceiveInitialAccount(chainAccount); setIsReceiveOpen(true); }
-        },
-      })),
-  ];
+  const tokenRows = allAssets.map((asset) => {
+    const style = MOCK_TOKENS.find(t => asset.kind === 'native' && t.symbol === asset.symbol);
+    return {
+      asset,
+      key: asset.key,
+      color: style?.color || '#71717a',
+      neon: style?.neon || 'rgba(0,0,0,0)',
+      usd: asset.balance === "..." ? "$..." : asset.hasPrice ? fmtUsd((parseFloat(asset.balance) || 0) * asset.price) : '—',
+      change: asset.hasPrice ? `${asset.change >= 0 ? '+' : ''}${asset.change.toFixed(1)}%` : '',
+      positive: asset.change >= 0,
+      onClick: () => setActiveAssetKey(asset.key),
+    };
+  });
+  const activeAsset = activeAssetKey ? allAssets.find(a => a.key === activeAssetKey) || null : null;
+  const activeAssetAccount = activeAsset ? accounts.find(c => c.chain === activeAsset.chain) || null : null;
+  const sendAssetObj = allAssets.find(a => a.key === sendAssetKey) || allAssets[0];
 
   // ---- Unlocked: Dashboard (Obsidian) ---------------------------------------
 
@@ -1066,19 +1077,16 @@ export default function App() {
                 className="w-12 h-12 flex items-center justify-center flex-shrink-0 relative z-10 shadow-lg rounded-full"
                 style={{ boxShadow: `0 4px 20px ${token.neon}` }}
               >
-                <img src={token.logo} alt={token.symbol} className="w-full h-full rounded-full" />
-                {token.chainBadge && (
-                  <img src={token.chainBadge} alt="" className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-[#0a0a0a] bg-[#0a0a0a]" />
-                )}
+                <TokenIcon asset={token.asset} size={48} />
               </div>
               <div className="flex-1 min-w-0 relative z-10">
                 <div className="flex items-center justify-between">
-                  <span className="text-base font-bold text-white">{token.name}</span>
+                  <span className="text-base font-bold text-white truncate mr-2">{token.asset.name}</span>
                   <span className="text-base font-bold text-white">{token.usd}</span>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
                   <span className="text-xs font-medium text-zinc-400">
-                    {token.balance} {token.symbol}
+                    {token.asset.balance} {token.asset.symbol}
                   </span>
                   <span
                     className="text-xs font-bold"
@@ -1095,7 +1103,7 @@ export default function App() {
       </div>
 
       {/* ---- Floating Bottom Nav ---- */}
-      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && !activeTokenPage && !connectionRequest && !signTxRequest && (
+      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && !activeAssetKey && !connectionRequest && !signTxRequest && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[200]">
           <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
             <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen && !isActivityOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); setIsActivityOpen(false); }} />
@@ -1266,62 +1274,26 @@ export default function App() {
             </div>
             <p className="text-zinc-500 text-xs font-semibold px-6 mb-4 tracking-wide uppercase">Select an asset to send</p>
             <div className="flex flex-col px-2 flex-1 overflow-y-auto pb-8">
-              {/* ETH */}
-              <button 
-                onClick={() => { setSendAsset('ETH'); setSendScreen('form'); }}
-                className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
-              >
-                <div className="w-11 h-11 rounded-full bg-[#627eea] flex items-center justify-center flex-shrink-0">
-                  <svg width="18" height="18" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg>
-                </div>
-                <div className="flex flex-col items-start flex-1 min-w-0">
-                  <span className="text-sm font-bold text-white">Ethereum</span>
-                  <span className="text-xs text-zinc-500 font-mono">{balances.eth} ETH</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-sm font-bold text-white">${(parseFloat(balances.eth) * prices.eth).toFixed(2)}</span>
-                  <span className={`text-[10px] font-bold ${changes.eth >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>{changes.eth >= 0 ? '+' : ''}{changes.eth.toFixed(1)}%</span>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
-              </button>
-
-              {/* SOL */}
-              <button 
-                onClick={() => { setSendAsset('SOL'); setSendScreen('form'); }}
-                className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
-              >
-                <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center border border-[#14F195]/30 flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 397 311" fill="url(#solana-grad-send)"><defs><linearGradient id="solana-grad-send" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#00FFA3" /><stop offset="100%" stopColor="#DC1FFF" /></linearGradient></defs><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
-                </div>
-                <div className="flex flex-col items-start flex-1 min-w-0">
-                  <span className="text-sm font-bold text-white">Solana</span>
-                  <span className="text-xs text-zinc-500 font-mono">{balances.sol} SOL</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-sm font-bold text-white">${(parseFloat(balances.sol) * prices.sol).toFixed(2)}</span>
-                  <span className={`text-[10px] font-bold ${changes.sol >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>{changes.sol >= 0 ? '+' : ''}{changes.sol.toFixed(1)}%</span>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
-              </button>
-
-              {/* BTC */}
-              <button 
-                onClick={() => { setSendAsset('BTC'); setSendScreen('form'); }}
-                className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
-              >
-                <div className="w-11 h-11 rounded-full bg-[#f7931a] flex items-center justify-center flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M14.653 10.686c1.171-.341 1.996-1.045 2.128-2.656.16-1.954-1.127-2.92-3.327-3.237l.745-2.991-1.815-.452-.724 2.905c-.477-.119-.968-.232-1.464-.343l.732-2.936-1.814-.452-.746 2.994c-.396-.089-.785-.181-1.164-.282l-2.493-.621-.48 1.926s1.341.306 1.314.327c.732.182.865.666.843 1.049l-1.688 6.772c-.092.219-.344.545-.855.419.023.03-1.316-.328-1.316-.328l-.902 2.083 2.355.587c.435.108.865.223 1.291.332l-.75 3.013 1.815.452.744-2.986c.493.131.975.253 1.448.369l-.736 2.955 1.814.452.753-3.023c2.721.516 4.776.31 5.631-2.155.688-1.986-.019-3.13-1.503-3.878zM11.603 6.953c1.554.388 2.658.625 2.454 1.443-.203.815-1.428.614-2.982.227l.528-1.67zm1.189 7.747c-1.745-.436-3.05-.662-2.825-1.564.225-.902 1.623-.637 3.368-.201.597.149 1.139.317 1.488.586.643.493.58 1.408-.035 1.656-.475.191-1.189.163-1.996-.477z"/></svg>
-                </div>
-                <div className="flex flex-col items-start flex-1 min-w-0">
-                  <span className="text-sm font-bold text-white">Bitcoin</span>
-                  <span className="text-xs text-zinc-500 font-mono">{balances.btc} BTC</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-sm font-bold text-white">${(parseFloat(balances.btc) * prices.btc).toFixed(2)}</span>
-                  <span className={`text-[10px] font-bold ${changes.btc >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>{changes.btc >= 0 ? '+' : ''}{changes.btc.toFixed(1)}%</span>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
-              </button>
+              {allAssets.map((asset) => (
+                <button 
+                  key={asset.key}
+                  onClick={() => { setSendAssetKey(asset.key); setSendScreen('form'); }}
+                  className="haptic-btn flex items-center gap-4 p-4 rounded-2xl bg-transparent hover:bg-[#111111] transition-all group"
+                >
+                  <TokenIcon asset={asset} size={44} />
+                  <div className="flex flex-col items-start flex-1 min-w-0">
+                    <span className="text-sm font-bold text-white truncate max-w-full">{asset.name}</span>
+                    <span className="text-xs text-zinc-500 font-mono truncate max-w-full">{asset.balance} {asset.symbol}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-bold text-white">{asset.hasPrice ? `$${((parseFloat(asset.balance) || 0) * asset.price).toFixed(2)}` : '—'}</span>
+                    {asset.hasPrice && (
+                      <span className={`text-[10px] font-bold ${asset.change >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'}`}>{asset.change >= 0 ? '+' : ''}{asset.change.toFixed(1)}%</span>
+                    )}
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-white transition-colors flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -1335,10 +1307,8 @@ export default function App() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                 </button>
                 <div className="flex items-center gap-2">
-                  {sendAsset === 'ETH' && <div className="w-6 h-6 rounded-full bg-[#627eea] flex items-center justify-center shadow border border-white/10"><svg width="10" height="10" viewBox="0 0 320 512" fill="#fff"><path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z"/></svg></div>}
-                  {sendAsset === 'SOL' && <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center shadow border border-[#14F195]/30"><svg width="12" height="12" viewBox="0 0 397 311" fill="url(#solana-grad-send)"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zM333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg></div>}
-                  {sendAsset === 'BTC' && <div className="w-6 h-6 rounded-full bg-[#f7931a] flex items-center justify-center shadow border border-white/10"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M14.653 10.686c1.171-.341 1.996-1.045 2.128-2.656.16-1.954-1.127-2.92-3.327-3.237l.745-2.991-1.815-.452-.724 2.905c-.477-.119-.968-.232-1.464-.343l.732-2.936-1.814-.452-.746 2.994c-.396-.089-.785-.181-1.164-.282l-2.493-.621-.48 1.926s1.341.306 1.314.327c.732.182.865.666.843 1.049l-1.688 6.772c-.092.219-.344.545-.855.419.023.03-1.316-.328-1.316-.328l-.902 2.083 2.355.587c.435.108.865.223 1.291.332l-.75 3.013 1.815.452.744-2.986c.493.131.975.253 1.448.369l-.736 2.955 1.814.452.753-3.023c2.721.516 4.776.31 5.631-2.155.688-1.986-.019-3.13-1.503-3.878zM11.603 6.953c1.554.388 2.658.625 2.454 1.443-.203.815-1.428.614-2.982.227l.528-1.67zm1.189 7.747c-1.745-.436-3.05-.662-2.825-1.564.225-.902 1.623-.637 3.368-.201.597.149 1.139.317 1.488.586.643.493.58 1.408-.035 1.656-.475.191-1.189.163-1.996-.477z"/></svg></div>}
-                  <h2 className="text-xl font-black text-white tracking-tight">Send {sendAsset}</h2>
+                  <TokenIcon asset={sendAssetObj} size={24} showChainBadge={false} />
+                  <h2 className="text-xl font-black text-white tracking-tight truncate max-w-[200px]">Send {sendAssetObj.symbol}</h2>
                 </div>
               </div>
               <button onClick={() => { setIsSendOpen(false); resetSend(); }} className="haptic-btn w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
@@ -1361,7 +1331,7 @@ export default function App() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder={sendAsset === 'SOL' ? 'Solana address...' : sendAsset === 'BTC' ? 'Bitcoin address...' : '0x...'}
+                  placeholder={sendAssetObj.chain === 'Solana' ? 'Solana address...' : sendAssetObj.chain === 'Bitcoin' ? 'Bitcoin address...' : '0x...'}
                   value={sendAddress}
                   onChange={(e) => setSendAddress(e.target.value)}
                   className="bg-transparent text-sm font-mono text-white outline-none w-full placeholder:text-zinc-700" 
@@ -1374,10 +1344,10 @@ export default function App() {
                   <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Amount</span>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-medium text-zinc-500">
-                      Balance: <span className="text-white font-mono">{sendAsset === 'ETH' ? balances.eth : sendAsset === 'SOL' ? balances.sol : balances.btc}</span>
+                      Balance: <span className="text-white font-mono">{sendAssetObj.balance}</span>
                     </span>
                     <button 
-                      onClick={() => setSendAmount(sendAsset === 'ETH' ? balances.eth : sendAsset === 'SOL' ? balances.sol : balances.btc)} 
+                      onClick={() => setSendAmount(sendAssetObj.balance)} 
                       className="haptic-btn text-[10px] font-bold bg-white/10 text-white px-2 py-1 rounded-full hover:bg-white/20 transition-colors"
                     >
                       MAX
@@ -1392,11 +1362,16 @@ export default function App() {
                     onChange={(e) => setSendAmount(e.target.value.replace(/[^0-9.]/g, ''))}
                     className="bg-transparent text-4xl font-black text-white outline-none w-full placeholder:text-zinc-800" 
                   />
-                  <span className="text-lg font-bold text-zinc-500 flex-shrink-0">{sendAsset}</span>
+                  <span className="text-lg font-bold text-zinc-500 flex-shrink-0 max-w-[90px] truncate">{sendAssetObj.symbol}</span>
                 </div>
-                {sendAmount && (
+                {sendAmount && sendAssetObj.hasPrice && (
                   <span className="text-sm text-zinc-500 mt-2 block font-medium">
-                    ≈ ${(parseFloat(sendAmount || '0') * (sendAsset === 'ETH' ? prices.eth : sendAsset === 'SOL' ? prices.sol : prices.btc)).toFixed(2)}
+                    ≈ ${(parseFloat(sendAmount || '0') * sendAssetObj.price).toFixed(2)}
+                  </span>
+                )}
+                {sendAssetObj.kind !== 'native' && (
+                  <span className="text-[11px] text-zinc-600 mt-2 block font-medium">
+                    Network fee is paid in {sendAssetObj.chain === 'EVM' ? 'ETH' : 'SOL'}
                   </span>
                 )}
               </div>
@@ -1428,8 +1403,8 @@ export default function App() {
                     {txHash && (
                       <a 
                         href={
-                          sendAsset === 'ETH' ? (isTestnet ? `https://sepolia.etherscan.io/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`) :
-                          sendAsset === 'SOL' ? (isTestnet ? `https://explorer.solana.com/tx/${txHash}?cluster=devnet` : `https://explorer.solana.com/tx/${txHash}`) :
+                          sendAssetObj.chain === 'EVM' ? (isTestnet ? `https://sepolia.etherscan.io/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`) :
+                          sendAssetObj.chain === 'Solana' ? (isTestnet ? `https://explorer.solana.com/tx/${txHash}?cluster=devnet` : `https://explorer.solana.com/tx/${txHash}`) :
                           (isTestnet ? `https://mempool.space/testnet/tx/${txHash}` : `https://mempool.space/tx/${txHash}`)
                         }
                         target="_blank" rel="noopener noreferrer"
@@ -1891,22 +1866,23 @@ export default function App() {
       </div>
 
       {/* ---- Token Page ---- */}
-      {activeTokenPage && (
+      {activeAsset && activeAssetAccount && (
         <TokenPage 
-          account={activeTokenPage!}
-          onClose={() => setActiveTokenPage(null)}
-          onSend={(asset) => {
-            setSendAsset(asset);
+          key={activeAsset.key}
+          asset={activeAsset}
+          isTestnet={isTestnet}
+          account={activeAssetAccount}
+          onClose={() => setActiveAssetKey(null)}
+          onSend={() => {
+            setSendAssetKey(activeAsset.key);
+            setSendScreen('form');
             setIsSendOpen(true);
-            setActiveTokenPage(null);
+            setActiveAssetKey(null);
           }}
           onReceive={() => {
-            setReceiveInitialAccount(activeTokenPage);
+            setReceiveInitialAccount(activeAssetAccount);
             setIsReceiveOpen(true);
           }}
-          balance={activeTokenPage!.chain === 'EVM' ? balances.eth : activeTokenPage!.chain === 'Solana' ? balances.sol : balances.btc}
-          price={activeTokenPage!.chain === 'EVM' ? prices.eth : activeTokenPage!.chain === 'Solana' ? prices.sol : prices.btc}
-          change={activeTokenPage!.chain === 'EVM' ? changes.eth : activeTokenPage!.chain === 'Solana' ? changes.sol : changes.btc}
         />
       )}
 

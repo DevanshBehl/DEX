@@ -221,54 +221,23 @@ export async function fetchPortfolioHistory(
   }
 }
 
-// ---- USDC (stablecoin) balances ---------------------------------------------
 
-// Circle's official USDC deployments
-export const USDC_ADDRESSES = {
-  eth: { mainnet: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', testnet: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' }, // Sepolia
-  sol: { mainnet: 'EPjFWdd5AuFYLv44Nt4VcGCFfiQDVtcwyGmzZdnx1Wt8', testnet: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU' }, // Devnet
-};
-
-const formatTokenAmount = (amount: number) => amount.toFixed(2);
-
-export async function fetchUSDCBalanceETH(address: string, isTestnet: boolean = false, retries = 2): Promise<string> {
+export async function fetchContractChartData(platform: 'ethereum' | 'solana', contract: string, days: string): Promise<{ time: number; value: number }[]> {
   try {
-    const rpcUrl = isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL;
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const token = new ethers.Contract(
-      isTestnet ? USDC_ADDRESSES.eth.testnet : USDC_ADDRESSES.eth.mainnet,
-      ['function balanceOf(address) view returns (uint256)'],
-      provider,
-    );
-    const raw: bigint = await withTimeout(token.balanceOf(address));
-    return formatTokenAmount(parseFloat(ethers.formatUnits(raw, 6)));
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${platform}/contract/${contract}/market_chart?vs_currency=usd&days=${days}`, {
+      headers: {
+        'x-cg-demo-api-key': CONFIG.COINGECKO_API_KEY,
+        'accept': 'application/json'
+      }
+    });
+    if (!res.ok) throw new Error("Failed to fetch token chart data");
+    const data = await res.json();
+    return (data.prices || []).map(([timestamp, price]: [number, number]) => ({
+      time: timestamp,
+      value: price,
+    }));
   } catch (error) {
-    if (retries > 0) {
-      await new Promise(r => setTimeout(r, 500));
-      return fetchUSDCBalanceETH(address, isTestnet, retries - 1);
-    }
-    console.error("Error fetching ETH USDC balance:", error);
-    return "0.00";
-  }
-}
-
-export async function fetchUSDCBalanceSOL(address: string, isTestnet: boolean = false, retries = 2): Promise<string> {
-  try {
-    const rpcUrl = isTestnet ? CONFIG.HELIUS_DEVNET_URL : CONFIG.HELIUS_SOL_URL;
-    const connection = new Connection(rpcUrl, 'confirmed');
-    const mint = new PublicKey(isTestnet ? USDC_ADDRESSES.sol.testnet : USDC_ADDRESSES.sol.mainnet);
-    const res = await withTimeout(connection.getParsedTokenAccountsByOwner(new PublicKey(address), { mint }));
-    const total = res.value.reduce(
-      (sum, acc) => sum + (acc.account.data.parsed?.info?.tokenAmount?.uiAmount || 0),
-      0,
-    );
-    return formatTokenAmount(total);
-  } catch (error) {
-    if (retries > 0) {
-      await new Promise(r => setTimeout(r, 500));
-      return fetchUSDCBalanceSOL(address, isTestnet, retries - 1);
-    }
-    console.error("Error fetching SOL USDC balance:", error);
-    return "0.00";
+    console.error("Error fetching token chart data:", error);
+    return [];
   }
 }

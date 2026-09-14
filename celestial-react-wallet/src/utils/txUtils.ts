@@ -6,6 +6,7 @@ if (typeof window !== 'undefined') {
 import { ethers } from 'ethers';
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
+import { getAssociatedTokenAddressSync, createAssociatedTokenAccountIdempotentInstruction, createTransferCheckedInstruction } from '@solana/spl-token';
 import * as bitcoin from 'bitcoinjs-lib';
 import { ECPairFactory } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
@@ -137,5 +138,66 @@ export async function sendBitcoinTransaction(privateKeyWIF: string, toAddress: s
 
   } catch (error: any) {
     throw new Error(error.message || "Failed to send Bitcoin transaction");
+  }
+}
+
+// ---- Token transfers ------------------------------------------------------------
+
+export async function sendERC20Transaction(
+  privateKey: string,
+  tokenAddress: string,
+  toAddress: string,
+  amount: string,
+  decimals: number,
+  rpcUrl: string,
+): Promise<string> {
+  try {
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const wallet = new ethers.Wallet(privateKey, provider);
+    const token = new ethers.Contract(tokenAddress, ['function transfer(address to, uint256 amount) returns (bool)'], wallet);
+    const tx = await token.transfer(ethers.getAddress(toAddress), ethers.parseUnits(amount, decimals));
+    return tx.hash;
+  } catch (error: any) {
+    throw new Error(error.shortMessage || error.message || "Failed to send token");
+  }
+}
+
+export async function sendSPLTokenTransaction(
+  privateKey: string,
+  params: { mint: string; programId: string; decimals: number; sourceTokenAccount?: string },
+  toAddress: string,
+  amount: string,
+  rpcUrl: string,
+): Promise<string> {
+  try {
+    const connection = new Connection(rpcUrl, 'confirmed');
+    const owner = Keypair.fromSecretKey(bs58.decode(privateKey));
+    const mint = new PublicKey(params.mint);
+    const programId = new PublicKey(params.programId);
+    const recipient = new PublicKey(toAddress);
+
+    const source = params.sourceTokenAccount
+      ? new PublicKey(params.sourceTokenAccount)
+      : getAssociatedTokenAddressSync(mint, owner.publicKey, false, programId);
+    // allowOwnerOffCurve so PDAs (e.g. multisig vaults) can receive too
+    const destination = getAssociatedTokenAddressSync(mint, recipient, true, programId);
+
+    const tx = new Transaction().add(
+      // Creates the recipient's token account if it doesn't exist yet (no-op otherwise)
+      createAssociatedTokenAccountIdempotentInstruction(owner.publicKey, destination, recipient, mint, programId),
+      createTransferCheckedInstruction(
+        source,
+        mint,
+        destination,
+        owner.publicKey,
+        ethers.parseUnits(amount, params.decimals),
+        params.decimals,
+        [],
+        programId,
+      ),
+    );
+    return await sendAndConfirmTransaction(connection, tx, [owner]);
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to send token");
   }
 }

@@ -16,3 +16,25 @@ export interface NFTRecord {
   collectionName: string; // e.g., "Bored Ape Yacht Club"
   imageUrl: string; // The parsed image URL (must handle ipfs:// conversion if necessary)
 }
+
+export type AssetChart =
+  | { kind: 'coin'; id: string } // CoinGecko coin id (native assets)
+  | { kind: 'contract'; platform: 'ethereum' | 'solana'; address: string }; // token contract / mint
+
+export interface WalletAsset {
+  key: string; // unique: 'native:ETH', 'erc20:0x…', 'spl:<mint>'
+  kind: 'native' | 'erc20' | 'spl';
+  chain: 'EVM' | 'Solana' | 'Bitcoin';
+  symbol: string;
+  name: string;
+  logo: string | null;
+  decimals: number;
+  balance: string; // human-readable
+  price: number; // USD per unit, 0 if unknown
+  change: number; // 24h % change
+  hasPrice: boolean;
+  chart: AssetChart | null;
+  contract?: string; // ERC-20 address or SPL mint
+  programId?: string; // SPL Token or Token-2022 program
+  tokenAccount?: string; // SPL source token account holding the balance
+}

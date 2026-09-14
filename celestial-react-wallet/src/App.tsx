@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './index.css';
 import { deriveMultiChainAccounts, type ChainAccount } from './utils/walletUtils';
-import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices, fetchPortfolioHistory } from './utils/rpcUtils';
+import { fetchETHBalance, fetchSOLBalance, fetchBTCBalance, fetchLivePrices, fetchPortfolioHistory, fetchUSDCBalanceETH, fetchUSDCBalanceSOL } from './utils/rpcUtils';
 import { TokenPage } from './components/TokenPage';
 import { ReceiveModal } from './components/ReceiveModal';
 import { SwapModal } from './components/SwapModal';
@@ -62,6 +62,7 @@ type WalletState = 'loading' | 'uninitialized' | 'locked' | 'unlocked';
 import btcLogo from './assets/btc.svg';
 import ethLogo from './assets/eth.svg';
 import solLogo from './assets/sol.svg';
+import usdcLogo from './assets/usdc.svg';
 
 interface MockToken {
   symbol: string;
@@ -139,6 +140,10 @@ export default function App() {
   const [isBuyOpen, setIsBuyOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
+  const dashScrollRef = useRef<HTMLDivElement>(null);
+  const assetDrawerRef = useRef<HTMLDivElement>(null);
+  const [dashViewportHeight, setDashViewportHeight] = useState(0);
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(false);
 
   // ---- EIP-1193 Connection Requests ----
   const [connectionRequest, setConnectionRequest] = useState<{ id: string, origin: string } | null>(null);
@@ -318,6 +323,30 @@ export default function App() {
     document.body.style.width = '360px'; // Set extension popup width
   }, []);
 
+  // ---- Dashboard Scroll (asset drawer expands to top) -----------------------
+
+  useEffect(() => {
+    const el = dashScrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setDashViewportHeight(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [walletState]);
+
+  function handleDashScroll() {
+    const el = dashScrollRef.current;
+    const drawer = assetDrawerRef.current;
+    if (!el || !drawer) return;
+    setIsDrawerExpanded(el.scrollTop >= drawer.offsetTop - 1);
+  }
+
+  function toggleDrawer() {
+    const el = dashScrollRef.current;
+    const drawer = assetDrawerRef.current;
+    if (!el || !drawer) return;
+    el.scrollTo({ top: isDrawerExpanded ? 0 : drawer.offsetTop, behavior: 'smooth' });
+  }
+
   // ---- Derive Accounts ------------------------------------------------------
 
   useEffect(() => {
@@ -351,6 +380,7 @@ export default function App() {
   const btcAccount = accounts.find(c => c.chain === 'Bitcoin')?.address;
 
   const [balances, setBalances] = useState({ eth: "0.00", sol: "0.00", btc: "0.00" });
+  const [usdcBalances, setUsdcBalances] = useState({ eth: "0.00", sol: "0.00" });
   const [prices, setPrices] = useState({ eth: 0, sol: 0, btc: 0 });
   const [changes, setChanges] = useState({ eth: 0, sol: 0, btc: 0 });
   const [totalUsdValue, setTotalUsdValue] = useState(0.00);
@@ -423,6 +453,7 @@ export default function App() {
       if (cachedStr) {
         const cached = JSON.parse(cachedStr);
         if (cached.balances) setBalances(cached.balances);
+        if (cached.usdcBalances) setUsdcBalances(cached.usdcBalances);
         if (cached.prices) setPrices(cached.prices);
         if (cached.changes) setChanges(cached.changes);
         if (cached.totalUsd !== undefined) setTotalUsdValue(cached.totalUsd);
@@ -434,11 +465,13 @@ export default function App() {
     }
 
     // 2. Fetch fresh data
-    const [liveData, eth, sol, btc] = await Promise.all([
+    const [liveData, eth, sol, btc, usdcEth, usdcSol] = await Promise.all([
       fetchLivePrices(),
       ethAccount ? fetchETHBalance(ethAccount, isTestnet) : Promise.resolve("0.00"),
       solAccount ? fetchSOLBalance(solAccount, isTestnet) : Promise.resolve("0.00"),
-      btcAccount ? fetchBTCBalance(btcAccount, isTestnet) : Promise.resolve("0.00")
+      btcAccount ? fetchBTCBalance(btcAccount, isTestnet) : Promise.resolve("0.00"),
+      ethAccount ? fetchUSDCBalanceETH(ethAccount, isTestnet) : Promise.resolve("0.00"),
+      solAccount ? fetchUSDCBalanceSOL(solAccount, isTestnet) : Promise.resolve("0.00")
     ]);
     console.log("Fetched balances on", isTestnet ? "Testnet" : "Mainnet", { eth, sol, btc, liveData });
 
@@ -447,12 +480,16 @@ export default function App() {
     setPrices(liveData.prices);
     setChanges(liveData.changes);
     setBalances({ eth, sol, btc });
+    setUsdcBalances({ eth: usdcEth, sol: usdcSol });
 
     const ethUsd = parseFloat(eth) * liveData.prices.eth;
     const solUsd = parseFloat(sol) * liveData.prices.sol;
     const btcUsd = parseFloat(btc) * liveData.prices.btc;
 
-    const totalUsd = ethUsd + solUsd + btcUsd;
+    // USDC is pegged at $1 and contributes no daily gain/loss
+    const usdcUsd = (parseFloat(usdcEth) || 0) + (parseFloat(usdcSol) || 0);
+
+    const totalUsd = ethUsd + solUsd + btcUsd + usdcUsd;
     setTotalUsdValue(totalUsd);
 
     const ethGain = ethUsd - (ethUsd / (1 + liveData.changes.eth / 100));
@@ -469,6 +506,7 @@ export default function App() {
     // 3. Update the cache with fresh data
     localStorage.setItem(cacheKey, JSON.stringify({
       balances: { eth, sol, btc },
+      usdcBalances: { eth: usdcEth, sol: usdcSol },
       prices: liveData.prices,
       changes: liveData.changes,
       totalUsd,
@@ -522,7 +560,12 @@ export default function App() {
     checkVaultState();
     if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
       const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-        if (changes['celestial/vault']?.newValue) {
+        // Only lock when a new vault is added (e.g. imported from onboarding),
+        // not when an existing vault is updated (e.g. adding an account).
+        const change = changes['celestial_dex_vault'];
+        const oldCount = (change?.oldValue as unknown[] | undefined)?.length ?? 0;
+        const newCount = (change?.newValue as unknown[] | undefined)?.length ?? 0;
+        if (change && newCount > oldCount) {
           setWalletState('locked');
         }
       };
@@ -566,8 +609,7 @@ export default function App() {
               setPassword('');
             } else {
               console.error('Unlock failed:', response.error, 'vaultId:', selectedVaultId);
-              // Temporary debug: show real error
-              setError(`${response.error || 'Unknown error'} [vault: ${selectedVaultId || 'NONE'}]`);
+              setError(`${response.error || 'Unknown error'}`);
               setPassword('');
               setShaking(true);
               setTimeout(() => setShaking(false), 400);
@@ -703,6 +745,56 @@ export default function App() {
     );
   }
 
+  // ---- Token list rows (native assets + USDC when held) --------------------
+
+  const fmtUsd = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const nativeKey = { ETH: 'eth', SOL: 'sol', BTC: 'btc' } as const;
+  const tokenRows = [
+    ...MOCK_TOKENS.map((token) => {
+      const k = nativeKey[token.symbol as keyof typeof nativeKey];
+      const bal = balances[k];
+      return {
+        key: token.symbol,
+        symbol: token.symbol,
+        name: token.name,
+        logo: token.logo,
+        chainBadge: null as string | null,
+        color: token.color,
+        neon: token.neon,
+        balance: bal,
+        usd: bal === "..." ? "$..." : fmtUsd(parseFloat(bal) * prices[k]),
+        change: `${changes[k] >= 0 ? '+' : ''}${changes[k].toFixed(1)}%`,
+        positive: changes[k] >= 0,
+        onClick: () => {
+          const chainAccount = accounts.find(c => c.chain === (token.symbol === 'ETH' ? 'EVM' : token.symbol === 'SOL' ? 'Solana' : 'Bitcoin'));
+          if (chainAccount) setActiveTokenPage(chainAccount);
+        },
+      };
+    }),
+    ...([
+      { chain: 'EVM', k: 'eth', label: isTestnet ? 'USDC · Sepolia' : 'USDC · Ethereum', badge: ethLogo },
+      { chain: 'Solana', k: 'sol', label: isTestnet ? 'USDC · Devnet' : 'USDC · Solana', badge: solLogo },
+    ] as const)
+      .filter(({ k }) => (parseFloat(usdcBalances[k]) || 0) > 0)
+      .map(({ chain, k, label, badge }) => ({
+        key: `USDC-${k}`,
+        symbol: 'USDC',
+        name: label,
+        logo: usdcLogo,
+        chainBadge: badge as string | null,
+        color: '#2775CA',
+        neon: 'rgba(39,117,202,0.4)',
+        balance: usdcBalances[k],
+        usd: fmtUsd(parseFloat(usdcBalances[k]) || 0),
+        change: '0.0%',
+        positive: true,
+        onClick: () => {
+          const chainAccount = accounts.find(c => c.chain === chain);
+          if (chainAccount) { setReceiveInitialAccount(chainAccount); setIsReceiveOpen(true); }
+        },
+      })),
+  ];
+
   // ---- Unlocked: Dashboard (Obsidian) ---------------------------------------
 
   return (
@@ -808,6 +900,9 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* ---- Scrollable Dashboard Body ---- */}
+      <div ref={dashScrollRef} onScroll={handleDashScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-hide relative z-10">
 
       {/* ---- Hero Balance ---- */}
       <div className="px-6 pt-4 pb-2 flex flex-col z-10">
@@ -933,84 +1028,74 @@ export default function App() {
       </div>
 
       {/* ---- Asset Drawer ---- */}
-      <div className="flex-1 bg-[#0a0a0a] rounded-t-[32px] px-4 pt-6 z-10 border-t border-white/5 relative shadow-[0_-10px_40px_rgba(0,0,0,0.5)] animate-slide-up flex flex-col overflow-hidden">
-        {/* Drag handle pill */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-zinc-800 rounded-full z-20" />
-        
-        <div className="flex items-center justify-between px-2 mb-4">
+      <div
+        ref={assetDrawerRef}
+        className={`bg-[#0a0a0a] px-4 z-10 border-t border-white/5 relative shadow-[0_-10px_40px_rgba(0,0,0,0.5)] animate-slide-up flex flex-col transition-[border-radius] duration-300 ${isDrawerExpanded ? 'rounded-t-none' : 'rounded-t-[32px]'}`}
+        style={{ minHeight: dashViewportHeight || undefined }}
+      >
+        {/* Sticky drawer header: drag handle + tabs */}
+        <div className={`sticky top-0 z-30 bg-[#0a0a0a] pt-6 pb-4 transition-[border-radius] duration-300 ${isDrawerExpanded ? 'rounded-t-none' : 'rounded-t-[32px]'}`}>
+          <button
+            onClick={toggleDrawer}
+            className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-4 flex items-center justify-center"
+            title={isDrawerExpanded ? 'Collapse' : 'Expand'}
+          >
+            <span className="w-12 h-1 bg-zinc-800 rounded-full" />
+          </button>
+
+        <div className="flex items-center justify-between px-2">
           <div className="flex gap-4">
             <span className="text-sm font-bold text-white border-b-2 border-[#00f0ff] pb-1">Tokens</span>
             <span className="text-sm font-bold text-zinc-600 pb-1 hover:text-zinc-400 cursor-pointer transition-colors" onClick={() => setIsNFTsOpen(true)}>NFTs</span>
           </div>
-          <span className="text-xs font-bold text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded-md">{MOCK_TOKENS.length}</span>
+          <span className="text-xs font-bold text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded-md">{tokenRows.length}</span>
+        </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-1 pb-24">
-          {MOCK_TOKENS.map((token) => {
-            let currentBalance = token.balance;
-            let currentUsd = token.usdValue;
-            let currentChange = token.change;
-            let currentPositive = token.positive;
-            
-            if (token.symbol === 'ETH') {
-              currentBalance = balances.eth;
-              currentUsd = balances.eth === "..." ? "$..." : `$${(parseFloat(balances.eth) * prices.eth).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-              currentChange = `${changes.eth >= 0 ? '+' : ''}${changes.eth.toFixed(1)}%`;
-              currentPositive = changes.eth >= 0;
-            } else if (token.symbol === 'SOL') {
-              currentBalance = balances.sol;
-              currentUsd = balances.sol === "..." ? "$..." : `$${(parseFloat(balances.sol) * prices.sol).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-              currentChange = `${changes.sol >= 0 ? '+' : ''}${changes.sol.toFixed(1)}%`;
-              currentPositive = changes.sol >= 0;
-            } else if (token.symbol === 'BTC') {
-              currentBalance = balances.btc;
-              currentUsd = balances.btc === "..." ? "$..." : `$${(parseFloat(balances.btc) * prices.btc).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-              currentChange = `${changes.btc >= 0 ? '+' : ''}${changes.btc.toFixed(1)}%`;
-              currentPositive = changes.btc >= 0;
-            }
-
-            return (
+        <div className="flex flex-col gap-1 pb-24">
+          {tokenRows.map((token) => (
             <div 
-              key={token.symbol} 
+              key={token.key} 
               className="token-row group relative overflow-hidden shrink-0 cursor-pointer"
-              onClick={() => {
-                const chainAccount = accounts.find(c => c.chain === (token.symbol === 'ETH' ? 'EVM' : token.symbol === 'SOL' ? 'Solana' : 'Bitcoin'));
-                if (chainAccount) setActiveTokenPage(chainAccount);
-              }}
+              onClick={token.onClick}
             >
               {/* Subtle hover bleed */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: `radial-gradient(circle at 10% 50%, ${token.color} 0%, transparent 80%)` }} />
               
               <div
-                className="w-12 h-12 flex items-center justify-center flex-shrink-0 relative z-10 shadow-lg rounded-full overflow-hidden"
+                className="w-12 h-12 flex items-center justify-center flex-shrink-0 relative z-10 shadow-lg rounded-full"
                 style={{ boxShadow: `0 4px 20px ${token.neon}` }}
               >
-                <img src={token.logo} alt={token.symbol} className="w-full h-full" />
+                <img src={token.logo} alt={token.symbol} className="w-full h-full rounded-full" />
+                {token.chainBadge && (
+                  <img src={token.chainBadge} alt="" className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-[#0a0a0a] bg-[#0a0a0a]" />
+                )}
               </div>
               <div className="flex-1 min-w-0 relative z-10">
                 <div className="flex items-center justify-between">
                   <span className="text-base font-bold text-white">{token.name}</span>
-                  <span className="text-base font-bold text-white">{currentUsd}</span>
+                  <span className="text-base font-bold text-white">{token.usd}</span>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
                   <span className="text-xs font-medium text-zinc-400">
-                    {currentBalance} {token.symbol}
+                    {token.balance} {token.symbol}
                   </span>
                   <span
                     className="text-xs font-bold"
-                    style={{ color: currentPositive ? '#00ff66' : '#ff0055' }}
+                    style={{ color: token.positive ? '#00ff66' : '#ff0055' }}
                   >
-                    {currentChange}
+                    {token.change}
                   </span>
                 </div>
               </div>
             </div>
-          )})}
+          ))}
         </div>
+      </div>
       </div>
 
       {/* ---- Floating Bottom Nav ---- */}
-      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && !activeTokenPage && (
+      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && !activeTokenPage && !connectionRequest && !signTxRequest && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[200]">
           <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
             <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen && !isActivityOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); setIsActivityOpen(false); }} />

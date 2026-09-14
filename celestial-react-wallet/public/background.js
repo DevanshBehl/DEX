@@ -87,8 +87,8 @@ async function handleMessage(message) {
       // Initialize accountCount to 1 for the new vault
       vault.accountCount = 1;
 
-      const result = await chrome.storage.local.get('celestial/vaults');
-      const vaults = result['celestial/vaults'] || [];
+      const result = await chrome.storage.local.get('celestial_dex_vault');
+      const vaults = result['celestial_dex_vault'] || [];
       
       // Ensure no duplicate ID
       const existingIdx = vaults.findIndex((v) => v.id === vault.id);
@@ -98,15 +98,15 @@ async function handleMessage(message) {
         vaults.push(vault);
       }
 
-      await chrome.storage.local.set({ 'celestial/vaults': vaults });
+      await chrome.storage.local.set({ 'celestial_dex_vault': vaults });
       return { success: true };
     }
 
     case 'VAULT_UNLOCK': {
       // Attempt to decrypt the vault with the provided password
       const { password, vaultId } = payload;
-      const result = await chrome.storage.local.get('celestial/vaults');
-      const vaults = result['celestial/vaults'] || [];
+      const result = await chrome.storage.local.get('celestial_dex_vault');
+      const vaults = result['celestial_dex_vault'] || [];
       
       const vault = vaults.find((v) => v.id === vaultId);
       
@@ -140,8 +140,8 @@ async function handleMessage(message) {
     }
 
     case 'VAULT_STATE_GET': {
-      const result = await chrome.storage.local.get('celestial/vaults');
-      const vaults = result['celestial/vaults'] || [];
+      const result = await chrome.storage.local.get('celestial_dex_vault');
+      const vaults = result['celestial_dex_vault'] || [];
       const hasVault = vaults.length > 0;
       
       const activeVault = vaults.find(v => v.id === activeVaultId);
@@ -159,13 +159,13 @@ async function handleMessage(message) {
 
     case 'VAULT_ADD_ACCOUNT': {
       if (!isUnlocked || !activeVaultId) return { success: false, error: 'Vault locked' };
-      const result = await chrome.storage.local.get('celestial/vaults');
-      const vaults = result['celestial/vaults'] || [];
-      const vIdx = vaults.findIndex(v => v.id === activeVaultId);
-      if (vIdx >= 0) {
-        vaults[vIdx].accountCount = (vaults[vIdx].accountCount || 1) + 1;
-        await chrome.storage.local.set({ 'celestial/vaults': vaults });
-        return { success: true, accountCount: vaults[vIdx].accountCount };
+      const result = await chrome.storage.local.get('celestial_dex_vault');
+      const vaults = result['celestial_dex_vault'] || [];
+      const v = vaults.find(v => v.id === activeVaultId);
+      if (v) {
+        v.accountCount = (v.accountCount || 1) + 1;
+        await chrome.storage.local.set({ 'celestial_dex_vault': vaults });
+        return { success: true, accountCount: v.accountCount };
       }
       return { success: false, error: 'Active vault not found' };
     }

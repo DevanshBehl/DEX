@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { ShieldCheck, Layers, Zap, ArrowRight, ArrowUpRight, ArrowDownLeft, Lock, Key, Smartphone, Repeat, Check, Sparkles } from 'lucide-react';
+import { ShieldCheck, Layers, Zap, ArrowRight, ArrowUpRight, ArrowDownLeft, Lock, Key, Smartphone, Repeat, Check, Sparkles, Terminal, Shield } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
 
 /* ============================================================
@@ -212,6 +212,108 @@ function SecurityVault() {
     </div>
   );
 }
+
+/* ============================================================
+   AGENT WALLET MOCKUP COMPONENT
+   ============================================================ */
+function AgentWalletMockup() {
+  const [messages, setMessages] = useState([
+    { role: 'user', content: 'Buy 1 ETH on Base using USDC' },
+    { role: 'agent', content: 'Analyzing intent & finding best route...', thinking: true },
+  ]);
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => {
+      setMessages(prev => [
+        prev[0],
+        { role: 'agent', content: "I've found the optimal route for your swap via Uniswap V3 on Base.", executionDetails: true, thinking: false }
+      ]);
+    }, 3000);
+
+    return () => clearTimeout(timer1);
+  }, []);
+
+  return (
+    <div className="w-full max-w-[500px] h-[400px] bg-white rounded-[2rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-200/60 relative flex flex-col">
+      {/* Top Bar */}
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-purple-600" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-slate-800 leading-tight">Celestial AI</div>
+            <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Agent Active</div>
+          </div>
+        </div>
+        <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          Desktop Mode
+        </div>
+      </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 p-5 flex flex-col gap-4 overflow-hidden relative bg-slate-50/30">
+        {messages.map((msg, i) => (
+          <motion.div 
+            key={i}
+            className={`max-w-[85%] ${msg.role === 'user' ? 'self-end bg-indigo-500 text-white rounded-2xl rounded-tr-sm' : msg.thinking ? 'self-start text-slate-500' : 'self-start w-full bg-white border border-slate-200 rounded-2xl rounded-tl-sm shadow-sm z-10'} px-4 py-3 text-sm`}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            {msg.thinking ? (
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <div className="flex gap-1">
+                  <motion.div className="w-1.5 h-1.5 bg-slate-300 rounded-full" animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-slate-300 rounded-full" animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-slate-300 rounded-full" animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} />
+                </div>
+                {msg.content}
+              </div>
+            ) : (
+              <>
+                <div className={msg.role === 'agent' ? 'text-slate-700 font-medium mb-3' : 'font-medium'}>{msg.content}</div>
+                {msg.executionDetails && (
+                  <>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500 font-medium">Pay</span>
+                        <span className="font-bold text-slate-800">3,452.10 USDC</span>
+                      </div>
+                      <div className="h-px w-full bg-slate-200 my-1" />
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500 font-medium">Receive</span>
+                        <span className="font-bold text-emerald-600">1.00 ETH</span>
+                      </div>
+                    </div>
+                    <motion.div 
+                      className="mt-4 w-full bg-indigo-500 hover:bg-indigo-600 text-white text-center py-2.5 rounded-xl text-sm font-bold cursor-pointer transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Confirm Execution
+                    </motion.div>
+                  </>
+                )}
+              </>
+            )}
+          </motion.div>
+        ))}
+      </div>
+      
+      {/* Bottom Input Area */}
+      <div className="px-5 py-4 border-t border-slate-100 bg-white relative z-20">
+        <div className="w-full bg-slate-50 border border-slate-200 rounded-full px-4 py-3 flex items-center justify-between text-sm text-slate-400">
+          <span>Type your intent...</span>
+          <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+            <ArrowUpRight className="w-3 h-3" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ============================================================
    MULTI-CHAIN VISUAL
@@ -550,6 +652,57 @@ export default function LandingPage() {
             className="flex-1 w-full flex items-center justify-center"
           >
             <MultiChainVisual />
+          </motion.div>
+        </div>
+
+        {/* ============ FEATURE 3: CELESTIAL AI ============ */}
+        <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16 md:gap-24 mb-40 md:mb-56">
+          <motion.div
+            initial={{ opacity: 0, x: -60 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as any }}
+            className="flex-1 text-left flex flex-col items-start"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center mb-6 shadow-lg">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
+            <h2 className="text-4xl md:text-[3.5rem] font-black tracking-tighter text-black mb-6 leading-[1.1]">
+              Meet your new <br /> Autonomous Agent.
+            </h2>
+            <p className="text-lg md:text-xl text-neutral-500 leading-relaxed font-medium mb-8 max-w-lg">
+              Don't execute trades manually. Express your intent to the Celestial AI and let it find the best routes, execute the swaps, and manage your portfolio across chains.
+            </p>
+            <ul className="flex flex-col gap-3">
+              {['Intent-based swapping', 'Desktop-class interactive 800px dashboard', 'Strictly isolated agent vault'].map((item, i) => (
+                <motion.li
+                  key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 + i * 0.1 }}
+                  className="flex items-center gap-3 text-neutral-600 font-semibold"
+                >
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-emerald-600" />
+                  </div>
+                  {item}
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 60 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as any, delay: 0.2 }}
+            className="flex-1 w-full flex items-center justify-center relative perspective-[1200px]"
+          >
+            {/* Ambient glow behind agent wallet mockup */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-purple-400/20 to-indigo-400/20 rounded-full blur-[80px] pointer-events-none" />
+            <TiltCard className="relative z-10 w-full max-w-[500px]">
+               <AgentWalletMockup />
+            </TiltCard>
           </motion.div>
         </div>
 

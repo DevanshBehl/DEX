@@ -12,14 +12,14 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
   onReject,
 }) => {
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-[#000000] text-white">
+    <div className="absolute inset-0 z-[9999] flex flex-col bg-[#000000] text-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/5">
         <h2 className="text-lg font-black tracking-tight">Connect to dApp</h2>
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center p-6 space-y-6">
         <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-2 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
           <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -51,7 +51,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
       </div>
 
       {/* Footer / Buttons */}
-      <div className="p-4 border-t border-white/5 bg-[#0a0a0a] flex space-x-3">
+      <div className="shrink-0 p-4 border-t border-white/5 bg-[#0a0a0a] flex space-x-3">
         <button
           onClick={onReject}
           className="flex-1 py-3.5 rounded-xl text-sm font-bold bg-white/5 hover:bg-white/10 transition-colors text-white"

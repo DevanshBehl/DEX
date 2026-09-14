@@ -67,3 +67,36 @@ export async function decryptPayload(
 
   return new TextDecoder().decode(plainBuffer);
 }
+
+export function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+export function generateSalt(length = 16): string {
+  const salt = crypto.getRandomValues(new Uint8Array(length));
+  return toBase64(salt);
+}
+
+export async function encryptPayload(
+  key: CryptoKey,
+  text: string,
+): Promise<EncryptedPayload> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+
+  const ciphertextBuffer = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    data,
+  );
+
+  return {
+    iv: toBase64(iv),
+    ciphertext: toBase64(new Uint8Array(ciphertextBuffer)),
+  };
+}

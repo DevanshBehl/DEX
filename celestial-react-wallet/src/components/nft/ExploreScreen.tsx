@@ -12,12 +12,16 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ isTestnet, onOpenC
   const { entries, ranked, isLoading, error, refresh } = useExplore(true, isTestnet);
 
   return (
-    <div className="absolute inset-0 bg-[#000] z-40 flex flex-col animate-fade-in">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5 shrink-0">
+    // z-[100] matches the other full-screen panels (Settings, Accounts) so this covers
+    // the account header (z-50); the bottom nav sits above at z-[200] and stays usable.
+    <div className="absolute inset-0 bg-[#000] z-[100] flex flex-col animate-fade-in">
+      <div className="flex items-center gap-3 px-5 pt-7 pb-4 border-b border-white/5 shrink-0">
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-black text-white tracking-tight">Explore</h1>
-          <p className="text-[11px] font-semibold text-zinc-500 mt-0.5">
-            {ranked ? 'Trending on Magic Eden' : 'Featured collections on Magic Eden'}
+          {/* One line carries both the source and the honesty caveat — vertical space is
+              scarce at 360×600, and a separate note repeated this. */}
+          <p className="text-[11px] font-semibold text-zinc-500 mt-0.5 truncate">
+            {ranked ? 'Trending on Magic Eden' : 'Featured on Magic Eden · not a ranking'}
           </p>
         </div>
         <button
@@ -47,19 +51,11 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ isTestnet, onOpenC
             ))}
           </div>
         ) : (
-          <>
-            {!ranked && entries.length > 0 && (
-              // Honesty: without a ranked feed this is a curated list, not a volume ranking.
-              <p className="text-[10px] font-medium text-zinc-600 mb-3 leading-snug">
-                A hand-picked set of established collections with live floor prices — not a volume ranking.
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              {entries.map((entry) => (
-                <CollectionRow key={entry.collection.handle} entry={entry} onOpen={onOpenCollection} />
-              ))}
-            </div>
-          </>
+          <div className="flex flex-col gap-2">
+            {entries.map((entry) => (
+              <CollectionRow key={entry.collection.handle} entry={entry} onOpen={onOpenCollection} />
+            ))}
+          </div>
         )}
       </div>
     </div>

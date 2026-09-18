@@ -1,0 +1,741 @@
+{
+    "ownedNfts": [
+        {
+            "contract": {
+                "address": "0x74e5e2d01969f52375E26FF8119E06BfDE633213",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "1",
+            "tokenType": "ERC1155",
+            "name": "Celestial Pass",
+            "description": "Celestial wallet ERC-1155 test edition (Sepolia). No value.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxyZWN0IHg9IjcwIiB5PSI3MCIgd2lkdGg9IjI2MCIgaGVpZ2h0PSIyNjAiIHJ4PSIzNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDBmMGZmIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMjAwIiB5PSIyMTUiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMzQiIGZpbGw9IiMwMGYwZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNvbW1vbjwvdGV4dD48L3N2Zz4=",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxyZWN0IHg9IjcwIiB5PSI3MCIgd2lkdGg9IjI2MCIgaGVpZ2h0PSIyNjAiIHJ4PSIzNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDBmMGZmIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMjAwIiB5PSIyMTUiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMzQiIGZpbGw9IiMwMGYwZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNvbW1vbjwvdGV4dD48L3N2Zz4="
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIFBhc3MiLCJkZXNjcmlwdGlvbiI6IkNlbGVzdGlhbCB3YWxsZXQgRVJDLTExNTUgdGVzdCBlZGl0aW9uIChTZXBvbGlhKS4gTm8gdmFsdWUuIiwiaW1hZ2UiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBME1EQWdOREF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlOREF3SWlCb1pXbG5hSFE5SWpRd01DSWdabWxzYkQwaUl6QTFNRFV3TlNJdlBqeHlaV04wSUhnOUlqY3dJaUI1UFNJM01DSWdkMmxrZEdnOUlqSTJNQ0lnYUdWcFoyaDBQU0l5TmpBaUlISjRQU0l6TmlJZ1ptbHNiRDBpYm05dVpTSWdjM1J5YjJ0bFBTSWpNREJtTUdabUlpQnpkSEp2YTJVdGQybGtkR2c5SWpFd0lpOCtQSFJsZUhRZ2VEMGlNakF3SWlCNVBTSXlNVFVpSUdadmJuUXRabUZ0YVd4NVBTSnRiMjV2YzNCaFkyVWlJR1p2Ym5RdGMybDZaVDBpTXpRaUlHWnBiR3c5SWlNd01HWXdabVlpSUhSbGVIUXRZVzVqYUc5eVBTSnRhV1JrYkdVaVBrTnZiVzF2Ymp3dmRHVjRkRDQ4TDNOMlp6ND0iLCJhdHRyaWJ1dGVzIjpbeyJ0cmFpdF90eXBlIjoiUmFyaXR5IiwidmFsdWUiOiJDb21tb24ifSx7InRyYWl0X3R5cGUiOiJFZGl0aW9uIElkIiwidmFsdWUiOjF9XX0=",
+                "metadata": {
+                    "name": "Celestial Pass",
+                    "attributes": [
+                        {
+                            "value": "Common",
+                            "trait_type": "Rarity"
+                        },
+                        {
+                            "trait_type": "Edition Id",
+                            "value": 1
+                        }
+                    ],
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxyZWN0IHg9IjcwIiB5PSI3MCIgd2lkdGg9IjI2MCIgaGVpZ2h0PSIyNjAiIHJ4PSIzNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDBmMGZmIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMjAwIiB5PSIyMTUiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMzQiIGZpbGw9IiMwMGYwZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNvbW1vbjwvdGV4dD48L3N2Zz4=",
+                    "description": "Celestial wallet ERC-1155 test edition (Sepolia). No value."
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.398Z",
+            "balance": "10",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0x74e5e2d01969f52375E26FF8119E06BfDE633213",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "2",
+            "tokenType": "ERC1155",
+            "name": "Celestial Relic",
+            "description": "Celestial wallet ERC-1155 test edition (Sepolia). No value.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxyZWN0IHg9IjcwIiB5PSI3MCIgd2lkdGg9IjI2MCIgaGVpZ2h0PSIyNjAiIHJ4PSIzNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYmQwMGZmIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMjAwIiB5PSIyMTUiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMzQiIGZpbGw9IiNiZDAwZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkxlZ2VuZGFyeTwvdGV4dD48L3N2Zz4=",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxyZWN0IHg9IjcwIiB5PSI3MCIgd2lkdGg9IjI2MCIgaGVpZ2h0PSIyNjAiIHJ4PSIzNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYmQwMGZmIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMjAwIiB5PSIyMTUiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMzQiIGZpbGw9IiNiZDAwZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkxlZ2VuZGFyeTwvdGV4dD48L3N2Zz4="
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIFJlbGljIiwiZGVzY3JpcHRpb24iOiJDZWxlc3RpYWwgd2FsbGV0IEVSQy0xMTU1IHRlc3QgZWRpdGlvbiAoU2Vwb2xpYSkuIE5vIHZhbHVlLiIsImltYWdlIjoiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhacFpYZENiM2c5SWpBZ01DQTBNREFnTkRBd0lqNDhjbVZqZENCM2FXUjBhRDBpTkRBd0lpQm9aV2xuYUhROUlqUXdNQ0lnWm1sc2JEMGlJekExTURVd05TSXZQanh5WldOMElIZzlJamN3SWlCNVBTSTNNQ0lnZDJsa2RHZzlJakkyTUNJZ2FHVnBaMmgwUFNJeU5qQWlJSEo0UFNJek5pSWdabWxzYkQwaWJtOXVaU0lnYzNSeWIydGxQU0lqWW1Rd01HWm1JaUJ6ZEhKdmEyVXRkMmxrZEdnOUlqRXdJaTgrUEhSbGVIUWdlRDBpTWpBd0lpQjVQU0l5TVRVaUlHWnZiblF0Wm1GdGFXeDVQU0p0YjI1dmMzQmhZMlVpSUdadmJuUXRjMmw2WlQwaU16UWlJR1pwYkd3OUlpTmlaREF3Wm1ZaUlIUmxlSFF0WVc1amFHOXlQU0p0YVdSa2JHVWlQa3hsWjJWdVpHRnllVHd2ZEdWNGRENDhMM04yWno0PSIsImF0dHJpYnV0ZXMiOlt7InRyYWl0X3R5cGUiOiJSYXJpdHkiLCJ2YWx1ZSI6IkxlZ2VuZGFyeSJ9LHsidHJhaXRfdHlwZSI6IkVkaXRpb24gSWQiLCJ2YWx1ZSI6Mn1dfQ==",
+                "metadata": {
+                    "name": "Celestial Relic",
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxyZWN0IHg9IjcwIiB5PSI3MCIgd2lkdGg9IjI2MCIgaGVpZ2h0PSIyNjAiIHJ4PSIzNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYmQwMGZmIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMjAwIiB5PSIyMTUiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMzQiIGZpbGw9IiNiZDAwZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkxlZ2VuZGFyeTwvdGV4dD48L3N2Zz4=",
+                    "description": "Celestial wallet ERC-1155 test edition (Sepolia). No value.",
+                    "attributes": [
+                        {
+                            "trait_type": "Rarity",
+                            "value": "Legendary"
+                        },
+                        {
+                            "trait_type": "Edition Id",
+                            "value": 2
+                        }
+                    ]
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.394Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0xaeE65b84d152Ee214A2e7607fcBFe302BD3EffDe",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "1",
+            "tokenType": "ERC721",
+            "name": "Celestial Orb #1",
+            "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTAyIiBmaWxsPSIjYmQwMGZmIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2JkMDBmZiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzE8L3RleHQ+PC9zdmc+",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTAyIiBmaWxsPSIjYmQwMGZmIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2JkMDBmZiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzE8L3RleHQ+PC9zdmc+"
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIE9yYiAjMSIsImRlc2NyaXB0aW9uIjoiQ2VsZXN0aWFsIHdhbGxldCB0ZXN0IE5GVCAoU2Vwb2xpYSkuIE5vdCBmb3Igc2FsZSwgbm8gdmFsdWUuIiwiaW1hZ2UiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBME1EQWdOREF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlOREF3SWlCb1pXbG5hSFE5SWpRd01DSWdabWxzYkQwaUl6QTFNRFV3TlNJdlBqeGphWEpqYkdVZ1kzZzlJakl3TUNJZ1kzazlJakl3TUNJZ2NqMGlNVEF5SWlCbWFXeHNQU0lqWW1Rd01HWm1JaUJ2Y0dGamFYUjVQU0l3TGpnMUlpOCtQR05wY21Oc1pTQmplRDBpTWpBd0lpQmplVDBpTWpBd0lpQnlQU0l4TlRBaUlHWnBiR3c5SW01dmJtVWlJSE4wY205clpUMGlJMkprTURCbVppSWdjM1J5YjJ0bExYZHBaSFJvUFNJeUlpQnZjR0ZqYVhSNVBTSXdMalFpTHo0OGRHVjRkQ0I0UFNJeU1EQWlJSGs5SWpNM01DSWdabTl1ZEMxbVlXMXBiSGs5SW0xdmJtOXpjR0ZqWlNJZ1ptOXVkQzF6YVhwbFBTSXlPQ0lnWm1sc2JEMGlJMlptWm1abVppSWdkR1Y0ZEMxaGJtTm9iM0k5SW0xcFpHUnNaU0krSXpFOEwzUmxlSFErUEM5emRtYysiLCJhdHRyaWJ1dGVzIjpbeyJ0cmFpdF90eXBlIjoiS2luZCIsInZhbHVlIjoiU3RhbmRhcmQifSx7InRyYWl0X3R5cGUiOiJPcmJpdCIsInZhbHVlIjoyfSx7InRyYWl0X3R5cGUiOiJDb2xvciIsInZhbHVlIjoiI2JkMDBmZiJ9XX0=",
+                "metadata": {
+                    "attributes": [
+                        {
+                            "value": "Standard",
+                            "trait_type": "Kind"
+                        },
+                        {
+                            "trait_type": "Orbit",
+                            "value": 2
+                        },
+                        {
+                            "value": "#bd00ff",
+                            "trait_type": "Color"
+                        }
+                    ],
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTAyIiBmaWxsPSIjYmQwMGZmIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2JkMDBmZiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzE8L3RleHQ+PC9zdmc+",
+                    "name": "Celestial Orb #1",
+                    "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value."
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.379Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0xaeE65b84d152Ee214A2e7607fcBFe302BD3EffDe",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "2",
+            "tokenType": "ERC721",
+            "name": "Celestial Orb #2",
+            "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTE0IiBmaWxsPSIjMDBmZjY2IiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwZmY2NiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzI8L3RleHQ+PC9zdmc+",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTE0IiBmaWxsPSIjMDBmZjY2IiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwZmY2NiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzI8L3RleHQ+PC9zdmc+"
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIE9yYiAjMiIsImRlc2NyaXB0aW9uIjoiQ2VsZXN0aWFsIHdhbGxldCB0ZXN0IE5GVCAoU2Vwb2xpYSkuIE5vdCBmb3Igc2FsZSwgbm8gdmFsdWUuIiwiaW1hZ2UiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBME1EQWdOREF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlOREF3SWlCb1pXbG5hSFE5SWpRd01DSWdabWxzYkQwaUl6QTFNRFV3TlNJdlBqeGphWEpqYkdVZ1kzZzlJakl3TUNJZ1kzazlJakl3TUNJZ2NqMGlNVEUwSWlCbWFXeHNQU0lqTURCbVpqWTJJaUJ2Y0dGamFYUjVQU0l3TGpnMUlpOCtQR05wY21Oc1pTQmplRDBpTWpBd0lpQmplVDBpTWpBd0lpQnlQU0l4TlRBaUlHWnBiR3c5SW01dmJtVWlJSE4wY205clpUMGlJekF3Wm1ZMk5pSWdjM1J5YjJ0bExYZHBaSFJvUFNJeUlpQnZjR0ZqYVhSNVBTSXdMalFpTHo0OGRHVjRkQ0I0UFNJeU1EQWlJSGs5SWpNM01DSWdabTl1ZEMxbVlXMXBiSGs5SW0xdmJtOXpjR0ZqWlNJZ1ptOXVkQzF6YVhwbFBTSXlPQ0lnWm1sc2JEMGlJMlptWm1abVppSWdkR1Y0ZEMxaGJtTm9iM0k5SW0xcFpHUnNaU0krSXpJOEwzUmxlSFErUEM5emRtYysiLCJhdHRyaWJ1dGVzIjpbeyJ0cmFpdF90eXBlIjoiS2luZCIsInZhbHVlIjoiU3RhbmRhcmQifSx7InRyYWl0X3R5cGUiOiJPcmJpdCIsInZhbHVlIjozfSx7InRyYWl0X3R5cGUiOiJDb2xvciIsInZhbHVlIjoiIzAwZmY2NiJ9XX0=",
+                "metadata": {
+                    "attributes": [
+                        {
+                            "trait_type": "Kind",
+                            "value": "Standard"
+                        },
+                        {
+                            "trait_type": "Orbit",
+                            "value": 3
+                        },
+                        {
+                            "trait_type": "Color",
+                            "value": "#00ff66"
+                        }
+                    ],
+                    "name": "Celestial Orb #2",
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTE0IiBmaWxsPSIjMDBmZjY2IiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwZmY2NiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzI8L3RleHQ+PC9zdmc+",
+                    "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value."
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.366Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0xaeE65b84d152Ee214A2e7607fcBFe302BD3EffDe",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "3",
+            "tokenType": "ERC721",
+            "name": "Celestial Orb #3",
+            "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTI2IiBmaWxsPSIjZmZhYTAwIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmYWEwMCIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzM8L3RleHQ+PC9zdmc+",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTI2IiBmaWxsPSIjZmZhYTAwIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmYWEwMCIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzM8L3RleHQ+PC9zdmc+"
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIE9yYiAjMyIsImRlc2NyaXB0aW9uIjoiQ2VsZXN0aWFsIHdhbGxldCB0ZXN0IE5GVCAoU2Vwb2xpYSkuIE5vdCBmb3Igc2FsZSwgbm8gdmFsdWUuIiwiaW1hZ2UiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBME1EQWdOREF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlOREF3SWlCb1pXbG5hSFE5SWpRd01DSWdabWxzYkQwaUl6QTFNRFV3TlNJdlBqeGphWEpqYkdVZ1kzZzlJakl3TUNJZ1kzazlJakl3TUNJZ2NqMGlNVEkySWlCbWFXeHNQU0lqWm1aaFlUQXdJaUJ2Y0dGamFYUjVQU0l3TGpnMUlpOCtQR05wY21Oc1pTQmplRDBpTWpBd0lpQmplVDBpTWpBd0lpQnlQU0l4TlRBaUlHWnBiR3c5SW01dmJtVWlJSE4wY205clpUMGlJMlptWVdFd01DSWdjM1J5YjJ0bExYZHBaSFJvUFNJeUlpQnZjR0ZqYVhSNVBTSXdMalFpTHo0OGRHVjRkQ0I0UFNJeU1EQWlJSGs5SWpNM01DSWdabTl1ZEMxbVlXMXBiSGs5SW0xdmJtOXpjR0ZqWlNJZ1ptOXVkQzF6YVhwbFBTSXlPQ0lnWm1sc2JEMGlJMlptWm1abVppSWdkR1Y0ZEMxaGJtTm9iM0k5SW0xcFpHUnNaU0krSXpNOEwzUmxlSFErUEM5emRtYysiLCJhdHRyaWJ1dGVzIjpbeyJ0cmFpdF90eXBlIjoiS2luZCIsInZhbHVlIjoiU3RhbmRhcmQifSx7InRyYWl0X3R5cGUiOiJPcmJpdCIsInZhbHVlIjo0fSx7InRyYWl0X3R5cGUiOiJDb2xvciIsInZhbHVlIjoiI2ZmYWEwMCJ9XX0=",
+                "metadata": {
+                    "attributes": [
+                        {
+                            "trait_type": "Kind",
+                            "value": "Standard"
+                        },
+                        {
+                            "trait_type": "Orbit",
+                            "value": 4
+                        },
+                        {
+                            "value": "#ffaa00",
+                            "trait_type": "Color"
+                        }
+                    ],
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTI2IiBmaWxsPSIjZmZhYTAwIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmYWEwMCIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzM8L3RleHQ+PC9zdmc+",
+                    "name": "Celestial Orb #3",
+                    "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value."
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.377Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0xaeE65b84d152Ee214A2e7607fcBFe302BD3EffDe",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "4",
+            "tokenType": "ERC721",
+            "name": "Celestial Orb #4",
+            "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTM4IiBmaWxsPSIjNjI3ZWVhIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzYyN2VlYSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzQ8L3RleHQ+PC9zdmc+",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTM4IiBmaWxsPSIjNjI3ZWVhIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzYyN2VlYSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzQ8L3RleHQ+PC9zdmc+"
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIE9yYiAjNCIsImRlc2NyaXB0aW9uIjoiQ2VsZXN0aWFsIHdhbGxldCB0ZXN0IE5GVCAoU2Vwb2xpYSkuIE5vdCBmb3Igc2FsZSwgbm8gdmFsdWUuIiwiaW1hZ2UiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBME1EQWdOREF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlOREF3SWlCb1pXbG5hSFE5SWpRd01DSWdabWxzYkQwaUl6QTFNRFV3TlNJdlBqeGphWEpqYkdVZ1kzZzlJakl3TUNJZ1kzazlJakl3TUNJZ2NqMGlNVE00SWlCbWFXeHNQU0lqTmpJM1pXVmhJaUJ2Y0dGamFYUjVQU0l3TGpnMUlpOCtQR05wY21Oc1pTQmplRDBpTWpBd0lpQmplVDBpTWpBd0lpQnlQU0l4TlRBaUlHWnBiR3c5SW01dmJtVWlJSE4wY205clpUMGlJell5TjJWbFlTSWdjM1J5YjJ0bExYZHBaSFJvUFNJeUlpQnZjR0ZqYVhSNVBTSXdMalFpTHo0OGRHVjRkQ0I0UFNJeU1EQWlJSGs5SWpNM01DSWdabTl1ZEMxbVlXMXBiSGs5SW0xdmJtOXpjR0ZqWlNJZ1ptOXVkQzF6YVhwbFBTSXlPQ0lnWm1sc2JEMGlJMlptWm1abVppSWdkR1Y0ZEMxaGJtTm9iM0k5SW0xcFpHUnNaU0krSXpROEwzUmxlSFErUEM5emRtYysiLCJhdHRyaWJ1dGVzIjpbeyJ0cmFpdF90eXBlIjoiS2luZCIsInZhbHVlIjoiU3RhbmRhcmQifSx7InRyYWl0X3R5cGUiOiJPcmJpdCIsInZhbHVlIjo1fSx7InRyYWl0X3R5cGUiOiJDb2xvciIsInZhbHVlIjoiIzYyN2VlYSJ9XX0=",
+                "metadata": {
+                    "name": "Celestial Orb #4",
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTM4IiBmaWxsPSIjNjI3ZWVhIiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzYyN2VlYSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+IzQ8L3RleHQ+PC9zdmc+",
+                    "attributes": [
+                        {
+                            "trait_type": "Kind",
+                            "value": "Standard"
+                        },
+                        {
+                            "trait_type": "Orbit",
+                            "value": 5
+                        },
+                        {
+                            "trait_type": "Color",
+                            "value": "#627eea"
+                        }
+                    ],
+                    "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value."
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.377Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0xaeE65b84d152Ee214A2e7607fcBFe302BD3EffDe",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "5",
+            "tokenType": "ERC721",
+            "name": "Celestial Orb #5",
+            "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iOTAiIGZpbGw9IiMxNGYxOTUiIG9wYWNpdHk9IjAuODUiLz48Y2lyY2xlIGN4PSIyMDAiIGN5PSIyMDAiIHI9IjE1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTRmMTk1IiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNCIvPjx0ZXh0IHg9IjIwMCIgeT0iMzcwIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjI4IiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4jNTwvdGV4dD48L3N2Zz4=",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iOTAiIGZpbGw9IiMxNGYxOTUiIG9wYWNpdHk9IjAuODUiLz48Y2lyY2xlIGN4PSIyMDAiIGN5PSIyMDAiIHI9IjE1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTRmMTk1IiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNCIvPjx0ZXh0IHg9IjIwMCIgeT0iMzcwIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjI4IiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4jNTwvdGV4dD48L3N2Zz4="
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIE9yYiAjNSIsImRlc2NyaXB0aW9uIjoiQ2VsZXN0aWFsIHdhbGxldCB0ZXN0IE5GVCAoU2Vwb2xpYSkuIE5vdCBmb3Igc2FsZSwgbm8gdmFsdWUuIiwiaW1hZ2UiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBME1EQWdOREF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlOREF3SWlCb1pXbG5hSFE5SWpRd01DSWdabWxzYkQwaUl6QTFNRFV3TlNJdlBqeGphWEpqYkdVZ1kzZzlJakl3TUNJZ1kzazlJakl3TUNJZ2NqMGlPVEFpSUdacGJHdzlJaU14TkdZeE9UVWlJRzl3WVdOcGRIazlJakF1T0RVaUx6NDhZMmx5WTJ4bElHTjRQU0l5TURBaUlHTjVQU0l5TURBaUlISTlJakUxTUNJZ1ptbHNiRDBpYm05dVpTSWdjM1J5YjJ0bFBTSWpNVFJtTVRrMUlpQnpkSEp2YTJVdGQybGtkR2c5SWpJaUlHOXdZV05wZEhrOUlqQXVOQ0l2UGp4MFpYaDBJSGc5SWpJd01DSWdlVDBpTXpjd0lpQm1iMjUwTFdaaGJXbHNlVDBpYlc5dWIzTndZV05sSWlCbWIyNTBMWE5wZW1VOUlqSTRJaUJtYVd4c1BTSWpabVptWm1abUlpQjBaWGgwTFdGdVkyaHZjajBpYldsa1pHeGxJajRqTlR3dmRHVjRkRDQ4TDNOMlp6ND0iLCJhdHRyaWJ1dGVzIjpbeyJ0cmFpdF90eXBlIjoiS2luZCIsInZhbHVlIjoiU3RhbmRhcmQifSx7InRyYWl0X3R5cGUiOiJPcmJpdCIsInZhbHVlIjo2fSx7InRyYWl0X3R5cGUiOiJDb2xvciIsInZhbHVlIjoiIzE0ZjE5NSJ9XX0=",
+                "metadata": {
+                    "name": "Celestial Orb #5",
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iOTAiIGZpbGw9IiMxNGYxOTUiIG9wYWNpdHk9IjAuODUiLz48Y2lyY2xlIGN4PSIyMDAiIGN5PSIyMDAiIHI9IjE1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTRmMTk1IiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNCIvPjx0ZXh0IHg9IjIwMCIgeT0iMzcwIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjI4IiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4jNTwvdGV4dD48L3N2Zz4=",
+                    "description": "Celestial wallet test NFT (Sepolia). Not for sale, no value.",
+                    "attributes": [
+                        {
+                            "value": "Standard",
+                            "trait_type": "Kind"
+                        },
+                        {
+                            "value": 6,
+                            "trait_type": "Orbit"
+                        },
+                        {
+                            "value": "#14f195",
+                            "trait_type": "Color"
+                        }
+                    ]
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.381Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0xaeE65b84d152Ee214A2e7607fcBFe302BD3EffDe",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "6",
+            "tokenType": "ERC721",
+            "name": "Claim 5 ETH Reward #6",
+            "description": "Congratulations! Visit celestial-airdrop-claim.xyz to claim your reward now.",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTAyIiBmaWxsPSIjZmYwMDU1IiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmMDA1NSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0xBSU08L3RleHQ+PC9zdmc+",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTAyIiBmaWxsPSIjZmYwMDU1IiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmMDA1NSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0xBSU08L3RleHQ+PC9zdmc+"
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2xhaW0gNSBFVEggUmV3YXJkICM2IiwiZGVzY3JpcHRpb24iOiJDb25ncmF0dWxhdGlvbnMhIFZpc2l0IGNlbGVzdGlhbC1haXJkcm9wLWNsYWltLnh5eiB0byBjbGFpbSB5b3VyIHJld2FyZCBub3cuIiwiaW1hZ2UiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBME1EQWdOREF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlOREF3SWlCb1pXbG5hSFE5SWpRd01DSWdabWxzYkQwaUl6QTFNRFV3TlNJdlBqeGphWEpqYkdVZ1kzZzlJakl3TUNJZ1kzazlJakl3TUNJZ2NqMGlNVEF5SWlCbWFXeHNQU0lqWm1Zd01EVTFJaUJ2Y0dGamFYUjVQU0l3TGpnMUlpOCtQR05wY21Oc1pTQmplRDBpTWpBd0lpQmplVDBpTWpBd0lpQnlQU0l4TlRBaUlHWnBiR3c5SW01dmJtVWlJSE4wY205clpUMGlJMlptTURBMU5TSWdjM1J5YjJ0bExYZHBaSFJvUFNJeUlpQnZjR0ZqYVhSNVBTSXdMalFpTHo0OGRHVjRkQ0I0UFNJeU1EQWlJSGs5SWpNM01DSWdabTl1ZEMxbVlXMXBiSGs5SW0xdmJtOXpjR0ZqWlNJZ1ptOXVkQzF6YVhwbFBTSXlPQ0lnWm1sc2JEMGlJMlptWm1abVppSWdkR1Y0ZEMxaGJtTm9iM0k5SW0xcFpHUnNaU0krUTB4QlNVMDhMM1JsZUhRK1BDOXpkbWMrIiwiYXR0cmlidXRlcyI6W3sidHJhaXRfdHlwZSI6IktpbmQiLCJ2YWx1ZSI6IlNwYW0ifSx7InRyYWl0X3R5cGUiOiJPcmJpdCIsInZhbHVlIjo3fSx7InRyYWl0X3R5cGUiOiJDb2xvciIsInZhbHVlIjoiIzAwZjBmZiJ9XX0=",
+                "metadata": {
+                    "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzA1MDUwNSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTAyIiBmaWxsPSIjZmYwMDU1IiBvcGFjaXR5PSIwLjg1Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSIxNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmMDA1NSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48dGV4dCB4PSIyMDAiIHk9IjM3MCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0xBSU08L3RleHQ+PC9zdmc+",
+                    "description": "Congratulations! Visit celestial-airdrop-claim.xyz to claim your reward now.",
+                    "name": "Claim 5 ETH Reward #6",
+                    "attributes": [
+                        {
+                            "trait_type": "Kind",
+                            "value": "Spam"
+                        },
+                        {
+                            "trait_type": "Orbit",
+                            "value": 7
+                        },
+                        {
+                            "value": "#00f0ff",
+                            "trait_type": "Color"
+                        }
+                    ]
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.381Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        },
+        {
+            "contract": {
+                "address": "0xaeE65b84d152Ee214A2e7607fcBFe302BD3EffDe",
+                "name": null,
+                "symbol": null,
+                "totalSupply": null,
+                "tokenType": "UNKNOWN",
+                "contractDeployer": null,
+                "deployedBlockNumber": null,
+                "openSeaMetadata": {
+                    "floorPrice": null,
+                    "collectionName": null,
+                    "collectionSlug": null,
+                    "safelistRequestStatus": null,
+                    "imageUrl": null,
+                    "description": null,
+                    "externalUrl": null,
+                    "twitterUsername": null,
+                    "discordUrl": null,
+                    "bannerImageUrl": null,
+                    "lastIngestedAt": null
+                },
+                "isSpam": false,
+                "spamClassifications": []
+            },
+            "tokenId": "7",
+            "tokenType": "ERC721",
+            "name": "Celestial Broken #7",
+            "description": "Fixture with an image URL that never resolves (fallback test).",
+            "tokenUri": null,
+            "image": {
+                "cachedUrl": "https://invalid.celestial.test/missing-image.png",
+                "thumbnailUrl": null,
+                "pngUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": "https://invalid.celestial.test/missing-image.png"
+            },
+            "animation": {
+                "cachedUrl": null,
+                "contentType": null,
+                "size": null,
+                "originalUrl": null
+            },
+            "raw": {
+                "tokenUri": "data:application/json;base64,eyJuYW1lIjoiQ2VsZXN0aWFsIEJyb2tlbiAjNyIsImRlc2NyaXB0aW9uIjoiRml4dHVyZSB3aXRoIGFuIGltYWdlIFVSTCB0aGF0IG5ldmVyIHJlc29sdmVzIChmYWxsYmFjayB0ZXN0KS4iLCJpbWFnZSI6Imh0dHBzOi8vaW52YWxpZC5jZWxlc3RpYWwudGVzdC9taXNzaW5nLWltYWdlLnBuZyIsImF0dHJpYnV0ZXMiOlt7InRyYWl0X3R5cGUiOiJLaW5kIiwidmFsdWUiOiJCcm9rZW5JbWFnZSJ9LHsidHJhaXRfdHlwZSI6Ik9yYml0IiwidmFsdWUiOjF9LHsidHJhaXRfdHlwZSI6IkNvbG9yIiwidmFsdWUiOiIjYmQwMGZmIn1dfQ==",
+                "metadata": {
+                    "description": "Fixture with an image URL that never resolves (fallback test).",
+                    "attributes": [
+                        {
+                            "trait_type": "Kind",
+                            "value": "BrokenImage"
+                        },
+                        {
+                            "value": 1,
+                            "trait_type": "Orbit"
+                        },
+                        {
+                            "value": "#bd00ff",
+                            "trait_type": "Color"
+                        }
+                    ],
+                    "name": "Celestial Broken #7",
+                    "image": "https://invalid.celestial.test/missing-image.png"
+                },
+                "error": null
+            },
+            "collection": null,
+            "mint": {
+                "mintAddress": null,
+                "blockNumber": null,
+                "timestamp": null,
+                "transactionHash": null
+            },
+            "owners": null,
+            "timeLastUpdated": "2026-09-15T07:03:18.362Z",
+            "balance": "1",
+            "acquiredAt": {
+                "blockTimestamp": null,
+                "blockNumber": null
+            }
+        }
+    ],
+    "totalCount": 8,
+    "validAt": {
+        "blockNumber": 11708317,
+        "blockHash": "0xfc874a58ee952b76034e985b660114dc2a44c165ba2aae25aeb9cad177bbb318",
+        "blockTimestamp": "2026-09-15T07:06:12Z"
+    },
+    "pageKey": null
+}

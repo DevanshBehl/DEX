@@ -10,7 +10,14 @@ import { TokenPage } from './components/TokenPage';
 import { ReceiveModal } from './components/ReceiveModal';
 import { SwapModal } from './components/SwapModal';
 import { ActivityTab } from './components/ActivityTab';
-import { NFTTab } from './components/NFTTab';
+import { NFTGrid } from './components/nft/NFTGrid';
+import { NFTDetailPage } from './components/nft/NFTDetailPage';
+import { SendNFTFlow } from './components/nft/SendNFTFlow';
+import { useNFTs } from './nft/hooks/useNFTs';
+import { useNFTMarket } from './nft/hooks/useNFTMarket';
+import { formatUsd } from './nft/marketplaces/format';
+import { ExploreScreen } from './components/nft/ExploreScreen';
+import { CollectionPage } from './components/nft/CollectionPage';
 import { BuyModal } from './components/BuyModal';
 import { ConnectionModal } from './components/ConnectionModal';
 import { SignTransactionView } from './components/SignTransactionView';
@@ -102,6 +109,9 @@ export default function App() {
   const [shaking, setShaking] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSwapOpen, setIsSwapOpen] = useState(false);
+  // nft.md Phase 4.3 — Explore: marketplace collections the user doesn't own
+  const [isExploreOpen, setIsExploreOpen] = useState(false);
+  const [exploreCollection, setExploreCollection] = useState<{ handle: string; name: string } | null>(null);
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [sendScreen, setSendScreen] = useState<'pick' | 'form'>('pick');
   const [sendAssetKey, setSendAssetKey] = useState<string>('native:ETH');
@@ -138,7 +148,9 @@ export default function App() {
   const [allAccounts, setAllAccounts] = useState<{ name: string; chains: ChainAccount[] }[]>([]);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
-  const [isNFTsOpen, setIsNFTsOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<'tokens' | 'nfts'>('tokens');
+  const [activeNftKey, setActiveNftKey] = useState<string | null>(null);
+  const [isNftSendOpen, setIsNftSendOpen] = useState(false);
   const [isBuyOpen, setIsBuyOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
@@ -403,6 +415,36 @@ export default function App() {
     const saved = localStorage.getItem('celestial_is_testnet');
     return saved === 'true';
   });
+
+  // ---- NFTs (nft.md Phase 1–2) — fetched when the NFTs tab is opened, or always
+  // when NFT floor value is folded into the portfolio total (Phase 4.3).
+  const [includeNftsInTotal, setIncludeNftsInTotal] = useState<boolean>(
+    () => localStorage.getItem('celestial_include_nfts_in_total') === 'true',
+  );
+  const nftState = useNFTs({
+    evmAddress: ethAccount,
+    solanaAddress: solAccount,
+    isTestnet,
+    enabled: walletState === 'unlocked' && (drawerTab === 'nfts' || includeNftsInTotal),
+  });
+  const activeNft = activeNftKey ? nftState.nfts.find(n => n.key === activeNftKey) || null : null;
+
+  // ---- NFT market data (nft.md Phase 4) — floors for non-hidden NFTs, mainnet only
+  const nftMarket = useNFTMarket({
+    nfts: nftState.visibleNfts,
+    evmAddress: ethAccount,
+    solanaAddress: solAccount,
+    isTestnet,
+    enabled: walletState === 'unlocked' && (drawerTab === 'nfts' || includeNftsInTotal),
+  });
+
+  useEffect(() => {
+    localStorage.setItem('celestial_include_nfts_in_total', String(includeNftsInTotal));
+  }, [includeNftsInTotal]);
+
+  const nftFloorUsd = nftMarket.floorTotals.EVM * prices.eth + nftMarket.floorTotals.Solana * prices.sol;
+  // Floors carry no 24h series, so the change figure stays token-only (see the toggle copy).
+  const displayedTotalUsd = totalUsdValue + (includeNftsInTotal ? nftFloorUsd : 0);
 
   useEffect(() => {
     localStorage.setItem('celestial_is_testnet', isTestnet.toString());
@@ -921,12 +963,17 @@ export default function App() {
         <div className="flex items-baseline gap-1">
           <span className="balance-dollar text-2xl font-semibold mt-1 mr-0.5">$</span>
           <span className="balance-amount text-[2.75rem] font-bold leading-none">
-            <AnimatedOdometer value={parseInt(totalUsdValue.toFixed(2).split('.')[0]).toLocaleString('en-US')} />
+            <AnimatedOdometer value={parseInt(displayedTotalUsd.toFixed(2).split('.')[0]).toLocaleString('en-US')} />
           </span>
           <span className="balance-cents text-xl font-semibold text-zinc-400">
-            .<AnimatedOdometer value={totalUsdValue.toFixed(2).split('.')[1]} />
+            .<AnimatedOdometer value={displayedTotalUsd.toFixed(2).split('.')[1]} />
           </span>
         </div>
+        {includeNftsInTotal && nftFloorUsd > 0 && (
+          <span className="text-[10px] font-semibold text-zinc-600 mt-1">
+            includes {formatUsd(nftFloorUsd)} in NFTs at floor
+          </span>
+        )}
         <div className="flex items-center gap-2 mt-1.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={totalUsdChange >= 0 ? "#00ff66" : "#ff0055"} strokeWidth="3" strokeLinecap="round">
             {totalUsdChange >= 0 ? (
@@ -1055,14 +1102,47 @@ export default function App() {
           </button>
 
         <div className="flex items-center justify-between px-2">
-          <div className="flex gap-4">
-            <span className="text-sm font-bold text-white border-b-2 border-[#00f0ff] pb-1">Tokens</span>
-            <span className="text-sm font-bold text-zinc-600 pb-1 hover:text-zinc-400 cursor-pointer transition-colors" onClick={() => setIsNFTsOpen(true)}>NFTs</span>
+          <div className="flex gap-4" role="tablist">
+            {(['tokens', 'nfts'] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={drawerTab === tab}
+                onClick={() => setDrawerTab(tab)}
+                className={`text-sm font-bold pb-1 border-b-2 transition-colors ${drawerTab === tab ? 'text-white border-[#00f0ff]' : 'text-zinc-600 border-transparent hover:text-zinc-400'}`}
+              >
+                {tab === 'tokens' ? 'Tokens' : 'NFTs'}
+              </button>
+            ))}
           </div>
-          <span className="text-xs font-bold text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded-md">{tokenRows.length}</span>
+          <div className="flex items-center gap-2">
+            {drawerTab === 'nfts' && (
+              <button
+                onClick={() => { void nftState.refresh(); nftMarket.refresh(); }}
+                title="Refresh NFTs"
+                className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={nftState.isRefreshing || nftState.isLoading ? 'animate-spin' : ''}><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+              </button>
+            )}
+            <span className="text-xs font-bold text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded-md">
+              {drawerTab === 'tokens' ? tokenRows.length : nftState.visibleNfts.length}
+            </span>
+          </div>
         </div>
         </div>
 
+        {drawerTab === 'nfts' ? (
+          <NFTGrid
+            visibleNfts={nftState.visibleNfts}
+            hiddenNfts={nftState.hiddenNfts}
+            isLoading={nftState.isLoading}
+            errors={nftState.errors}
+            onOpen={(nft) => setActiveNftKey(nft.key)}
+            onReceive={() => { setReceiveInitialAccount(null); setIsReceiveOpen(true); }}
+            market={nftMarket.market}
+          />
+        ) : (
         <div className="flex flex-col gap-1 pb-24">
           {tokenRows.map((token) => (
             <div 
@@ -1099,19 +1179,44 @@ export default function App() {
             </div>
           ))}
         </div>
+        )}
       </div>
       </div>
 
+      {/* ---- Explore (nft.md Phase 4.3) ---- */}
+      {isExploreOpen && (
+        <ExploreScreen
+          isTestnet={isTestnet}
+          onOpenCollection={(handle, name) => setExploreCollection({ handle, name })}
+        />
+      )}
+      {isExploreOpen && exploreCollection && (
+        <CollectionPage
+          key={exploreCollection.handle}
+          handle={exploreCollection.handle}
+          name={exploreCollection.name}
+          isTestnet={isTestnet}
+          solUsdPrice={prices.sol}
+          onClose={() => setExploreCollection(null)}
+        />
+      )}
+
       {/* ---- Floating Bottom Nav ---- */}
-      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && !activeAssetKey && !connectionRequest && !signTxRequest && (
+      {(!isSettingsOpen || settingsMode === 'idle') && !isAccountsOpen && !isSendOpen && !activeAssetKey && !activeNft && !exploreCollection && !connectionRequest && !signTxRequest && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[200]">
           <nav className="flex items-center gap-1 bg-[#18181b]/90 backdrop-blur-xl p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
-            <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen && !isActivityOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); setIsActivityOpen(false); }} />
-            <NavItem 
-              icon="swap" 
-              active={isSwapOpen} 
-              onClick={() => { setIsSwapOpen(!isSwapOpen); handleCloseSettings(); setIsActivityOpen(false); }} 
-              iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSwapOpen ? 'rotate-[180deg]' : 'rotate-0'}`} 
+            <NavItem icon="home" active={!isSettingsOpen && !isSwapOpen && !isActivityOpen && !isExploreOpen} onClick={() => { handleCloseSettings(); setIsSwapOpen(false); setIsActivityOpen(false); setIsExploreOpen(false); }} />
+            <NavItem
+              icon="swap"
+              active={isSwapOpen}
+              onClick={() => { setIsSwapOpen(!isSwapOpen); handleCloseSettings(); setIsActivityOpen(false); setIsExploreOpen(false); }}
+              iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isSwapOpen ? 'rotate-[180deg]' : 'rotate-0'}`}
+            />
+            <NavItem
+              icon="compass"
+              active={isExploreOpen}
+              onClick={() => { setIsExploreOpen(!isExploreOpen); handleCloseSettings(); setIsSwapOpen(false); setIsActivityOpen(false); }}
+              iconClass={`transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isExploreOpen ? 'rotate-[135deg]' : 'rotate-0'}`}
             />
             <NavItem 
               icon="clock" 
@@ -1132,14 +1237,6 @@ export default function App() {
       <ActivityTab 
         isOpen={isActivityOpen} 
         onClose={() => setIsActivityOpen(false)} 
-        activeAccountGroup={allAccounts[activeAccountIndex]} 
-        isTestnet={isTestnet} 
-      />
-
-      {/* ---- NFTs Sliding Panel ---- */}
-      <NFTTab 
-        isOpen={isNFTsOpen} 
-        onClose={() => setIsNFTsOpen(false)} 
         activeAccountGroup={allAccounts[activeAccountIndex]} 
         isTestnet={isTestnet} 
       />
@@ -1586,6 +1683,27 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            {/* nft.md Phase 4.3 — NFT floor value in the portfolio total */}
+            <div className="bg-[#111111] border border-white/5 p-4 rounded-3xl">
+              <div className="flex items-center justify-between mb-2">
+                <div className="pr-3">
+                  <h3 className="text-white font-bold text-sm">Include NFTs at floor</h3>
+                  <p className="text-zinc-500 text-xs font-medium mt-0.5">
+                    Adds each NFT's collection floor price to your total balance. Estimates only — floors are not offers, and the 24h change excludes them.
+                  </p>
+                </div>
+                <div
+                  className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 ease-in-out flex items-center shrink-0 ${includeNftsInTotal ? 'bg-[#00f0ff]' : 'bg-[#27272a]'}`}
+                  onClick={() => setIncludeNftsInTotal(v => !v)}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${includeNftsInTotal ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </div>
+              {isTestnet && (
+                <p className="text-[11px] font-medium text-zinc-600">No market data on testnets — this has no effect until you switch to mainnet.</p>
+              )}
+            </div>
           </div>
         )}
 
@@ -1886,6 +2004,46 @@ export default function App() {
         />
       )}
 
+      {/* ---- NFT Detail Page ---- */}
+      {activeNft && (
+        <NFTDetailPage
+          key={activeNft.key}
+          nft={activeNft}
+          ownerAddress={(activeNft.chain === 'EVM' ? ethAccount : solAccount) || ''}
+          isTestnet={isTestnet}
+          onClose={() => { setActiveNftKey(null); setIsNftSendOpen(false); }}
+          onSend={() => setIsNftSendOpen(true)}
+          marketData={nftMarket.market.get(activeNft.key)}
+          isMarketLoading={nftMarket.isLoading}
+          nativeUsdPrice={activeNft.chain === 'EVM' ? prices.eth : prices.sol}
+          onToggleHidden={(nft) => {
+            // Unhiding spam records an explicit "visible" override; unhiding a user-hidden NFT clears it
+            void nftState.setVisibility(nft.key, nft.hidden ? (nft.isSpam ? 'visible' : null) : 'hidden');
+          }}
+        />
+      )}
+
+      {/* ---- Send NFT Flow ---- */}
+      {activeNft && isNftSendOpen && (() => {
+        const signer = accounts.find(a => a.chain === activeNft.chain);
+        if (!signer) return null;
+        const rpcUrl = activeNft.chain === 'EVM'
+          ? (isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL)
+          : (isTestnet ? CONFIG.HELIUS_DEVNET_URL : CONFIG.HELIUS_SOL_URL);
+        return (
+          <SendNFTFlow
+            key={activeNft.key}
+            nft={activeNft}
+            ownerAddress={signer.address}
+            privateKey={signer.privateKey}
+            rpcUrl={rpcUrl}
+            isTestnet={isTestnet}
+            onClose={() => setIsNftSendOpen(false)}
+            onSent={(amount) => nftState.applyLocalTransfer(activeNft, amount)}
+          />
+        );
+      })()}
+
       {/* ---- Receive Modal ---- */}
       <ReceiveModal
         isOpen={isReceiveOpen}
@@ -2113,6 +2271,7 @@ function NavItem({ icon, active = false, onClick, iconClass = '' }: { icon: stri
           </g>
         </svg>
       )}
+      {icon === 'compass' && <svg {...p}><circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></svg>}
       {icon === 'settings' && <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}
     </button>
   );

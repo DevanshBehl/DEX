@@ -1,0 +1,21 @@
+{
+  "network": "solana-devnet",
+  "createdAt": "2026-09-15T06:45:13.153Z",
+  "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ",
+  "fixturePayer": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+  "collection": "GX8LDM4wi3ukxJrGoS8McCagraUy9u5WrYBk2KQNpuLa",
+  "standardNfts": [
+    "G3r8kpB6Bjf6KE5kn4PTGemuwktiks51yvPh4jwkUFUq",
+    "3k7NjVoabVWBAQnBefsXt6i1cxSPpE8QQKfScypqEStV"
+  ],
+  "programmableNft": "3W2T2FpiuwPSfKUYMM2DKXDj7MCoJf3f9g7q9TtAMiz8",
+  "merkleTree": "FGrGWRWfEXebTa4YsioXy3f2zhoN258z3kmz9kLZjx7t",
+  "compressedNfts": [
+    "5Ko6mdn54Vyojq1hU5NCPvEA1xmrFpv9RWcy39DCnhd1",
+    "E5cWKTguDgTqqoRLBUvbTe1bnfHFzBdyBUgThAKk53Td"
+  ],
+  "coreCollection": "Es56MxrQ8CQPzyRoYhQaznPWu8eEPEJ1Wx6rcRXYzFEy",
+  "coreAsset": "45VHfgQRihv4gFiVj8VsYPy9A2BbtbgKgpcY4Z8h8KKH",
+  "spamNft": "4fFx68wo5zHw3VLUGTejX4bDVUD6LSS5CbknX4L9WHiP",
+  "brokenImageNft": "2i8Gt6FdqG7FuguGgDccSjwkv5Qh6d6zzBTEviYGiXfo"
+}

@@ -1,0 +1,792 @@
+{
+    "jsonrpc": "2.0",
+    "result": {
+        "last_indexed_slot": 498648728,
+        "total": 8,
+        "limit": 1000,
+        "page": 1,
+        "items": [
+            {
+                "interface": "V1_NFT",
+                "id": "G3r8kpB6Bjf6KE5kn4PTGemuwktiks51yvPh4jwkUFUq",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/GSmKSFmN3MkSNjSpFRoisjHsKjcLdbsBdupiy3muaPh3",
+                    "files": [
+                        {
+                            "uri": "https://gateway.irys.xyz/GVUxRmAoHYkrsTZcapdReN93MC4bogVaGU8rA6xSxvoC",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://gateway.irys.xyz/GVUxRmAoHYkrsTZcapdReN93MC4bogVaGU8rA6xSxvoC",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [
+                            {
+                                "value": "NonFungible",
+                                "trait_type": "Standard"
+                            },
+                            {
+                                "value": "#00f0ff",
+                                "trait_type": "Color"
+                            }
+                        ],
+                        "description": "Standard Metaplex NFT fixture (devnet).",
+                        "json_name": "Celestial Orb #1",
+                        "name": "Celestial Orb #1",
+                        "symbol": "CTEST",
+                        "token_standard": "NonFungible"
+                    },
+                    "links": {
+                        "image": "https://gateway.irys.xyz/GVUxRmAoHYkrsTZcapdReN93MC4bogVaGU8rA6xSxvoC"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": false,
+                    "data_hash": "",
+                    "creator_hash": "",
+                    "asset_hash": "",
+                    "tree": "",
+                    "seq": 0,
+                    "leaf_id": 0
+                },
+                "grouping": [
+                    {
+                        "group_key": "collection",
+                        "group_value": "GX8LDM4wi3ukxJrGoS8McCagraUy9u5WrYBk2KQNpuLa",
+                        "collection_metadata": {
+                            "name": "Celestial Test Collection",
+                            "symbol": "CTEST",
+                            "image": "https://gateway.irys.xyz/ASUYQqQiXHrDUBm96LJy2eqyijwfSMqrzHG1FLebNfDd",
+                            "description": "Celestial wallet devnet fixture collection. No value.",
+                            "external_url": ""
+                        }
+                    }
+                ],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.05,
+                    "basis_points": 500,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "share": 100,
+                        "verified": true
+                    }
+                ],
+                "ownership": {
+                    "frozen": false,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": {
+                    "print_max_supply": 0,
+                    "print_current_supply": 0,
+                    "edition_nonce": 253
+                },
+                "mutable": true,
+                "burnt": false,
+                "token_info": {
+                    "token_accounts": [
+                        {
+                            "address": "DiFZnQN7b7SJxSNq5wypVMk3sQoue8sm5AKJaZvHaro3",
+                            "balance": 1
+                        }
+                    ],
+                    "balance": 1,
+                    "supply": 1,
+                    "decimals": 0,
+                    "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                    "associated_token_address": "DiFZnQN7b7SJxSNq5wypVMk3sQoue8sm5AKJaZvHaro3",
+                    "mint_authority": "GC5Y2hugnpeKZkQBbKoLEDvifzS5esKjeW7emy377jti",
+                    "freeze_authority": "GC5Y2hugnpeKZkQBbKoLEDvifzS5esKjeW7emy377jti"
+                }
+            },
+            {
+                "interface": "V1_NFT",
+                "id": "E5cWKTguDgTqqoRLBUvbTe1bnfHFzBdyBUgThAKk53Td",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/81cnq6jFTAF3xZFrPoTsgph27oQaoEUm5ECUNf7toqD9",
+                    "files": [
+                        {
+                            "uri": "https://gateway.irys.xyz/GbJexmqKx5AgEt7ehW1rpXLskeL2DJmWC8CSFzc7wtVh",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://gateway.irys.xyz/GbJexmqKx5AgEt7ehW1rpXLskeL2DJmWC8CSFzc7wtVh",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [
+                            {
+                                "value": "Compressed",
+                                "trait_type": "Standard"
+                            }
+                        ],
+                        "description": "Compressed NFT fixture \u2014 transfers require an asset proof.",
+                        "json_name": "Celestial Dust #2",
+                        "name": "Celestial Dust #2",
+                        "symbol": "CTEST",
+                        "token_standard": "NonFungible"
+                    },
+                    "links": {
+                        "image": "https://gateway.irys.xyz/GbJexmqKx5AgEt7ehW1rpXLskeL2DJmWC8CSFzc7wtVh"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "4fE4HJjva65ELSMDxgiuLmfFi1NVV3dwT2Lx2w49NeFa",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": true,
+                    "data_hash": "64k2Zq2aN8WuqUQSkm9ZCVCUFsR8WFE61vAQFUxwNHbb",
+                    "creator_hash": "2NiXf7FTD2KGPun8dujKauTko9t6LV2Aa7RMWpnJQSgC",
+                    "asset_hash": "8bEdejaMbpnfNuHFENCJZpyoScMbr8KATJpbRuhHvbSP",
+                    "tree": "FGrGWRWfEXebTa4YsioXy3f2zhoN258z3kmz9kLZjx7t",
+                    "seq": 2,
+                    "leaf_id": 1
+                },
+                "grouping": [
+                    {
+                        "group_key": "collection",
+                        "group_value": "GX8LDM4wi3ukxJrGoS8McCagraUy9u5WrYBk2KQNpuLa",
+                        "collection_metadata": {
+                            "name": "Celestial Test Collection",
+                            "symbol": "CTEST",
+                            "image": "https://gateway.irys.xyz/ASUYQqQiXHrDUBm96LJy2eqyijwfSMqrzHG1FLebNfDd",
+                            "description": "Celestial wallet devnet fixture collection. No value.",
+                            "external_url": ""
+                        }
+                    }
+                ],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.05,
+                    "basis_points": 500,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "share": 100,
+                        "verified": false
+                    }
+                ],
+                "ownership": {
+                    "frozen": false,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": {
+                    "print_max_supply": 0,
+                    "print_current_supply": 0,
+                    "edition_nonce": null
+                },
+                "mutable": true,
+                "burnt": false
+            },
+            {
+                "interface": "V1_NFT",
+                "id": "5Ko6mdn54Vyojq1hU5NCPvEA1xmrFpv9RWcy39DCnhd1",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/U9fhvQ7BVGADAfKh3rKa34gRrC3KvAge29ic1Xhm5kV",
+                    "files": [
+                        {
+                            "uri": "https://gateway.irys.xyz/4ssV9ErXukEkeukTPfnZidFEuCQgrijuWgybE9yqxhmo",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://gateway.irys.xyz/4ssV9ErXukEkeukTPfnZidFEuCQgrijuWgybE9yqxhmo",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [
+                            {
+                                "value": "Compressed",
+                                "trait_type": "Standard"
+                            }
+                        ],
+                        "description": "Compressed NFT fixture \u2014 transfers require an asset proof.",
+                        "json_name": "Celestial Dust #1",
+                        "name": "Celestial Dust #1",
+                        "symbol": "CTEST",
+                        "token_standard": "NonFungible"
+                    },
+                    "links": {
+                        "image": "https://gateway.irys.xyz/4ssV9ErXukEkeukTPfnZidFEuCQgrijuWgybE9yqxhmo"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "4fE4HJjva65ELSMDxgiuLmfFi1NVV3dwT2Lx2w49NeFa",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": true,
+                    "data_hash": "9z3fPqikaFJdHoWFuUkSYfdtFjbe5dt6KRGRcund9pqh",
+                    "creator_hash": "2NiXf7FTD2KGPun8dujKauTko9t6LV2Aa7RMWpnJQSgC",
+                    "asset_hash": "J1zuH7SN8jjtqyzyrE2YhyzPsXUVVu3VMSfdwuTb89BC",
+                    "tree": "FGrGWRWfEXebTa4YsioXy3f2zhoN258z3kmz9kLZjx7t",
+                    "seq": 1,
+                    "leaf_id": 0
+                },
+                "grouping": [
+                    {
+                        "group_key": "collection",
+                        "group_value": "GX8LDM4wi3ukxJrGoS8McCagraUy9u5WrYBk2KQNpuLa",
+                        "collection_metadata": {
+                            "name": "Celestial Test Collection",
+                            "symbol": "CTEST",
+                            "image": "https://gateway.irys.xyz/ASUYQqQiXHrDUBm96LJy2eqyijwfSMqrzHG1FLebNfDd",
+                            "description": "Celestial wallet devnet fixture collection. No value.",
+                            "external_url": ""
+                        }
+                    }
+                ],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.05,
+                    "basis_points": 500,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "share": 100,
+                        "verified": false
+                    }
+                ],
+                "ownership": {
+                    "frozen": false,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": {
+                    "print_max_supply": 0,
+                    "print_current_supply": 0,
+                    "edition_nonce": null
+                },
+                "mutable": true,
+                "burnt": false
+            },
+            {
+                "interface": "V1_NFT",
+                "id": "4fFx68wo5zHw3VLUGTejX4bDVUD6LSS5CbknX4L9WHiP",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/Hx7siJ7W5Zqv4UgoA8fi1221AFq4NC1uNc7FDq58ArnT",
+                    "files": [
+                        {
+                            "uri": "https://gateway.irys.xyz/FbndWnvkCrvPLpQVMj1pCfVFSXRLLZeEFyRiYkau8fEE",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://gateway.irys.xyz/FbndWnvkCrvPLpQVMj1pCfVFSXRLLZeEFyRiYkau8fEE",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [],
+                        "description": "Congratulations! Visit celestial-airdrop-claim.xyz to claim your reward now.",
+                        "json_name": "Claim 500 SOL Reward",
+                        "name": "Claim 500 SOL Reward",
+                        "symbol": "CLAIM",
+                        "token_standard": "NonFungible"
+                    },
+                    "links": {
+                        "image": "https://gateway.irys.xyz/FbndWnvkCrvPLpQVMj1pCfVFSXRLLZeEFyRiYkau8fEE"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": false,
+                    "data_hash": "",
+                    "creator_hash": "",
+                    "asset_hash": "",
+                    "tree": "",
+                    "seq": 0,
+                    "leaf_id": 0
+                },
+                "grouping": [],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.0,
+                    "basis_points": 0,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "share": 100,
+                        "verified": true
+                    }
+                ],
+                "ownership": {
+                    "frozen": false,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": {
+                    "print_max_supply": 0,
+                    "print_current_supply": 0,
+                    "edition_nonce": 255
+                },
+                "mutable": true,
+                "burnt": false,
+                "token_info": {
+                    "token_accounts": [
+                        {
+                            "address": "2XTW8zzprr5uYDfQi3xDj1GXy3EWjQCk8Fbmw5Peq4pi",
+                            "balance": 1
+                        }
+                    ],
+                    "balance": 1,
+                    "supply": 1,
+                    "decimals": 0,
+                    "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                    "associated_token_address": "2XTW8zzprr5uYDfQi3xDj1GXy3EWjQCk8Fbmw5Peq4pi",
+                    "mint_authority": "bSKmDaRpY8oDihHpZVRTxTwsp1YkGsNbrjXGc6Bcosv",
+                    "freeze_authority": "bSKmDaRpY8oDihHpZVRTxTwsp1YkGsNbrjXGc6Bcosv"
+                }
+            },
+            {
+                "interface": "MplCoreAsset",
+                "id": "45VHfgQRihv4gFiVj8VsYPy9A2BbtbgKgpcY4Z8h8KKH",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/38cGs6eYMhn9Lff3YaoPkJM92udWaPpJnZ9q4VkDetse",
+                    "files": [
+                        {
+                            "uri": "https://gateway.irys.xyz/H5qQfm93fThX7mDggBD6srvmxbg1Y7hhWxLwWJ8CwZ4V",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://gateway.irys.xyz/H5qQfm93fThX7mDggBD6srvmxbg1Y7hhWxLwWJ8CwZ4V",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [
+                            {
+                                "value": "MplCore",
+                                "trait_type": "Standard"
+                            }
+                        ],
+                        "description": "Metaplex Core asset fixture \u2014 single-account NFT standard.",
+                        "json_name": "Celestial Core Orb",
+                        "name": "Celestial Core Orb",
+                        "symbol": ""
+                    },
+                    "links": {
+                        "image": "https://gateway.irys.xyz/H5qQfm93fThX7mDggBD6srvmxbg1Y7hhWxLwWJ8CwZ4V"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": false,
+                    "data_hash": "",
+                    "creator_hash": "",
+                    "asset_hash": "",
+                    "tree": "",
+                    "seq": 0,
+                    "leaf_id": 0
+                },
+                "grouping": [
+                    {
+                        "group_key": "collection",
+                        "group_value": "Es56MxrQ8CQPzyRoYhQaznPWu8eEPEJ1Wx6rcRXYzFEy",
+                        "collection_metadata": {
+                            "name": "Celestial Core Collection",
+                            "symbol": "",
+                            "image": "https://gateway.irys.xyz/6SS3RBR1kbQxfzFFomMNd4nDppUHp3JokCtAqad67taG",
+                            "description": "Metaplex Core fixture collection (devnet).",
+                            "external_url": ""
+                        }
+                    }
+                ],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.0,
+                    "basis_points": 0,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [],
+                "ownership": {
+                    "frozen": false,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": null,
+                "mutable": true,
+                "burnt": false,
+                "plugins": {},
+                "mpl_core_info": {
+                    "plugins_json_version": 1
+                },
+                "external_plugins": [],
+                "is_agent": false
+            },
+            {
+                "interface": "V1_NFT",
+                "id": "3k7NjVoabVWBAQnBefsXt6i1cxSPpE8QQKfScypqEStV",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/J99sphxP3hTxRrVwmE7sDNEWb2z7BN4hwoFn9btM4FQ7",
+                    "files": [
+                        {
+                            "uri": "https://gateway.irys.xyz/HUjQkpEKUsoMRqhGqUiUBo2J4Cu5quLpBsxfsRpGgv25",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://gateway.irys.xyz/HUjQkpEKUsoMRqhGqUiUBo2J4Cu5quLpBsxfsRpGgv25",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [
+                            {
+                                "value": "NonFungible",
+                                "trait_type": "Standard"
+                            },
+                            {
+                                "value": "#00ff66",
+                                "trait_type": "Color"
+                            }
+                        ],
+                        "description": "Standard Metaplex NFT fixture (devnet).",
+                        "json_name": "Celestial Orb #2",
+                        "name": "Celestial Orb #2",
+                        "symbol": "CTEST",
+                        "token_standard": "NonFungible"
+                    },
+                    "links": {
+                        "image": "https://gateway.irys.xyz/HUjQkpEKUsoMRqhGqUiUBo2J4Cu5quLpBsxfsRpGgv25"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": false,
+                    "data_hash": "",
+                    "creator_hash": "",
+                    "asset_hash": "",
+                    "tree": "",
+                    "seq": 0,
+                    "leaf_id": 0
+                },
+                "grouping": [
+                    {
+                        "group_key": "collection",
+                        "group_value": "GX8LDM4wi3ukxJrGoS8McCagraUy9u5WrYBk2KQNpuLa",
+                        "collection_metadata": {
+                            "name": "Celestial Test Collection",
+                            "symbol": "CTEST",
+                            "image": "https://gateway.irys.xyz/ASUYQqQiXHrDUBm96LJy2eqyijwfSMqrzHG1FLebNfDd",
+                            "description": "Celestial wallet devnet fixture collection. No value.",
+                            "external_url": ""
+                        }
+                    }
+                ],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.05,
+                    "basis_points": 500,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "share": 100,
+                        "verified": true
+                    }
+                ],
+                "ownership": {
+                    "frozen": false,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": {
+                    "print_max_supply": 0,
+                    "print_current_supply": 0,
+                    "edition_nonce": 255
+                },
+                "mutable": true,
+                "burnt": false,
+                "token_info": {
+                    "token_accounts": [
+                        {
+                            "address": "AfBmqbJi16gao8FVZ747VYmxEqhX854VHH81kKXpKUno",
+                            "balance": 1
+                        }
+                    ],
+                    "balance": 1,
+                    "supply": 1,
+                    "decimals": 0,
+                    "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                    "associated_token_address": "AfBmqbJi16gao8FVZ747VYmxEqhX854VHH81kKXpKUno",
+                    "mint_authority": "EV56Vgg91E7BrXQgxKGnBdFnc4pjQj9aXgqcrfwDNpjd",
+                    "freeze_authority": "EV56Vgg91E7BrXQgxKGnBdFnc4pjQj9aXgqcrfwDNpjd"
+                }
+            },
+            {
+                "interface": "ProgrammableNFT",
+                "id": "3W2T2FpiuwPSfKUYMM2DKXDj7MCoJf3f9g7q9TtAMiz8",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/3kRa74nWXjoguUgvuc9h8s2ufEYgSzNMQjBi9h19nUyo",
+                    "files": [
+                        {
+                            "uri": "https://gateway.irys.xyz/8sjvJvrTm2ErfWe5YJu8rA8LxUY8DsqTvNkQg8wg33i5",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://gateway.irys.xyz/8sjvJvrTm2ErfWe5YJu8rA8LxUY8DsqTvNkQg8wg33i5",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [
+                            {
+                                "value": "ProgrammableNonFungible",
+                                "trait_type": "Standard"
+                            }
+                        ],
+                        "description": "Programmable NFT fixture \u2014 requires transferV1, not a plain SPL transfer.",
+                        "json_name": "Celestial Relic (pNFT)",
+                        "name": "Celestial Relic (pNFT)",
+                        "symbol": "CTEST",
+                        "token_standard": "ProgrammableNonFungible"
+                    },
+                    "links": {
+                        "image": "https://gateway.irys.xyz/8sjvJvrTm2ErfWe5YJu8rA8LxUY8DsqTvNkQg8wg33i5"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": false,
+                    "data_hash": "",
+                    "creator_hash": "",
+                    "asset_hash": "",
+                    "tree": "",
+                    "seq": 0,
+                    "leaf_id": 0
+                },
+                "grouping": [
+                    {
+                        "group_key": "collection",
+                        "group_value": "GX8LDM4wi3ukxJrGoS8McCagraUy9u5WrYBk2KQNpuLa",
+                        "collection_metadata": {
+                            "name": "Celestial Test Collection",
+                            "symbol": "CTEST",
+                            "image": "https://gateway.irys.xyz/ASUYQqQiXHrDUBm96LJy2eqyijwfSMqrzHG1FLebNfDd",
+                            "description": "Celestial wallet devnet fixture collection. No value.",
+                            "external_url": ""
+                        }
+                    }
+                ],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.05,
+                    "basis_points": 500,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "share": 100,
+                        "verified": true
+                    }
+                ],
+                "ownership": {
+                    "frozen": true,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": {
+                    "print_max_supply": 0,
+                    "print_current_supply": 0,
+                    "edition_nonce": 255
+                },
+                "mutable": true,
+                "burnt": false,
+                "token_info": {
+                    "token_accounts": [
+                        {
+                            "address": "FPjw8iyr9tBLJsUBV5FhgaPXmaR2VHmsDVRuMYUKqKsc",
+                            "balance": 1
+                        }
+                    ],
+                    "balance": 1,
+                    "supply": 1,
+                    "decimals": 0,
+                    "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                    "associated_token_address": "FPjw8iyr9tBLJsUBV5FhgaPXmaR2VHmsDVRuMYUKqKsc",
+                    "mint_authority": "2bmPDMUZNTXmNok99GrPddnF2arF91gVXiciXoboNKZU",
+                    "freeze_authority": "2bmPDMUZNTXmNok99GrPddnF2arF91gVXiciXoboNKZU"
+                }
+            },
+            {
+                "interface": "V1_NFT",
+                "id": "2i8Gt6FdqG7FuguGgDccSjwkv5Qh6d6zzBTEviYGiXfo",
+                "content": {
+                    "$schema": "https://schema.metaplex.com/nft1.0.json",
+                    "json_uri": "https://gateway.irys.xyz/BjKY8TgoNLXvPhMEneQB8t7geCo7g5ZjRdNX7JpuexnG",
+                    "files": [
+                        {
+                            "uri": "https://invalid.celestial.test/missing-image.png",
+                            "cdn_uri": "https://cdn.helius-rpc.com/cdn-cgi/image//https://invalid.celestial.test/missing-image.png",
+                            "mime": "image/svg+xml"
+                        }
+                    ],
+                    "metadata": {
+                        "attributes": [],
+                        "description": "Fixture whose image URL never resolves (fallback test).",
+                        "json_name": "Celestial Broken Image",
+                        "name": "Celestial Broken Image",
+                        "symbol": "CTEST",
+                        "token_standard": "NonFungible"
+                    },
+                    "links": {
+                        "image": "https://invalid.celestial.test/missing-image.png"
+                    },
+                    "category": "image"
+                },
+                "authorities": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "scopes": [
+                            "full"
+                        ]
+                    }
+                ],
+                "compression": {
+                    "eligible": false,
+                    "compressed": false,
+                    "data_hash": "",
+                    "creator_hash": "",
+                    "asset_hash": "",
+                    "tree": "",
+                    "seq": 0,
+                    "leaf_id": 0
+                },
+                "grouping": [],
+                "royalty": {
+                    "royalty_model": "creators",
+                    "target": null,
+                    "percent": 0.0,
+                    "basis_points": 0,
+                    "primary_sale_happened": false,
+                    "locked": false
+                },
+                "creators": [
+                    {
+                        "address": "F4eqVHJdpM2fmsiNDG37kKMHTLsLBJSnLuTJkWSsg3wR",
+                        "share": 100,
+                        "verified": true
+                    }
+                ],
+                "ownership": {
+                    "frozen": false,
+                    "delegated": false,
+                    "delegate": null,
+                    "ownership_model": "single",
+                    "owner": "5ehVoahvrtU7MxUpGnj4JTk8rXka4dmDECU8fRusLKsZ"
+                },
+                "supply": {
+                    "print_max_supply": 0,
+                    "print_current_supply": 0,
+                    "edition_nonce": 254
+                },
+                "mutable": true,
+                "burnt": false,
+                "token_info": {
+                    "token_accounts": [
+                        {
+                            "address": "EpkWoiTmypTRF4sHGp25NpCMtJTpUdBxZFwcxiSVPhpk",
+                            "balance": 1
+                        }
+                    ],
+                    "balance": 1,
+                    "supply": 1,
+                    "decimals": 0,
+                    "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                    "associated_token_address": "EpkWoiTmypTRF4sHGp25NpCMtJTpUdBxZFwcxiSVPhpk",
+                    "mint_authority": "7T9TVeWeh2TLUjjEgRAqep1nm9qWYF5KzhvKxp1Yi8J9",
+                    "freeze_authority": "7T9TVeWeh2TLUjjEgRAqep1nm9qWYF5KzhvKxp1Yi8J9"
+                }
+            }
+        ]
+    },
+    "id": 1
+}

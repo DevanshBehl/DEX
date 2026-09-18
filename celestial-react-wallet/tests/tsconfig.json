@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node", "chrome", "vite/client"]
+  },
+  "include": ["./**/*.ts", "../src/nft/types.ts", "../src/nft/media.ts", "../src/nft/spam.ts", "../src/nft/normalize.ts", "../src/nft/indexers/*.ts", "../src/nft/tx/*.ts", "../src/nft/marketplaces/*.ts", "../src/config/networks.ts"]
+}

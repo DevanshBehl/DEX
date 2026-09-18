@@ -9,14 +9,6 @@ export interface TransactionRecord {
   explorerUrl: string; // Direct link to view the tx on-chain
 }
 
-export interface NFTRecord {
-  id: string; // Contract Address + Token ID
-  chain: 'Ethereum' | 'Solana';
-  name: string; // e.g., "Bored Ape #1234"
-  collectionName: string; // e.g., "Bored Ape Yacht Club"
-  imageUrl: string; // The parsed image URL (must handle ipfs:// conversion if necessary)
-}
-
 export type AssetChart =
   | { kind: 'coin'; id: string } // CoinGecko coin id (native assets)
   | { kind: 'contract'; platform: 'ethereum' | 'solana'; address: string }; // token contract / mint

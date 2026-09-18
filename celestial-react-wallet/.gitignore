@@ -24,3 +24,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# NFT fixture scripts (nft.md Phase 0) — fixture payer keypairs are secret
+scripts/.keys/

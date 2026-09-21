@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -309,10 +310,10 @@ export default function Page() {
               </a>
             ))}
           </div>
-          <button className="btn-primary !px-4 !py-2 text-sm">
+          <Link href="/trade" className="btn-primary !px-4 !py-2 text-sm">
             Launch App
             <ChevronRight className="h-4 w-4" />
-          </button>
+          </Link>
         </nav>
       </header>
 
@@ -373,10 +374,10 @@ export default function Page() {
           </p>
 
           <div className="hero-stagger mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button className="btn-primary w-full sm:w-auto">
+            <Link href="/trade" className="btn-primary w-full sm:w-auto">
               Launch App
               <ArrowRight className="h-4.5 w-4.5" />
-            </button>
+            </Link>
             <button className="btn-secondary w-full sm:w-auto">
               <Download className="h-4.5 w-4.5" />
               Download Wallet
@@ -690,10 +691,10 @@ export default function Page() {
               Launch the terminal in seconds. No sign-ups, no custody.
             </p>
           </div>
-          <button className="btn-primary shrink-0">
+          <Link href="/trade" className="btn-primary shrink-0">
             Launch App
             <ArrowRight className="h-4.5 w-4.5" />
-          </button>
+          </Link>
         </div>
       </section>
 

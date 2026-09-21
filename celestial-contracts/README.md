@@ -1,66 +1,59 @@
-## Foundry
+# Celestial Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Solidity contracts for Celestial Perps and the Celestial wallet test fixtures, built with [Foundry](https://book.getfoundry.sh/).
 
-Foundry consists of:
+The perps protocol is being rebuilt as a pool-based perpetual DEX (see [`../phases.md`](../phases.md) and [`../docs/protocol-spec.md`](../docs/protocol-spec.md)).
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Contracts
 
-## Documentation
+| Path | Status | What it is |
+|---|---|---|
+| `src/legacy/CelestialVault.sol` | **Deprecated** | First perps prototype: ETH collateral, Chainlink prices, no LP pool. Deployed on Sepolia at `0x786f4037924772c79F39D49C302dC3D3eDd14b04`, no longer maintained. Superseded by the Phase 3 contracts. |
+| `src/test-nfts/TestERC721.sol` | Active | ERC-721 fixture collection for testing the wallet's NFT view (standard, spam and broken-image tokens) |
+| `src/test-nfts/TestERC1155.sol` | Active | ERC-1155 fixture editions for the same tests |
 
-https://book.getfoundry.sh/
+Planned (Phase 2–3): `MockUSDC`, `oracle/ChainlinkOracle`, `pool/LiquidityPool`, `pool/CLP`, `PerpEngine`.
 
-## Usage
+## Dependencies
 
-### Build
+Vendored in `lib/` as plain files (not git submodules):
+
+| Library | Remapping |
+|---|---|
+| forge-std | `forge-std/` |
+| OpenZeppelin Contracts | `@openzeppelin/contracts/` |
+| Chainlink (brownie contracts) | `@chainlink/`: `AggregatorV3Interface` and `MockV3Aggregator`, the price oracle for the perps engine |
+
+To add a library, copy its sources into `lib/<name>` without a `.git` directory and add a remapping in `foundry.toml`.
+
+## Setup
 
 ```shell
-$ forge build
+cp .env.example .env   # fill in SEPOLIA_RPC_URL, PRIVATE_KEY, ETHERSCAN_API_KEY
 ```
 
-### Test
+Never commit `.env`, and only use a wallet that holds testnet funds.
+
+## Build & test
 
 ```shell
-$ forge test
+forge build
+forge test          # NFT fixture tests + Chainlink oracle smoke test
+forge fmt
 ```
 
-### Format
+## Deploy
+
+NFT fixtures (Sepolia):
 
 ```shell
-$ forge fmt
+forge script script/MintTestNFTs.s.sol:MintTestNFTs \
+  --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast
 ```
 
-### Gas Snapshots
+Legacy vault (**deprecated**, kept only for reference):
 
 ```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+forge script script/DeployVault.s.sol:DeployVault \
+  --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify
 ```

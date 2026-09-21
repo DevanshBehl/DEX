@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: MIT
+// DEPRECATED — superseded by PerpEngine/LiquidityPool (see phases.md).
+// Sepolia deployment 0x786f…4b04 is no longer maintained.
 pragma solidity ^0.8.24;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";

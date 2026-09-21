@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
+// DEPRECATED — superseded by PerpEngine/LiquidityPool (see phases.md).
+// Sepolia deployment 0x786f…4b04 is no longer maintained.
 pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
-import {CelestialVault} from "../src/CelestialVault.sol";
+import {CelestialVault} from "../src/legacy/CelestialVault.sol";
 
 /**
  * @title DeployVault

@@ -1,0 +1,26 @@
+{
+  "network": "solana-devnet",
+  "deployer": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
+  "tokens": {
+    "MockUSDC": {
+      "mint": "2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y",
+      "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "decimals": 6,
+      "mintAuthority": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
+      "mintAuthorityNote": "Moves to the perps program's faucet PDA in Phase 4",
+      "freezeAuthority": null,
+      "metadataUri": "https://raw.githubusercontent.com/DevanshBehl/DEX/main/deployments/mock-usdc-metadata.json",
+      "initialMint": "10000000",
+      "explorer": "https://explorer.solana.com/address/2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y?cluster=devnet",
+      "createdAt": "2026-09-22"
+    }
+  },
+  "oracles": {
+    "chainlink": {
+      "storeProgram": "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny",
+      "SOL-USD": "99B2bTijsU6f1GCT73HmdR7HCFFjGMBcPZY6jZ96ynrR",
+      "BTC-USD": "6PxBx93S8x3tno1TsFZwT5VqP8drrRCbCXygEXYNkFJe",
+      "ETH-USD": "669U43LNHx7LsVj95uYksnhXUfWKDsdzVqev3V4Jpw3P"
+    }
+  }
+}

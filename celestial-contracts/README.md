@@ -9,10 +9,11 @@ The perps protocol is being rebuilt as a pool-based perpetual DEX (see [`../phas
 | Path | Status | What it is |
 |---|---|---|
 | `src/legacy/CelestialVault.sol` | **Deprecated** | First perps prototype: ETH collateral, Chainlink prices, no LP pool. Deployed on Sepolia at `0x786f4037924772c79F39D49C302dC3D3eDd14b04`, no longer maintained. Superseded by the Phase 3 contracts. |
+| `src/MockUSDC.sol` | Active (testnet only) | 6-decimal mock USDC, the collateral for the perps. Owner mint plus a public `faucet()` giving 10k every 24 h. Sepolia: `0x88a77050162285276d6346a4Bc07C406572d6cD2` (verified) |
 | `src/test-nfts/TestERC721.sol` | Active | ERC-721 fixture collection for testing the wallet's NFT view (standard, spam and broken-image tokens) |
 | `src/test-nfts/TestERC1155.sol` | Active | ERC-1155 fixture editions for the same tests |
 
-Planned (Phase 2–3): `MockUSDC`, `oracle/ChainlinkOracle`, `pool/LiquidityPool`, `pool/CLP`, `PerpEngine`.
+Planned (Phase 3): `oracle/ChainlinkOracle`, `pool/LiquidityPool`, `pool/CLP`, `PerpEngine`.
 
 ## Dependencies
 
@@ -38,11 +39,20 @@ Never commit `.env`, and only use a wallet that holds testnet funds.
 
 ```shell
 forge build
-forge test          # NFT fixture tests + Chainlink oracle smoke test
+forge test          # MockUSDC, NFT fixtures, Chainlink oracle smoke test
 forge fmt
 ```
 
 ## Deploy
+
+Deployed addresses are recorded in [`../deployments/sepolia.json`](../deployments/sepolia.json).
+
+MockUSDC (Sepolia, mints 10M to the deployer):
+
+```shell
+forge script script/DeployMockUSDC.s.sol:DeployMockUSDC \
+  --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify
+```
 
 NFT fixtures (Sepolia):
 

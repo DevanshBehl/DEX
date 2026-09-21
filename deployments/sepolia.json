@@ -1,0 +1,26 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployer": "0xA0c3A70806983a965e43961DE48658a9D41f2322",
+  "contracts": {
+    "MockUSDC": {
+      "address": "0x88a77050162285276d6346a4Bc07C406572d6cD2",
+      "decimals": 6,
+      "owner": "0xA0c3A70806983a965e43961DE48658a9D41f2322",
+      "initialMint": "10000000",
+      "faucet": { "amount": "10000", "cooldownSeconds": 86400 },
+      "verified": "https://sepolia.etherscan.io/address/0x88a77050162285276d6346a4Bc07C406572d6cD2#code",
+      "deployedAt": "2026-09-22"
+    },
+    "CelestialVault (legacy, deprecated)": {
+      "address": "0x786f4037924772c79F39D49C302dC3D3eDd14b04"
+    }
+  },
+  "oracles": {
+    "chainlink": {
+      "ETH-USD": "0x694AA1769357215DE4FAC081bf1f309aDC325306",
+      "BTC-USD": "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43",
+      "SOL-USD": null
+    }
+  }
+}

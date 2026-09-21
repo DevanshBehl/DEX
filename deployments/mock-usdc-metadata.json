@@ -1,0 +1,6 @@
+{
+  "name": "Mock USD Coin",
+  "symbol": "USDC",
+  "description": "TESTNET ONLY. 6-decimal mock USDC used as collateral by Celestial Perps on Solana devnet and Ethereum Sepolia. Has no value.",
+  "image": "https://raw.githubusercontent.com/DevanshBehl/DEX/main/deployments/mock-usdc.svg"
+}

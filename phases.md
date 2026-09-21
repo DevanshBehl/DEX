@@ -45,6 +45,7 @@ celestial-contracts/   EVM (Foundry): MockUSDC, ChainlinkOracle, LiquidityPool, 
 celestial-solana/      Anchor workspace: celestial_perps program + tests
 celestial-keeper/      TypeScript keeper for both chains: execute orders, liquidate, funding
 celestial-perps/       Next.js frontend
+deployments/           Deployed addresses per network (sepolia.json, solana-devnet.json) + token metadata
 ```
 
 ---
@@ -92,22 +93,26 @@ Files: `celestial-perps/app/trade/page.tsx` (split it into `components/` and `li
 
 ---
 
-## Phase 2 — Mock USDC on both chains
+## Phase 2 — Mock USDC on both chains ✅ (2026-09-22, except the Solana faucet, which moves to Phase 4)
+
+Addresses are recorded in `deployments/sepolia.json`, `deployments/solana-devnet.json`, and `celestial-perps/lib/tokens.ts`.
 
 ### EVM — `celestial-contracts/src/MockUSDC.sol`
-- [ ] ERC20 "Mock USD Coin" / "USDC", `decimals() = 6`
-- [ ] `mint(to, amount)` restricted to `onlyOwner`, used to seed the pool
-- [ ] `faucet()`: 10,000 USDC per address every 24 h
-- [ ] `test/MockUSDC.t.sol`: decimals, owner mint, non-owner mint reverts, faucet cooldown
-- [ ] `script/DeployMockUSDC.s.sol`: deploy, then mint 10M to the deployer
+- [x] ERC20 "Mock USD Coin" / "USDC", `decimals() = 6`
+- [x] `mint(to, amount)` restricted to `onlyOwner`, used to seed the pool
+- [x] `faucet()`: 10,000 USDC per address every 24 h, plus a `nextClaimAt(user)` view for the UI
+- [x] `test/MockUSDC.t.sol`: decimals, owner mint, non-owner mint reverts, faucet cooldown (8 tests including a fuzz test)
+- [x] `script/DeployMockUSDC.s.sol`: deploy, then mint 10M to the deployer (refuses to run on chains other than Sepolia)
+- [x] **Deployed and verified on Sepolia:** `0x88a77050162285276d6346a4Bc07C406572d6cD2`. Owner and deployer is `0xA0c3…2322`, which holds 10M. A live `faucet()` test call succeeded.
 
-### Solana — SPL mint
-- [ ] Create the mint: `spl-token create-token --decimals 6` (optionally Token-2022 with `--enable-metadata` and name/symbol "Mock USD Coin" / "USDC")
-- [ ] Mint 10M to the deployer
-- [ ] The faucet instruction lives in the Anchor program (Phase 4). After deploying, move the mint authority to the program's PDA: `spl-token authorize <MINT> mint <FAUCET_PDA>`
-- [ ] Record the mint address in `celestial-solana/README.md` and in the frontend config
+### Solana — Token-2022 mint
+- [x] Mint `2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y`, created with the Token-2022 program (`TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`, `spl-token create-token --program-2022 --decimals 6 --enable-metadata`). It has 6 decimals and no freeze authority.
+- [x] On-chain metadata: "Mock USD Coin" / "USDC". The URI points to `deployments/mock-usdc-metadata.json` on GitHub `main` (it only resolves after a push).
+- [x] Minted 10M to the deployer `6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED` (`~/.config/solana/devnet.json`)
+- [ ] **Faucet: Phase 4.** The `faucet` instruction lives in the Anchor program. After deploying the program, move the mint authority to its PDA: `spl-token authorize 2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y mint <FAUCET_PDA>`. Until then, top up testers manually with `spl-token transfer`.
+- [x] Recorded the mint in `deployments/solana-devnet.json` and in the frontend config
 
-**Done when:** both tokens are deployed, the deployer holds 10M on each chain, and the faucet works.
+> The Anchor program must use the `token_interface` / `InterfaceAccount` types from `anchor-spl`. It must not use the classic `Token` program types, because the mint is Token-2022.
 
 ---
 
@@ -167,7 +172,7 @@ All files go in `celestial-contracts/src/`.
 
 ### 3e. Deploy to Sepolia
 - [ ] `script/DeployPerps.s.sol`: deploys ChainlinkOracle, CLP, LiquidityPool, and PerpEngine; links them; configures the three markets; whitelists the keeper; seeds the pool with 5M USDC
-- [ ] Verify the contracts on Etherscan. Write the addresses to `celestial-contracts/deployments/sepolia.json`, which the frontend reads.
+- [ ] Verify the contracts on Etherscan. Write the addresses to `deployments/sepolia.json`, which the frontend reads.
 - [ ] Export the ABIs to `celestial-perps/src/abis/`
 
 **Done when:** all tests and invariants pass, the contracts are deployed and verified, and one manual cast-script flow works: request, execute, close.
@@ -204,7 +209,7 @@ All files go in `celestial-contracts/src/`.
 
 ### 4d. Deploy to devnet
 - [ ] `anchor deploy --provider.cluster devnet`, run the init script (markets, keeper, seed 5M USDC into the pool), and move the mint authority to the faucet PDA
-- [ ] Write the program ID and PDAs to `celestial-solana/deployments/devnet.json`, and copy the IDL to `celestial-perps/src/idl/`
+- [ ] Write the program ID and PDAs to `deployments/solana-devnet.json`, and copy the IDL to `celestial-perps/src/idl/`
 
 **Done when:** tests pass, the program is on devnet, and a full script flow works: request, execute, close.
 

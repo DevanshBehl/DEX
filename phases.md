@@ -11,13 +11,13 @@ Goal: a pool-based perpetual DEX (GMX / Jupiter Perps model) running on **Ethere
 | Parameter | Value | Notes |
 |---|---|---|
 | Collateral | Mock USDC, 6 decimals | Valued at $1 through `collateralPrice()`; switch to a USDC/USD oracle on mainnet |
-| Markets | BTC-USD, ETH-USD, SOL-USD | Synthetic, so the pool only needs USDC |
+| Markets | Sepolia: BTC-USD, ETH-USD. Solana devnet: BTC-USD, ETH-USD, SOL-USD | Synthetic, so the pool only needs USDC. SOL-USD is **Solana-only** because Sepolia has no Chainlink SOL/USD feed (decided 2026-09-22) |
 | Oracle | Chainlink Data Feeds (push model, free to read) | EVM: `AggregatorV3Interface` on Sepolia. Solana: Chainlink OCR2 store feeds on devnet. No price updates to fetch or pay for |
 | Chart / UI price | Coinbase Exchange public API | Candles + live ticker, no API key. Display only; trades always fill at the on-chain oracle price |
 | Max leverage | 20x | Must stay below 1 / maintenance margin |
 | Maintenance margin | 2.5% of size | Liquidation once `collateral + pnl − fees < 2.5% × size` |
-| Open / close fee | 0.06% of size each | Goes to the pool (LPs) |
-| Liquidation fee | 0.5% of size, capped at the remaining collateral | Paid to the liquidator (keeper) |
+| Open / close fee | 0.06% of size each | 90% to the pool (LPs), 10% to protocol `feeReserves` (`protocolFeeShareBps` = 1000) |
+| Liquidation fee | 0.5% of size, capped at the position's collateral | Paid to the liquidator (keeper). The rest of the collateral goes to the pool; the trader receives nothing |
 | Max profit per position | 9 × collateral | This amount is **reserved** in the pool when a position opens, which keeps the pool solvent |
 | OI cap per side, per market | 30% of pool AUM | Limits how much the LPs can lose |
 | Funding | Skew-based, charged hourly | `rate = k × (longOI − shortOI) / poolAUM`, capped at ±0.01%/h. The larger side pays the pool |
@@ -35,7 +35,7 @@ Goal: a pool-based perpetual DEX (GMX / Jupiter Perps model) running on **Ethere
 |---|---|---|
 | ETH-USD | `0x694AA1769357215DE4FAC081bf1f309aDC325306` (live, checked 2026-09-22) | `669U43LNHx7LsVj95uYksnhXUfWKDsdzVqev3V4Jpw3P` (account exists) |
 | BTC-USD | `0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43` (live, checked 2026-09-22) | `6PxBx93S8x3tno1TsFZwT5VqP8drrRCbCXygEXYNkFJe` (active every few seconds) |
-| SOL-USD | **No Chainlink feed found on Sepolia**, see the decision in Phase 3a | `99B2bTijsU6f1GCT73HmdR7HCFFjGMBcPZY6jZ96ynrR` (active every few seconds) |
+| SOL-USD | None, so **SOL-USD is disabled on EVM** | `99B2bTijsU6f1GCT73HmdR7HCFFjGMBcPZY6jZ96ynrR` (active every few seconds) |
 
 > Before deploying, check addresses and decimals against docs.chain.link. For the Solana feeds, confirm freshness by decoding `latest_round_data` at the start of Phase 4.
 
@@ -116,64 +116,66 @@ Addresses are recorded in `deployments/sepolia.json`, `deployments/solana-devnet
 
 ---
 
-## Phase 3 — EVM contracts (Solidity, Foundry)
+## Phase 3 — EVM contracts (Solidity, Foundry) ✅ (2026-09-22)
+
+**Deployed and verified on Sepolia:** PerpEngine `0x49765B9bEFed004A6462ad2025C240191e762b60`, LiquidityPool `0xB2DF5d7C1BCa2d82ECA1D591F0E58B335387b24b`, CLP `0x303C049BF526bD40d82E2Bd405af34bB095A55DA`, ChainlinkOracle `0xFF6a6Da437b16e5dd29D2eF8Aa38517911320cC0`. The pool is seeded with 5M USDC, and an on-chain open/close smoke test passed (see `deployments/sepolia.json`). 107 tests (unit, fuzz, 6 invariants); line coverage 98–100% on the new contracts.
+
+Deviations from the original plan: CLP is deployed separately and bound with `setPool`, not deployed by the pool. `PerpMath` holds all maths, and no `PerpReader` split was needed (the engine is 19.9 KB).
 
 All files go in `celestial-contracts/src/`.
 
 ### 3a. `oracle/ChainlinkOracle.sol`
-- [ ] Maps `bytes32 marketId → (AggregatorV3Interface feed, uint32 maxAge)`
-- [ ] `getPrice(marketId)`: reads `latestRoundData`, rejects `answer ≤ 0`, rejects `updatedAt` older than `maxAge`, rejects `answeredInRound < roundId`, and normalises to 1e8 from `decimals()`
-- [ ] `collateralPrice()` returns `1e8` ($1). Leave a hook for USDC/USD on mainnet.
-- [ ] **SOL-USD on Sepolia (decide at the start of Phase 3).** Chainlink has no SOL/USD feed on Sepolia. Options:
-  - (a) disable SOL-USD on EVM
-  - (b) deploy a testnet-only `KeeperPriceFeed` that implements `AggregatorV3Interface` and is pushed by the keeper from the Coinbase price. It's trusted and centralised, and **must never go to mainnet**.
+- [x] Maps `bytes32 marketId → (AggregatorV3Interface feed, uint32 maxAge)`
+- [x] `getPrice(marketId)`: reads `latestRoundData`, rejects `answer ≤ 0`, rejects `updatedAt` older than `maxAge`, rejects `answeredInRound < roundId`, and normalises to 1e8 from `decimals()`
+- [x] `collateralPrice()` returns `1e8` ($1). Leave a hook for USDC/USD on mainnet.
+- [x] **SOL-USD on Sepolia: decided to disable it.** Chainlink has no SOL/USD feed on Sepolia, so the EVM engine lists only BTC-USD and ETH-USD. SOL-USD trades on Solana only.
 
 ### 3b. `pool/CLP.sol` + `pool/LiquidityPool.sol`
-- [ ] `CLP`: ERC20 LP token. Only the pool can mint and burn it.
-- [ ] `addLiquidity(amount)`: CLP minted = `amount × clpSupply / AUM` (1:1 for the first deposit), minus a 0.1% fee
-- [ ] `removeLiquidity(clpAmount)`: burns CLP and returns the matching USDC. Blocked if the withdrawal would take the pool below its **reserved** amount.
-- [ ] `AUM = poolBalance − reservedForProfits − netTraderUnrealisedPnl`. Computing it needs prices, so it goes through the oracle.
-- [ ] Accounting: `poolAmount`, `reservedAmount`, `feeReserves`, plus long and short OI per market
-- [ ] Only `PerpEngine` can call `payOut`, `receiveLoss`, `reserve`, and `unreserve`
-- [ ] 15-minute cooldown on removing liquidity after adding (stops LPs from sandwiching trades)
+- [x] `CLP`: ERC20 LP token. Only the pool can mint and burn it.
+- [x] `addLiquidity(amount)`: CLP minted = `amount × clpSupply / AUM` (1:1 for the first deposit), minus a 0.1% fee
+- [x] `removeLiquidity(clpAmount)`: burns CLP and returns the matching USDC. Blocked if the withdrawal would take the pool below its **reserved** amount.
+- [x] `AUM = poolAmount − Σ net trader unrealised PnL` per market, floored at 0, with each market's trader losses capped at its collateral. Reserves are **not** subtracted again, because that would count the same risk twice. Computing it needs prices, so it goes through the oracle. See `docs/perp-math.md`.
+- [x] Accounting: `poolAmount`, `reservedAmount`, `feeReserves`, plus long and short OI per market
+- [x] Only `PerpEngine` can call `payOut`, `receiveLoss`, `reserve`, and `unreserve`
+- [x] 15-minute cooldown on removing liquidity after adding (stops LPs from sandwiching trades)
 
 ### 3c. `PerpEngine.sol`
-- [ ] Market config per market: feed ID, max leverage, OI caps, funding factor, enabled flag
-- [ ] **Order requests** (user pays USDC and an execution fee in ETH to cover keeper gas):
+- [x] Market config per market: feed ID, max leverage, OI caps, funding factor, enabled flag
+- [x] **Order requests** (user pays USDC and an execution fee in ETH to cover keeper gas):
   - `requestIncrease(market, isLong, collateral, sizeUsd, acceptablePrice)`
   - `requestDecrease(positionKey, sizeDelta, collateralDelta, acceptablePrice)`
   - `cancelRequest(id)` after 60 s
-- [ ] **Keeper execution:** `executeRequests(ids[], priceUpdateData[])`
+- [x] **Keeper execution:** `executeRequests(ids[], priceUpdateData[])`
   - Only whitelisted keepers can call it
   - Uses `oracle.getPrice(market)` at execution time, plus the 0.1% execution spread against the trader
   - Checks slippage (`acceptablePrice`), leverage ≤ 20x, OI cap, and pool reserve capacity
   - If a check fails, cancels the request and refunds the user; the call must never revert as a whole
-- [ ] **Position** (key = `keccak(trader, market, isLong)`): size, collateral, avg entry price, entry funding index, reserved amount, last updated
-- [ ] Increase and decrease: weighted average entry price, fees to the pool, realised PnL on a decrease, reserve/unreserve `9 × collateral` in the pool
-- [ ] **Funding:** a cumulative funding index per market and side, updated on every interaction and by the keeper's `updateFunding(market)`
-- [ ] **Liquidation:** `liquidate(positionKey, priceUpdateData)` is keeper-only in v1
+- [x] **Position** (key = `keccak(trader, market, isLong)`): size, collateral, avg entry price, entry funding index, reserved amount, last updated
+- [x] Increase and decrease: weighted average entry price, fees to the pool, realised PnL on a decrease, reserve/unreserve `9 × collateral` in the pool
+- [x] **Funding:** a cumulative funding index per market and side, updated on every interaction and by the keeper's `updateFunding(market)`
+- [x] **Liquidation:** `liquidate(positionKey, priceUpdateData)` is keeper-only in v1
   - Liquidate when `collateral + pnl − fundingOwed − closeFee < 2.5% × size`
   - The liquidation fee goes to the keeper and the remaining collateral goes to the pool
-- [ ] Views: `getPosition`, `getLiquidationPrice`, `getPnl`, `getMarketInfo` (OI, funding, capacity), used by the frontend
-- [ ] Events for every state change. The frontend builds its history from them.
-- [ ] Admin: `Ownable2Step`, pause per market and globally, parameter setters with bounds (for example, maintenance margin × max leverage < 1)
-- [ ] Use `SafeERC20` and `ReentrancyGuard` everywhere. Update state before external calls (checks-effects-interactions).
+- [x] Views: `getPosition`, `getLiquidationPrice`, `getPnl`, `getMarketInfo` (OI, funding, capacity), used by the frontend
+- [x] Events for every state change. The frontend builds its history from them.
+- [x] Admin: `Ownable2Step`, pause per market and globally, parameter setters with bounds (for example, maintenance margin × max leverage < 1)
+- [x] Use `SafeERC20` and `ReentrancyGuard` everywhere. Update state before external calls (checks-effects-interactions).
 
 ### 3d. Tests (`celestial-contracts/test/`), using `MockV3Aggregator` from Chainlink
-- [ ] Unit tests: add/remove liquidity, opening a position long or short, increasing/decreasing it, closing with profit or loss, fee accounting, funding accrual, liquidation at the boundary
-- [ ] Regression test: opening at max leverage can **not** be liquidated immediately
-- [ ] Slippage, stale price, non-positive answer, OI cap, reserve cap, expired request cancellation
-- [ ] **Invariant tests**:
+- [x] Unit tests: add/remove liquidity, opening a position long or short, increasing/decreasing it, closing with profit or loss, fee accounting, funding accrual, liquidation at the boundary
+- [x] Regression test: opening at max leverage can **not** be liquidated immediately
+- [x] Slippage, stale price, non-positive answer, OI cap, reserve cap, expired request cancellation
+- [x] **Invariant tests**:
   - `usdc.balanceOf(pool) ≥ poolAmount + feeReserves + total trader collateral`
   - `reservedAmount ≤ poolAmount`
   - the total paid out never exceeds what came in
-- [ ] Fuzz tests: random price paths and random opens and closes, checking that nothing breaks solvency
-- [ ] Target at least 90% line coverage (`forge coverage`)
+- [x] Fuzz tests: random price paths and random opens and closes, checking that nothing breaks solvency
+- [x] Target at least 90% line coverage (`forge coverage`)
 
 ### 3e. Deploy to Sepolia
-- [ ] `script/DeployPerps.s.sol`: deploys ChainlinkOracle, CLP, LiquidityPool, and PerpEngine; links them; configures the three markets; whitelists the keeper; seeds the pool with 5M USDC
-- [ ] Verify the contracts on Etherscan. Write the addresses to `deployments/sepolia.json`, which the frontend reads.
-- [ ] Export the ABIs to `celestial-perps/src/abis/`
+- [x] `script/DeployPerps.s.sol`: deploys ChainlinkOracle, CLP, LiquidityPool, and PerpEngine; links them; configures the two EVM markets (BTC-USD, ETH-USD); whitelists the keeper; seeds the pool with 5M USDC
+- [x] Verify the contracts on Etherscan. Write the addresses to `deployments/sepolia.json`, which the frontend reads.
+- [x] Export the ABIs to `celestial-perps/src/abis/`
 
 **Done when:** all tests and invariants pass, the contracts are deployed and verified, and one manual cast-script flow works: request, execute, close.
 
@@ -219,7 +221,7 @@ All files go in `celestial-contracts/src/`.
 
 A Node/TypeScript service. One process drives both chains.
 
-- [ ] **Order executor:** watches `Request` events and accounts, and calls `executeRequests` (EVM) or `execute_request` (Solana). Chainlink feeds are push-based, so there are no price updates to fetch. If option (b) in 3a is chosen, also push SOL-USD to `KeeperPriceFeed` on Sepolia. Poll every 1–2 s.
+- [ ] **Order executor:** watches `Request` events and accounts, and calls `executeRequests` (EVM) or `execute_request` (Solana). Chainlink feeds are push-based, so there are no price updates to fetch.  Poll every 1–2 s.
 - [ ] **Liquidator:** loads all open positions every 5 s, calculates liquidation off-chain, and calls `liquidate` for positions below maintenance
 - [ ] **Funding updater:** calls `updateFunding` hourly for every market
 - [ ] Retries with backoff, alerts on low keeper gas balance, logs in JSON

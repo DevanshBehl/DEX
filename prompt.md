@@ -1,193 +1,329 @@
-# Task: Execute Phase 0 and Phase 1 of the Celestial Perps plan
+# Task: Execute Phase 3 — EVM perps contracts (Solidity, Foundry, Sepolia)
 
-You are working in the monorepo at `/Users/devanshbehl/Documents/Code/DEx`. Carry out **Phase 0, then Phase 1** from `phases.md`, in that order. Do not start Phase 1 until every Phase 0 check passes. Do **not** start Phase 2 or later. The contracts, mock USDC, the Solana program, and the keeper are out of scope.
+You are working in the monorepo at `/Users/devanshbehl/Documents/Code/DEx`. Build, test, and deploy the **Ethereum side of Celestial Perps**: an oracle wrapper, a USDC liquidity pool with an LP token, and the perps engine. Traders trade against the pool at the Chainlink price, and a keeper executes their orders.
 
-Read `phases.md` first, especially the "Shared protocol spec" section. This prompt adds the detail you need for Phases 0 and 1.
+Only do Phase 3. **Out of scope:** the Solana program (Phase 4), the keeper service (Phase 5), and any frontend UI work (Phase 6). The only frontend change allowed is exporting ABIs and addresses (step 7).
 
-> **Revised 2026-09-22.** Pyth Hermes and Benchmarks now require a paid API key (they return 401), so this project uses **Chainlink** for on-chain prices and the **Coinbase Exchange public API** for the chart. Both are free and need no key. The endpoints below were checked with live requests.
-
----
-
-## Context: current state of the code
-
-- `celestial-perps/`: Next.js 15, React 19, Tailwind v4, TypeScript. Dependencies: `ethers` v6, `lightweight-charts` v5, `lucide-react`, `gsap`.
-  - `app/page.tsx`: the landing page. **Do not restyle it.** It uses its own light "Mist Liquid Glass" theme. The only change allowed is the CTA link in Phase 1d.
-  - `app/trade/page.tsx`: about 1,420 lines in a single file. It contains:
-    - wallet connection: EIP-6963 for EVM and Wallet Standard for Solana, plus disconnect, copy address, and ETH balance. **This must keep working unchanged.**
-    - Binance market data: `BINANCE_REST` and `BINANCE_WS`, the kline REST call and WebSocket inside `PriceChart`, the `@depth20@100ms` order book WebSocket, and the `ticker/24hr` REST call
-    - order book UI: `BookRow`, `BookSkeleton`, `processDepth`, and the order book section
-    - mock data: `STATS` (the funding value is hardcoded) and `POSITION` (a hardcoded positions row)
-    - the trade form: side, market/limit, collateral (ETH), size, leverage (1–50), summary (liquidation price, fees and slippage are hardcoded), and `executeTrade`, which calls the old `CelestialVault` on Sepolia
-    - dead UI: the `TIMEFRAMES` buttons change state, but the chart always shows 1m
-  - `src/abis/CelestialVault.json`: the ABI for the old vault at `0x786f4037924772c79F39D49C302dC3D3eDd14b04` (Sepolia)
-- `celestial-contracts/`: Foundry project (solc 0.8.24, `via_ir`), with `src/CelestialVault.sol`, `script/DeployVault.s.sol`, the `test-nfts/` contracts, and `TestNFTs.t.sol`
-  - **Libraries in `lib/` are vendored as plain files tracked in the parent repo, not as working git submodules.** Check with `git ls-files celestial-contracts/lib | head` and follow the same pattern.
-  - `.env` holds real secrets. **Never read, print, modify, or commit it.**
-  - The file `celestial-contracts/RECIPIENT=0x11F27CD68B72a81A192E4ec2672870084607c3B1` is an empty stray file, left by a broken shell command.
-- Git: branch `main`. **Create a branch `phase-0-1` before making any change. Do not commit, push, or open a PR unless the user asks.**
+Read these first:
+1. `docs/protocol-spec.md`. This is the source of truth for every parameter. If this prompt and the spec disagree, **the spec wins**. Report any disagreement you find.
+2. `phases.md`, Phase 3.
+3. `deployments/sepolia.json`, which holds the MockUSDC and Chainlink addresses.
 
 ---
 
-## Phase 0: Cleanup and groundwork
+## Context: current state
 
-Do these steps in order.
-
-1. **Branch.** Run `git checkout -b phase-0-1`.
-2. **Stray file.** Confirm the file is empty (`wc -c`), then delete `celestial-contracts/RECIPIENT=0x11F27CD68B72a81A192E4ec2672870084607c3B1`.
-3. **Archive the legacy vault.**
-   - Move `src/CelestialVault.sol` to `src/legacy/CelestialVault.sol`, and update the import in `script/DeployVault.s.sol` to match.
-   - Add a header comment to both files: `DEPRECATED — superseded by PerpEngine/LiquidityPool (see phases.md). Sepolia deployment 0x786f…4b04 is no longer maintained.`
-   - **Keep `celestial-perps/src/abis/CelestialVault.json` and `executeTrade` as they are.** The frontend keeps using the old vault until Phase 6. Do not break it.
-   - `forge build` must still succeed.
-4. **Chainlink oracle library.** It's already vendored at `lib/chainlink-brownie-contracts` with the `@chainlink/` remapping.
-   - Prove it resolves: add `test/ChainlinkSmoke.t.sol`, which imports `AggregatorV3Interface` and `MockV3Aggregator` (`@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol`) and checks the answer, decimals, `updatedAt`, and a new round.
-   - Run `forge test --match-path test/ChainlinkSmoke.t.sol`.
-5. **Solana toolchain check. Do not install anything.**
-   - Run `solana --version`, `anchor --version`, `rustc --version`, and `avm --version`.
-   - Report which tools are missing, with the official install commands. Installing tools and creating keypairs are the user's decisions, so **do not run installers** and **do not generate keypairs**.
-6. **Env templates.**
-   - Update `celestial-contracts/.env.example`: keep `SEPOLIA_RPC_URL`, `PRIVATE_KEY`, and `ETHERSCAN_API_KEY`, and add `CHAINLINK_ETH_USD_SEPOLIA` and `CHAINLINK_BTC_USD_SEPOLIA` with the addresses from `phases.md`, plus a note that Sepolia has no SOL/USD feed.
-   - Create `celestial-perps/.env.example` with `NEXT_PUBLIC_MARKET_REST_URL=https://api.exchange.coinbase.com` and `NEXT_PUBLIC_MARKET_WS_URL=wss://ws-feed.exchange.coinbase.com`.
-   - Make sure `celestial-perps/.gitignore` ignores `.env*.local` but not `.env.example`.
-7. **Docs.**
-   - Create `docs/protocol-spec.md` at the repo root. Copy the "Shared protocol spec" section of `phases.md` into it word for word, and add a short "Source of truth for both chains" preamble.
-   - Replace the default Foundry `celestial-contracts/README.md` with project docs: what each contract is, that the legacy vault is deprecated, how to build and test, and the deploy command for `DeployVault`, noting it is legacy.
-
-**Phase 0 check. All of these must pass before Phase 1:**
-- `cd celestial-contracts && forge build && forge test` passes, including the NFT tests and the Chainlink smoke test
-- `cd celestial-perps && npx tsc --noEmit` passes. The frontend was not touched, so this should not change.
-- `git status` shows only the changes intended above, and `.env` is untouched
+- **Foundry project:** `celestial-contracts/`. It uses solc `0.8.24` with `via_ir = true`, optimizer on, and 200 runs.
+- **Libraries** are copied into `lib/` as plain files, not git submodules. Don't run `forge install`. The ones available:
+  - OpenZeppelin **5.6.1**: `Ownable2Step`, `Pausable`, `ReentrancyGuard`, `SafeERC20`, `ERC20`, `Math`, `SignedMath`
+  - Chainlink: `AggregatorV3Interface` and `MockV3Aggregator` under `@chainlink/contracts/src/v0.8/...`
+  - forge-std
+- **Existing contracts:**
+  - `src/MockUSDC.sol`: 6 decimals, deployed at `0x88a77050162285276d6346a4Bc07C406572d6cD2`. The deployer holds about 10M.
+  - `src/legacy/CelestialVault.sol`: deprecated. **Don't touch it.**
+  - the `src/test-nfts/*` contracts. **Don't touch them either.**
+- **Chainlink on Sepolia**, 8 decimals, heartbeat 3600 s:
+  - ETH-USD `0x694AA1769357215DE4FAC081bf1f309aDC325306`
+  - BTC-USD `0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43`
+- **Markets on EVM: BTC-USD and ETH-USD only.** SOL-USD is Solana-only and **must not be listed** on EVM.
+- **Deployer:** `0xA0c3A70806983a965e43961DE48658a9D41f2322`. `celestial-contracts/.env` contains `SEPOLIA_RPC_URL`, `PRIVATE_KEY`, and `ETHERSCAN_API_KEY`.
+  - **Never print, log, copy, or commit `.env` or the private key.** Load it only in a subshell: `( set -a; source ./.env; set +a; forge script ... )`.
+  - Filter any output that might echo secrets.
+  - The deployer had **about 0.033 Sepolia ETH** at the end of Phase 2. See step 6.
+- **Git:** create branch `phase-3` from `main` before making changes. **Don't commit or push**; the user commits.
 
 ---
 
-## Phase 1: Frontend, Coinbase + Chainlink instead of Binance, remove the order book
+## Architecture
 
-Work only in `celestial-perps/`. **Keep the existing dark trade-terminal look**: the colours, the `PANEL` style, and the green/red accents. The only layout change is the order book column becoming the Market Info panel.
-
-### 1.0 Split `app/trade/page.tsx` before changing behaviour
-
-Move code out without changing what it does, so the diff for the behaviour changes stays readable. Suggested layout:
 ```
-celestial-perps/
-  lib/marketData.ts        Coinbase products, candles (REST), ticker (WebSocket), timeframe mapping
-  lib/oracle.ts            Chainlink Sepolia feed addresses + read-only latestRoundData via a public RPC
-  lib/protocol.ts          protocol constants mirrored from docs/protocol-spec.md
-  lib/format.ts            fmtPrice, fmtUsd, etc.
-  lib/wallet.ts            wallet types (Eip1193Provider, Eip6963ProviderDetail, StandardWallet, …)
-  hooks/useLivePrice.ts    Coinbase ticker subscription
-  hooks/useOraclePrice.ts  Chainlink oracle polling
-  hooks/useWalletDiscovery.ts   (optional: EIP-6963 + Wallet Standard discovery effect)
-  components/trade/PriceChart.tsx
-  components/trade/MarketInfo.tsx
-  components/trade/TradeForm.tsx
-  components/trade/PositionsPanel.tsx
-  components/trade/WalletModal.tsx, AccountMenu.tsx, Stat.tsx, SummaryRow.tsx …
-  app/trade/page.tsx       composition + shared state only
+                 ┌──────────────────┐   latestRoundData
+                 │ ChainlinkOracle  │◄──────────────── Chainlink feeds
+                 └────────┬─────────┘
+                          │ getPrice(market)
+┌────────┐ requestIncrease/Decrease  ┌────────────┐  pool accounting calls  ┌───────────────┐
+│ Trader │──────────────────────────►│ PerpEngine │────────────────────────►│ LiquidityPool │── holds ALL USDC
+└────────┘   (+ ETH execution fee)   └─────▲──────┘   (onlyEngine)          └──────┬────────┘
+                                           │ executeRequests / liquidate           │ mint/burn
+                                     ┌─────┴──┐                              ┌──────▼──┐
+                                     │ Keeper │                              │   CLP   │ LP token
+                                     └────────┘                              └─────────┘
+LPs ── addLiquidity / removeLiquidity ──► LiquidityPool
 ```
-Use the existing `@/` alias (check `tsconfig.json`). After the split, run `npx tsc --noEmit` and **confirm the page still behaves the same** before continuing.
 
-### 1a. Market data: Coinbase (chart and index price) and Chainlink (oracle price)
-
-**Coinbase Exchange public API.** It needs no key, CORS is `*`, and it works in the US. Product IDs match our market IDs: `BTC-USD`, `ETH-USD`, `SOL-USD`.
-- **Candles:** `GET ${REST}/products/<id>/candles?granularity=<seconds>`
-  - Returns up to about 350 rows of `[time, low, high, open, close, volume]`, **newest first**. Reverse them before `setData`.
-  - Supported granularities are 60, 300, 900, 3600, 21600, and 86400. **There is no 14400 (4H)**, so build 4H bars from 1H candles, aligned to UTC 4-hour boundaries.
-  - Timeframe mapping: `1m→60`, `5m→300`, `15m→900`, `1H→3600`, `4H→3600 aggregated ×4`, `1D→86400`.
-- **Wire up the timeframe buttons.** `PriceChart` takes `marketId` and `timeframe`, refetches when either changes, then calls `setData` and `fitContent`. Ignore responses from superseded requests using the existing `cancelled` flag pattern.
-- **Live ticker:** `new WebSocket("wss://ws-feed.exchange.coinbase.com")`. On open, send `{"type":"subscribe","product_ids":[id],"channels":["ticker"]}`.
-  - Messages have `type: "ticker"`, `price`, `open_24h`, `time` (ISO string), `best_bid`, and `best_ask`. Ignore the `subscriptions` message.
-  - Add a `useLivePrice(marketId)` hook that returns `{ price, open24h, time, status: "connecting" | "live" | "stale" | "error" }`. Mark it stale when there has been no tick for 15 s.
-  - Close the socket on unmount or market change. Reconnect with backoff (1, 2, 4 … 30 s), and never keep two sockets open for the same hook.
-- **Live candle from ticks.** `bucketStart = floor(tickTime / bucketSeconds) × bucketSeconds`. For 4H, use 14400. For the same bucket, update high, low and close. Otherwise add a bar with `open = previous close`. Never send a bar older than the last one to `series.update()`, because lightweight-charts throws.
-
-**Chainlink oracle price (Sepolia, read-only).** This is the price trades fill at.
-- `lib/oracle.ts`:
-  - ETH-USD `0x694AA1769357215DE4FAC081bf1f309aDC325306` and BTC-USD `0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43`, 8 decimals
-  - SOL-USD has **no Sepolia feed**, so it's `null`
-- Read it with `ethers.JsonRpcProvider` pointed at a public Sepolia RPC. Use `NEXT_PUBLIC_SEPOLIA_RPC_URL`, defaulting to `https://ethereum-sepolia-rpc.publicnode.com`, and add it to `.env.example`.
-- Call `latestRoundData()`. Poll every 30 s.
-- `useOraclePrice(marketId)` returns `{ price, updatedAt, status }`. Mark it stale if `now − updatedAt > 3960 s`, which is the heartbeat plus 10%.
-
-**Header stats.**
-- **Price**: the live Coinbase price. Keep the existing up/down colour logic.
-- **24h change**: `(price − open_24h) / open_24h` from the ticker. Before the first tick, seed it from `GET ${REST}/products/<id>/stats` (`open` and `last`).
-- **Remove "24h Volume"**, because it would be Coinbase's volume, not ours. Replace it with **"Oracle"**: the Chainlink price, or `—` for SOL.
-- **Funding**: `—` until Phase 6. Remove `STATS`.
-- **Live/Sync indicator**: driven by `useLivePrice().status`.
-
-**Remove Binance completely.** Delete `BINANCE_REST`, `BINANCE_WS`, the kline/depth/ticker code, `DepthLevel`, and the Binance `symbol` values. When you're done, `grep -ri binance celestial-perps --include=*.ts --include=*.tsx` must return nothing. Ignore `node_modules` and `.next`.
-
-### 1b. Replace the order book with `MarketInfo`
-
-- Delete `BookRow`, `BookSkeleton`, `processDepth`, the depth WebSocket effect, the bids/asks state, and the spread strip.
-- Add a `components/trade/MarketInfo.tsx` panel in the same grid column, with the same classes (`order-3 … lg:col-span-2`). It gets its data through a typed prop:
-  ```ts
-  type MarketInfoData = {
-    oraclePrice: number | null; oracleUpdatedAt: number | null; indexPrice: number | null;
-    poolLiquidityUsd: number | null;
-    longOiUsd: number | null; shortOiUsd: number | null;
-    longCapacityUsd: number | null; shortCapacityUsd: number | null;
-    fundingLongPerHour: number | null; fundingShortPerHour: number | null;
-    maxLeverage: number; openFeeBps: number;
-  };
-  ```
-- Only `oraclePrice`, `oracleUpdatedAt`, and `indexPrice` are live in Phase 1. Every pool, OI, and funding field is `null` and shows `—`, with a small muted "Available after pool launch" note. Take `maxLeverage = 20` and `openFeeBps = 6` from a constants file (`lib/protocol.ts`) that mirrors `docs/protocol-spec.md`.
-- Put the oracle price in large, prominent type where the spread strip used to be, with "Chainlink · updated Xm ago" underneath and the gap from the Coinbase index price (`index − oracle`, in % terms). For SOL-USD, show "No Sepolia oracle".
-- Show a long/short OI skew bar, rendered as a neutral 50/50 placeholder while the values are null.
-
-### 1c. Trade form and mock cleanup
-
-- **Remove the `POSITION` constant.** The positions tab shows an empty state ("No open positions"), styled like the existing "No order history yet" state. Keep the table header markup so Phase 6 can fill it in.
-- **Remove the "Size" input** and the `size` state. Add a read-only "Position size" row to the order summary: `collateral × ETH price × leverage`. Until Phase 2 moves collateral to USDC, the ETH price comes from the ETH-USD Chainlink oracle, which is what the old vault uses. Always read ETH-USD for this, or show `—` if it isn't available.
-- **Hide the Limit order type.** Remove the market/limit toggle and the `limitPrice` state. Market is the only order type.
-- **Leverage**: the slider range becomes 1–20. The presets become `[2, 5, 10, 15, 20]`. The default stays at 10. The tick labels become `1x · 10x · 20x`. `levPct` uses `/ (20 - 1)`.
-- **Summary rows**: replace the hardcoded values.
-  - Entry price = oracle price (Chainlink), because that is what the contract fills at
-  - Liquidation price = `—` with the tooltip/title "Calculated on-chain after launch"
-  - Fees = `size × 0.06%`, calculated
-  - Remove the Slippage row
-- **SOL-USD guard.** The old vault rejects SOL-USD, so while SOL-USD is selected, disable the Execute button with the label "SOL-USD trading opens with the new engine". The chart and Market Info still work for SOL. This prevents the known failure where the deposit succeeds, the open reverts, and the ETH is stuck in the vault.
-- **Leave everything else in `executeTrade` unchanged.** The two-step old-vault flow and the provider handling are replaced in Phase 6. Keeping the old flow while the maximum is 20x is fine, because the old contract allows up to 50x.
-
-### 1d. Landing CTA
-
-- In `app/page.tsx`, find the primary "Launch App" or "Trade" style CTA(s). Most are `href="#"` today, around lines 305, 731, and 750.
-- Point only the main trading CTA at `/trade` using `next/link`, and leave the other anchors alone.
-- Change nothing else on the landing page.
+- **`LiquidityPool` holds every USDC**: LP liquidity, trader collateral, pending-request escrow, and protocol fees, each tracked in its own accounting bucket. `PerpEngine` holds no USDC. It holds only the ETH execution fees of pending requests.
+- Files:
+  - `src/oracle/ChainlinkOracle.sol`
+  - `src/pool/CLP.sol`
+  - `src/pool/LiquidityPool.sol`
+  - `src/PerpEngine.sol`
+  - `src/libraries/PerpMath.sol`
+  - `src/interfaces/{IChainlinkOracle,ILiquidityPool,IPerpEngine}.sol`
+- **Contract size:** `forge build --sizes` must show every deployable contract under **24,576 bytes**. If `PerpEngine` is too big, move pure maths into `PerpMath` (internal functions) and views into a separate `PerpReader` contract. **Don't turn off the size check.**
 
 ---
 
-## Phase 1 check: all must pass
+## Units and precision (use these exactly)
 
-1. `cd celestial-perps && npx tsc --noEmit` shows no errors.
-2. `npm run build` succeeds. If `next lint` is set up, it has no new errors.
-3. The `grep -ri binance` check above returns nothing.
-4. **Runtime check.** Start `npm run dev` in the background and open `/trade`. Use the browser tools if they're available; otherwise use `curl` and the dev-server logs. Confirm that:
-   - candles load for BTC, ETH, and SOL, and each of the 6 timeframes shows correctly spaced bars
-   - the live price ticks and the last candle updates
-   - the Market Info panel shows the oracle price and confidence, and the other fields show `—`
-   - the Network tab or logs show no requests to `binance.com`
-   - wallet connect and disconnect still work for EVM and Solana, and the ETH balance still shows
-   - the SOL-USD Execute button is disabled with the message above
-   - stop the dev server when you're done
-5. `forge build && forge test` in `celestial-contracts` still passes.
+| Quantity | Unit |
+|---|---|
+| USDC amounts, collateral, `sizeUsd`, fees, PnL | 6 decimals (1 USD = `1e6`) |
+| Prices | 8 decimals (`PRICE_PRECISION = 1e8`). Normalise every feed to this |
+| Basis points | `BPS = 10_000` |
+| Funding rate and funding index | 1e18 fraction of size (`FUNDING_PRECISION = 1e18`) |
+| Aggregate "open tokens" (for AUM) | `tokens = sizeUsd × 1e20 / price`, which is 18 decimals of the base asset |
 
-If a check fails, fix it and run the check again. If something outside this scope blocks you, for example Coinbase or the Sepolia RPC returning a different response shape, stop and report it. Don't guess.
+**Rounding always goes against the trader:**
+- round profit down
+- round losses and fees up
+- round LP mint amounts down, and LP redemption amounts down
+
+Use `Math.mulDiv` with `Math.Rounding.Ceil` where rounding up.
+
+---
+
+## Parameters (defaults, all settable by the owner within bounds)
+
+| Name | Default | Bound enforced in the setter |
+|---|---|---|
+| `maxLeverage` | 20 | `maxLeverage × maintenanceMarginBps < 10_000` |
+| `maintenanceMarginBps` | 250 (2.5%) | same as above |
+| `positionFeeBps` (charged on both open and close) | 6 | ≤ 100 |
+| `liquidationFeeBps` | 50 (0.5%) | ≤ 200 |
+| `executionSpreadBps` | 10 (0.1%) | ≤ 100 |
+| `maxProfitMultiplier` | 9 (× collateral reserved) | 1–20 |
+| `oiCapBps` (per side, per market, as a share of AUM) | 3_000 (30%) | ≤ 10_000 |
+| `fundingFactorPerHour` | `3e14` (0.03%/h at skew = AUM) | ≤ `1e16` |
+| `maxFundingRatePerHour` | `1e14` (0.01%/h) | ≤ `1e16` |
+| `protocolFeeShareBps` | 1_000 (10% of fees to `feeReserves`, the rest to LPs) | ≤ 5_000 |
+| `lpMintFeeBps` | 10 (0.1%, stays in the pool) | ≤ 100 |
+| `lpCooldown` | 15 minutes | ≤ 1 day |
+| `requestExpiry` | 60 s | 10 s – 1 h |
+| `minExecutionFee` | 0.0002 ether | ≤ 0.01 ether |
+| `minCollateral` | 10 USDC (`10e6`) | — |
+| Oracle `maxAge` per feed | 3960 s (heartbeat + 10%) | 60 s – 1 day |
+
+Emit a `ParamUpdated(bytes32 key, uint256 value)` event from every setter.
+
+---
+
+## Formulas: implement in `PerpMath.sol` as pure functions and unit test each one
+
+Notation: `S` = size in USD, `C` = collateral, `E` = entry price, `P` = price, `F` = funding owed, `mm` = maintenanceMarginBps.
+
+1. **Execution price** (spread against the trader; liquidations use the raw oracle price with no spread):
+   - Increasing a long, or decreasing a short: `P × (BPS + spread) / BPS`, rounded up
+   - Increasing a short, or decreasing a long: `P × (BPS − spread) / BPS`, rounded down
+2. **PnL:**
+   - long: `S × (P − E) / E`
+   - short: `S × (E − P) / E`
+   - The result is signed, rounded against the trader.
+3. **Average entry price when a position increases:** keep the position's `tokens = Σ sizeDelta × 1e20 / execPrice`, and derive `E = S × 1e20 / tokens`. This keeps PnL exact.
+4. **Position fee:** `sizeDelta × positionFeeBps / BPS`, rounded up
+5. **Funding:**
+   - `rate = min(maxFundingRatePerHour, fundingFactorPerHour × |longOI − shortOI| / AUM)`
+   - Only the **heavier side** pays: `cumulativeFunding[market][heavySide] += rate × dt / 3600`
+   - A position owes `F = S × (cumulativeFunding[side] − entryFunding) / 1e18`, rounded up
+   - Settle `F` into the pool (it is LP revenue) on every update to the position
+   - If AUM is 0, the rate is 0
+6. **Remaining margin:** `R = C + PnL(P) − F − closeFee(S)`
+   - The position is **liquidatable** when `R < S × mm / BPS`, using the raw oracle price
+7. **Liquidation price** (a view function; ignores funding that hasn't accrued yet):
+   - Let `need = S × mm / BPS + F + closeFee − C`
+   - long: `E × (S + need) / S`
+   - short: `E × (S − need) / S`
+   - If the result is ≤ 0 for a short, return 0
+8. **Profit cap:** a position's realised profit is capped at `position.reserved`. When the position opens, reserve `maxProfitMultiplier × collateral`, and adjust the reserve as collateral changes.
+9. **Aggregate PnL per market** (feeds into AUM):
+   - long: `longTokens × P / 1e20 − longSize`
+   - short: `shortSize − shortTokens × P / 1e20`
+10. **AUM:** `poolAmount − Σ_markets(aggregateTraderPnl)`, floored at 0
+    - Positive trader PnL lowers AUM. Negative trader PnL raises it, capped at the collateral at risk. For v1, clamp **each market's net trader PnL to ≥ −(that market's total collateral)**.
+11. **CLP pricing:**
+    - on add: `mint = amountAfterFee × supply / AUM`, or `amountAfterFee` 1:1 when supply is 0
+    - on remove: `out = clp × AUM / supply`
+
+Also write **`docs/perp-math.md`**. It must list every formula above and **at least 10 worked numeric examples**: long and short, profit and loss, a funding accrual, a liquidation just above and just below the threshold, the liquidation price, the profit cap, and a CLP mint and redeem. The Foundry tests must assert these exact numbers. Phase 4 reuses the same vectors so both chains can be checked for identical results.
+
+---
+
+## Contract specs
+
+### `ChainlinkOracle`
+- Owner-managed mapping `bytes32 market → Feed { AggregatorV3Interface feed; uint32 maxAge; uint8 decimals }`, where `market = keccak256("BTC-USD")` and so on.
+- `getPrice(bytes32 market) returns (uint256 price1e8)`. It reverts when:
+  - the feed is unknown
+  - `answer <= 0`
+  - `updatedAt == 0`
+  - `block.timestamp − updatedAt > maxAge`
+  - `answeredInRound < roundId`
+- Normalise the answer to 1e8.
+- `collateralPrice() returns (uint256)`: returns `1e8` (USDC valued at $1), and is marked `// TODO(mainnet): USDC/USD feed`.
+
+### `CLP`
+- ERC20 "Celestial LP" / "CLP", 18 decimals.
+- Only the pool can `mint` and `burn` it; the pool address is set once through the constructor or an init function.
+
+### `LiquidityPool`
+- **Accounting:**
+  - `poolAmount`: LP-owned USDC
+  - `reservedAmount`
+  - `feeReserves`: the protocol's share of fees
+  - `totalCollateral`: all open-position collateral
+  - `totalEscrow`: collateral held for pending requests
+- **LP functions:**
+  - `addLiquidity(uint256 amount, uint256 minClp)`
+  - `removeLiquidity(uint256 clpAmount, uint256 minUsdc)`
+  - Removal is blocked during `lpCooldown` after the address's last add, and when `poolAmount − out < reservedAmount`.
+  - `getAum()` and `getClpPrice()` are views; `getAum` reads prices through the engine or oracle.
+- **Engine-only hooks**, named so it's obvious what each one changes:
+  - `escrowIn(from, amount)`, `escrowToCollateral`, and `escrowRefund(to, amount)`
+  - `collateralOut(to, amount)` and `collateralToPool(amount)`, for losses, fees and funding
+  - `poolToTrader(to, amount)`, for profit (capped)
+  - `reserve` and `unreserve`
+  - `addFees(amount)`, which splits between `feeReserves` and `poolAmount`
+- **Owner:** `withdrawFees(to)` sends out `feeReserves` only.
+- **Invariant (enforce it in tests):** `usdc.balanceOf(pool) >= poolAmount + feeReserves + totalCollateral + totalEscrow` and `reservedAmount <= poolAmount`.
+
+### `PerpEngine`
+- **Markets:** `listMarket(bytes32 market)` by the owner. It checks that the oracle has a feed. Also `setMarketEnabled`.
+- **Requests** (one struct, `kind = Increase | Decrease`):
+  - `requestIncrease(bytes32 market, bool isLong, uint256 collateralDelta, uint256 sizeDelta, uint256 acceptablePrice) payable`
+    - `msg.value` must be at least `minExecutionFee`
+    - pulls `collateralDelta` USDC from the user into pool escrow
+  - `requestDecrease(bytes32 market, bool isLong, uint256 collateralDelta, uint256 sizeDelta, uint256 acceptablePrice) payable`
+    - `sizeDelta == position.size` means a full close
+  - `cancelRequest(uint256 id)`: the owner of the request can call it once `block.timestamp ≥ createdAt + requestExpiry`. It refunds the escrow and the execution fee.
+- **Execution** (keeper only): `executeRequests(uint256[] ids)`
+  - Each request runs through `try this.executeRequestInternal(id)`, an external function guarded by `msg.sender == address(this)`. A single failure must never revert the batch.
+  - On failure: cancel the request, refund the escrow, and emit `RequestCancelled(id, reason)`.
+  - The keeper gets the execution fee whether the request succeeds or fails.
+- **Increase checks:**
+  - market enabled
+  - `acceptablePrice` respected: for a long, `execPrice ≤ acceptablePrice`; for a short, `≥`
+  - `collateral ≥ minCollateral`
+  - `size ≥ collateral` (at least 1x)
+  - `size ≤ collateralAfterFees × maxLeverage`
+  - OI cap per side: `sideOI + sizeDelta ≤ AUM × oiCapBps / BPS`
+  - reserve capacity: `reservedAmount + newReserve ≤ poolAmount`
+  - the position must not be liquidatable after the increase
+- **Decrease:**
+  - realise PnL in proportion to `sizeDelta / size`
+  - settle funding and take the close fee
+  - pay out `collateralDelta ± realised PnL − fees`; profit comes from the pool and is capped by the reserve
+  - after a partial decrease, the position must satisfy the leverage and liquidation checks
+  - a full close deletes the position and unreserves everything
+- **Liquidation:** `liquidate(bytes32 positionKey)`, keeper only in v1
+  - keeper fee = `min(S × liquidationFeeBps / BPS, C)`
+  - the rest of the collateral goes to the pool, and the reserve is released
+  - the trader receives nothing
+- **Position key:** `keccak256(abi.encode(trader, market, isLong))`
+- **Views:**
+  - `getPosition(key)`
+  - `getPositionKey(trader, market, isLong)`
+  - `getPnl(key)`
+  - `getLiquidationPrice(key)`
+  - `getMarketInfo(market)`: returns OI long/short, capacity per side, funding rate per side, the cumulative indices, and the oracle price
+  - `getRequest(id)`
+  - `getPendingRequestIds(user)`
+- **Admin:** `Ownable2Step`, `Pausable` (pausing blocks new requests and execution of increases; decreases, cancels and liquidations keep working), `setKeeper(address, bool)`, and the parameter setters.
+- **Events for every state change:**
+  - `RequestCreated`, `RequestExecuted`, `RequestCancelled`
+  - `PositionIncreased`, `PositionDecreased`, `PositionClosed`, `PositionLiquidated`
+  - `FundingUpdated`, `ParamUpdated`
+  - Include the fields the frontend needs to rebuild history without extra calls.
+- Use `nonReentrant` on every external function that changes state. Use `SafeERC20`. Follow checks-effects-interactions. Send ETH with `call` and check the result. Don't use `tx.origin`, `transfer()`, or unbounded loops over user-controlled arrays apart from the keeper batch.
+
+---
+
+## Steps (in order)
+
+1. **Branch:** `git checkout -b phase-3`.
+2. **Maths first.** Write `PerpMath.sol` and `docs/perp-math.md`, then `test/PerpMath.t.sol`, which asserts every worked example. Get this green before continuing.
+3. **Oracle, CLP and pool**, each with unit tests: `test/ChainlinkOracle.t.sol` and `test/LiquidityPool.t.sol`. Use `MockV3Aggregator` for prices and `vm.warp` for time.
+4. **Engine:** `test/PerpEngine.t.sol` must cover:
+   - request → execute → open, for long and short
+   - increase an existing position (average entry price)
+   - partial and full decrease, with profit and with loss
+   - the profit cap
+   - funding accrual on the heavier side only, and settlement
+   - liquidation just below the threshold succeeds and just above reverts `NotLiquidatable`
+   - **regression:** opening at exactly `maxLeverage` is **not** liquidatable straight away
+   - slippage (`acceptablePrice`) → cancelled and refunded
+   - a stale oracle → cancelled and refunded
+   - OI cap, reserve cap, and `minCollateral`
+   - `cancelRequest` before and after expiry
+   - a batch where one request fails and the others succeed
+   - only keepers can execute and liquidate
+   - pause behaviour
+   - SOL-USD can't be listed without a feed, and requests for unlisted markets revert
+   - execution fee paid to the keeper; the ETH refund on cancel
+5. **Invariants and fuzzing:** `test/invariant/PerpInvariants.t.sol` with a handler that randomly:
+   - adds or removes liquidity
+   - requests and executes increases and decreases
+   - moves prices ±15% within `maxAge`
+   - warps time
+   - liquidates
+   Assert the pool invariants above, plus:
+   - CLP supply > 0 ⇒ AUM > 0
+   - no user gets back more USDC than deposited + capped profit
+   - `totalCollateral` equals the sum of position collaterals (track this in the handler)
+   Run with `runs = 256, depth = 100` at minimum, and add a `[profile.ci]` in `foundry.toml` with more runs.
+6. **Deploy to Sepolia:**
+   - Write `script/DeployPerps.s.sol`. It must:
+     - require `chainid == 11155111`
+     - deploy the oracle (ETH and BTC feeds, `maxAge` 3960), CLP, LiquidityPool (MockUSDC from `deployments/sepolia.json`), and PerpEngine, and link them
+     - list BTC-USD and ETH-USD, and **not** SOL-USD
+     - `setKeeper(KEEPER_ADDRESS)`; the env var defaults to the deployer
+     - approve the pool and `addLiquidity(5_000_000e6)` from the deployer
+   - **Dry-run first (no `--broadcast`).** Read the estimated ETH cost and compare it with the deployer's balance (`cast balance`).
+   - **If balance < 1.5 × estimate, STOP** and tell the user how much Sepolia ETH to add. Don't try to cut gas by changing the code.
+   - Otherwise run with `--broadcast --verify`, and confirm every contract is verified.
+   - **Smoke test on-chain with `cast`:**
+     - read `getAum()`; it should be about 5M
+     - from the deployer: approve, then `requestIncrease` for ETH-USD long, 100 USDC collateral, 5x, and a generous `acceptablePrice`
+     - `executeRequests([id])` as keeper
+     - check `getPosition`
+     - `requestDecrease` for a full close, execute it, and check the USDC came back minus fees
+     - Record the tx hashes.
+7. **Record and export:**
+   - Update `deployments/sepolia.json` with every new address, the keeper, the seed amount, the verification links, and the smoke-test tx hashes.
+   - Export ABIs (the `abi` array only, from `out/`) to `celestial-perps/src/abis/{PerpEngine,LiquidityPool,CLP,ChainlinkOracle,MockUSDC}.json`.
+   - Add addresses to `celestial-perps/lib/contracts.ts`, next to `lib/tokens.ts`.
+   - **Don't change any frontend UI or behaviour.**
+   - Check that `npx tsc --noEmit` still passes in `celestial-perps`.
+8. **Docs:**
+   - Update `celestial-contracts/README.md` (contracts table, deploy command, parameters).
+   - In `phases.md`, tick off the Phase 3 items and write the addresses in.
+   - Update `docs/protocol-spec.md` **only** if you had to settle an ambiguity, and list each change in the report.
+
+---
+
+## Checks: everything must pass before you report done
+
+1. `forge build --sizes`: no errors, and every contract under 24,576 bytes
+2. `forge test`: everything passes, including the old MockUSDC, NFT and Chainlink smoke tests
+3. `forge test --match-path 'test/invariant/*'` passes, and `forge coverage --ir-minimum` shows **≥ 90% line coverage** on `src/PerpEngine.sol`, `src/pool/*`, `src/oracle/*`, and `src/libraries/*`
+4. Every contract is deployed and verified on Sepolia, and the on-chain smoke test passed (list the tx hashes)
+5. `cd celestial-perps && npx tsc --noEmit` passes
+6. `git status` shows only the intended changes, and `.env` is untouched and unprinted
+
+If something outside this scope blocks you, stop and report it. Examples: the RPC is down, verification fails repeatedly, there isn't enough ETH, or a spec formula contradicts itself. **Don't guess on money maths**; ask.
 
 ---
 
 ## Rules
 
-- Match the existing code style: Tailwind arbitrary values, `lucide-react` icons, and small comment headers like the ones already in `page.tsx`.
-- Add **no** new npm dependencies. Native `EventSource` and `fetch` are enough. If you think one is needed, stop and ask.
-- Don't change `CelestialVault` logic, the deployed addresses, `.env`, or the NFT contracts.
-- Don't commit. Leave the changes on the `phase-0-1` branch for review.
+- Match the existing style: NatSpec headers like `MockUSDC.sol`, custom errors instead of revert strings, and events for every state change.
+- Add no new libraries. The vendored OpenZeppelin, Chainlink and forge-std are enough.
+- Don't change `MockUSDC`, the legacy vault, the NFT contracts, or already-deployed addresses.
+- Don't commit or push. Leave the changes on `phase-3` for the user.
 
 ## Final report
 
-When both phases are done, reply with:
-1. A checklist for each phase, with every item marked done, skipped, or blocked, and a reason for anything not done
-2. The files created, moved, deleted, and modified (`git status --short`)
-3. The output of every check command, summarised as pass or fail, with the error text for any failure
-4. Solana toolchain status and the install commands the user still needs to run
-5. Anything you found that affects Phase 2 or later
+1. A checklist per step, with each item marked done, skipped or blocked, and reasons for anything not done
+2. The contract addresses with Etherscan links, and the smoke-test tx hashes
+3. `forge build --sizes` output for the new contracts, the test summary, and coverage per file
+4. Any spec ambiguities you settled, and how you settled them
+5. Gas used for deployment and the deployer's remaining ETH
+6. Anything the keeper (Phase 5) or frontend (Phase 6) needs to know: event names and fields, request lifecycle, and which views to poll

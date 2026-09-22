@@ -8,12 +8,59 @@
       "decimals": 6,
       "owner": "0xA0c3A70806983a965e43961DE48658a9D41f2322",
       "initialMint": "10000000",
-      "faucet": { "amount": "10000", "cooldownSeconds": 86400 },
+      "faucet": {
+        "amount": "10000",
+        "cooldownSeconds": 86400
+      },
       "verified": "https://sepolia.etherscan.io/address/0x88a77050162285276d6346a4Bc07C406572d6cD2#code",
       "deployedAt": "2026-09-22"
     },
     "CelestialVault (legacy, deprecated)": {
       "address": "0x786f4037924772c79F39D49C302dC3D3eDd14b04"
+    },
+    "ChainlinkOracle": {
+      "address": "0xFF6a6Da437b16e5dd29D2eF8Aa38517911320cC0",
+      "verified": "https://sepolia.etherscan.io/address/0xFF6a6Da437b16e5dd29D2eF8Aa38517911320cC0#code",
+      "deployedAt": "2026-09-22",
+      "markets": {
+        "ETH-USD": {
+          "feed": "0x694AA1769357215DE4FAC081bf1f309aDC325306",
+          "maxAge": 3960
+        },
+        "BTC-USD": {
+          "feed": "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43",
+          "maxAge": 3960
+        }
+      }
+    },
+    "CLP": {
+      "address": "0x303C049BF526bD40d82E2Bd405af34bB095A55DA",
+      "verified": "https://sepolia.etherscan.io/address/0x303C049BF526bD40d82E2Bd405af34bB095A55DA#code",
+      "deployedAt": "2026-09-22",
+      "decimals": 18
+    },
+    "LiquidityPool": {
+      "address": "0xB2DF5d7C1BCa2d82ECA1D591F0E58B335387b24b",
+      "verified": "https://sepolia.etherscan.io/address/0xB2DF5d7C1BCa2d82ECA1D591F0E58B335387b24b#code",
+      "deployedAt": "2026-09-22",
+      "seedUsdc": "5000000",
+      "note": "Traders and LPs approve THIS address for USDC"
+    },
+    "PerpEngine": {
+      "address": "0x49765B9bEFed004A6462ad2025C240191e762b60",
+      "verified": "https://sepolia.etherscan.io/address/0x49765B9bEFed004A6462ad2025C240191e762b60#code",
+      "deployedAt": "2026-09-22",
+      "markets": [
+        "BTC-USD",
+        "ETH-USD"
+      ],
+      "marketIds": {
+        "ETH-USD": "0x2430f68ea2e8d4151992bb7fc3a4c472087a6149bf7e0232704396162ab7c1f7",
+        "BTC-USD": "0xb39c402b9bd8428ba7a4cc2d1aca1432756cddeb60941a9175541a819095269e"
+      },
+      "keepers": [
+        "0xA0c3A70806983a965e43961DE48658a9D41f2322"
+      ]
     }
   },
   "oracles": {
@@ -22,5 +69,14 @@
       "BTC-USD": "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43",
       "SOL-USD": null
     }
+  },
+  "smokeTest": {
+    "date": "2026-09-22",
+    "flow": "ETH-USD long, 100 USDC collateral, 500 USDC size (5x) \u2192 full close",
+    "requestIncrease": "0xbf90eaf23b74700ce18cc0678518829fa660239c045caed5d52d6ba7c66a91e2",
+    "executeIncrease": "0xf549a7f4a5cf96be1c44f5ab7c150feea2e7e4ab228cad0fc6795d78ebdd9255",
+    "requestDecrease": "0x083bf745d08d770faa14a943f605c4f88c500318d48e0ada176addf7f1f2ec98",
+    "executeDecrease": "0x96589489f8fc28ed5b9329ef8f68bd10daf19a7fe933cef1bd015511c2b9e9d6",
+    "result": "Round-trip cost 1.599002 USDC (0.6 fees + ~1.0 spread); AUM +1.539002; feeReserves 0.06"
   }
 }

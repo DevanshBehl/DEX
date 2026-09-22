@@ -13,6 +13,15 @@ remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
 ]
 
+[invariant]
+runs = 256
+depth = 100
+fail_on_revert = false
+
+[profile.ci]
+fuzz = { runs = 5000 }
+invariant = { runs = 1000, depth = 200, fail_on_revert = false }
+
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"
 

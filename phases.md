@@ -229,15 +229,27 @@ See `celestial-solana/README.md`.
 
 ---
 
-## Phase 5 — Keeper service (`celestial-keeper/`)
+## Phase 5 — Keeper service (`celestial-keeper/`) ✅ (2026-09-25)
+
+**Running on both chains.** Live fills from a separate test wallet:
+- **Solana devnet:** every request filled 2 s (chain time) after it landed.
+- **Sepolia:** the keeper sent `executeRequests` 2–3 s after the request's block and it filled in the next block.
+
+Live funding updates also went through on both chains. Liquidation is proven on Anvil and on a local validator: real Chainlink prices can't be pushed on the live networks. Tests: 18 unit tests (every `perp-math.md` vector is exact), plus 5 Anvil and 6 local-validator scenarios. See `celestial-keeper/README.md`.
+
+Deviations from the plan:
+- Sepolia has no list of pending requests or open positions, so the keeper scans request ids with a cursor and rebuilds positions from events (starting at deploy block 11757411).
+- Latency on Sepolia is bounded by the 12 s block time.
+- The Solana public RPC lags and rate-limits, so reads carry `minContextSlot` and confirmation polls in the background.
+- Alerts are a log level plus an optional webhook.
 
 A Node/TypeScript service. One process drives both chains.
 
-- [ ] **Order executor:** watches `Request` events and accounts, and calls `executeRequests` (EVM) or `execute_request` (Solana). Chainlink feeds are push-based, so there are no price updates to fetch.  Poll every 1–2 s.
-- [ ] **Liquidator:** loads all open positions every 5 s, calculates liquidation off-chain, and calls `liquidate` for positions below maintenance
-- [ ] **Funding updater:** calls `updateFunding` hourly for every market
-- [ ] Retries with backoff, alerts on low keeper gas balance, logs in JSON
-- [ ] `.env` with keeper keys for both chains (devnet only). Start it with `npm run keeper`.
+- [x] **Order executor:** watches `Request` events and accounts, and calls `executeRequests` (EVM) or `execute_request` (Solana). Chainlink feeds are push-based, so there are no price updates to fetch.  Poll every 1–2 s.
+- [x] **Liquidator:** loads all open positions every 5 s, calculates liquidation off-chain, and calls `liquidate` for positions below maintenance
+- [x] **Funding updater:** calls `updateFunding` hourly for every market
+- [x] Retries with backoff, alerts on low keeper gas balance, logs in JSON
+- [x] `.env` with keeper keys for both chains (devnet only). Start it with `npm run keeper`.
 
 **Done when:** a user request is filled within 5 s and underwater positions are liquidated automatically.
 

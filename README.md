@@ -859,6 +859,19 @@ npm run dev
 </tbody>
 </table>
 
+### ✦ Running the Keeper
+
+The perps protocol needs a keeper to execute orders, liquidate and update funding on Sepolia and Solana devnet. It is one process for both chains:
+
+```bash
+cd celestial-keeper
+pnpm install
+cp .env.example .env   # RPC URLs, the EVM keeper key, the Solana keypair PATH
+pnpm keeper            # or keeper:evm / keeper:solana
+```
+
+See [`celestial-keeper/README.md`](celestial-keeper/README.md) for the jobs, logs, alerts and tests.
+
 ### ✦ Loading the Chrome Extension
 
 ```

@@ -92,6 +92,11 @@
     "programData": "GKBdY3BzTW5hBZvuBLVhicTcLfenzHmjUCkgAbah6YoB",
     "deploySlot": 503955960,
     "build": "anchor build (no mock-oracle feature); IDL has 22 instructions, none mock",
-    "onChainIdl": "not uploaded (metadata write failed on devnet RPC 429s); use celestial-perps/src/idl/celestial_perps.json"
+    "onChainIdl": "not uploaded (metadata write failed on devnet RPC 429s); use celestial-perps/src/idl/celestial_perps.json",
+    "keeperService": {
+      "address": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
+      "package": "celestial-keeper",
+      "since": "2026-09-25"
+    }
   }
 }

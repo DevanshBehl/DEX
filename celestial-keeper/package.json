@@ -1,0 +1,29 @@
+{
+  "name": "celestial-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Celestial Perps keeper: executes orders, liquidates and updates funding on Sepolia and Solana devnet",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "keeper": "node --import tsx src/index.ts",
+    "keeper:evm": "ENABLE_SOLANA=false node --import tsx src/index.ts",
+    "keeper:solana": "ENABLE_EVM=false node --import tsx src/index.ts",
+    "test": "node --import tsx --test test/math.test.ts test/unit.test.ts",
+    "test:local": "node --import tsx --test --test-concurrency=1 test/local-evm.test.ts test/local-solana.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anchor-lang/core": "1.1.2",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.98.4",
+    "ethers": "^6.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

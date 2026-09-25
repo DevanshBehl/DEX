@@ -60,7 +60,13 @@
       },
       "keepers": [
         "0xA0c3A70806983a965e43961DE48658a9D41f2322"
-      ]
+      ],
+      "deployBlock": 11757411,
+      "keeperService": {
+        "address": "0xA0c3A70806983a965e43961DE48658a9D41f2322",
+        "package": "celestial-keeper",
+        "since": "2026-09-25"
+      }
     }
   },
   "oracles": {

@@ -378,7 +378,6 @@ Not in `agent.md`, and the most interesting direction available.
 `agent.md` §1 justifies embedding by saying the agent gains *"secure, programmatic access to the ethers.js signer."* But under the Dual-Vault model (§2.2), that signer is derived from the **agent's own** BIP-39 seed, unlocked with the **agent's own** password, from the **agent's own** vault. The agent never reads `celestial_dex_vault`.
 
 A standalone agent extension would have *exactly the same* access to *exactly the same* signer.
-
 So the strategic argument for embedding is weaker than the document claims. What embedding actually buys is **distribution and funding UX**, not signer access. That is a real benefit — but it is a product benefit, not an architectural necessity, and it should be argued on those terms.
 
 ### 9.3 Arguments for splitting

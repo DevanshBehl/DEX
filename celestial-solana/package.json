@@ -1,0 +1,24 @@
+{
+  "name": "celestial-solana",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Celestial Perps \u2014 Anchor program for Solana devnet",
+  "scripts": {
+    "build:test": "anchor build -- --features mock-oracle && cp target/idl/celestial_perps.json tests/fixtures/idl-mock.json && cp target/deploy/celestial_perps.so tests/fixtures/celestial_perps-mock.so",
+    "build:devnet": "anchor build",
+    "test": "pnpm build:test && node --import tsx --test tests/*.test.ts",
+    "test:only": "node --import tsx --test tests/*.test.ts",
+    "test:chainlink": "anchor build && node --import tsx tests/chainlink-validator.ts",
+    "check-oracle": "node --import tsx scripts/check-oracle.ts",
+    "init-devnet": "node --import tsx scripts/init-devnet.ts"
+  },
+  "devDependencies": {
+    "@anchor-lang/core": "1.1.2",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.98.4",
+    "@types/node": "^24.3.0",
+    "litesvm": "0.8.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,329 +1,248 @@
-# Task: Execute Phase 3 — EVM perps contracts (Solidity, Foundry, Sepolia)
+# Task: Execute Phase 5: Keeper service (TypeScript, Sepolia + Solana devnet)
 
-You are working in the monorepo at `/Users/devanshbehl/Documents/Code/DEx`. Build, test, and deploy the **Ethereum side of Celestial Perps**: an oracle wrapper, a USDC liquidity pool with an LP token, and the perps engine. Traders trade against the pool at the Chainlink price, and a keeper executes their orders.
+You are working in the monorepo at `/Users/devanshbehl/Documents/Code/DEx`. Build, test and run the **Celestial Perps keeper**: one Node/TypeScript process, `celestial-keeper/`, that drives both deployed chains. It has three jobs:
+1. **Execute** pending order requests.
+2. **Liquidate** under-margined positions.
+3. **Update funding** hourly for every market.
 
-Only do Phase 3. **Out of scope:** the Solana program (Phase 4), the keeper service (Phase 5), and any frontend UI work (Phase 6). The only frontend change allowed is exporting ABIs and addresses (step 7).
+The two protocols are already live:
+- **EVM:** `PerpEngine` on Sepolia (Phase 3)
+- **Solana:** the `celestial_perps` Anchor program on devnet (Phase 4)
 
-Read these first:
-1. `docs/protocol-spec.md`. This is the source of truth for every parameter. If this prompt and the spec disagree, **the spec wins**. Report any disagreement you find.
-2. `phases.md`, Phase 3.
-3. `deployments/sepolia.json`, which holds the MockUSDC and Chainlink addresses.
+Only do Phase 5. **Out of scope:** any frontend UI (Phase 6), and **any change to the contracts or the program**. Don't touch `celestial-contracts/src/`, `celestial-solana/programs/`, or the deployed addresses. If the keeper can't do its job without an on-chain change, **stop and report**. Don't work around it.
+
+Read these before you write any code:
+1. `phases.md`, Phase 5 (the "Done when" criteria) and the Phase 3 / Phase 4 summaries.
+2. `docs/protocol-spec.md` and `docs/perp-math.md`: every formula and rounding rule. **The TypeScript liquidation maths must reproduce the `perp-math.md` vectors exactly** (Ex 1–9, including the Ex 7 boundary).
+3. `celestial-contracts/src/PerpEngine.sol`: `executeRequests`, `liquidate`, `updateFunding`, `isLiquidatable`, `getRequest`, `nextRequestId`, `getPosition`, `getMarketIds`, and the events.
+4. `celestial-solana/README.md`: the account map, the **`remaining_accounts` convention**, batching, event decoding and the `getProgramAccounts` filters (the "Notes for the keeper" section). `celestial-solana/programs/celestial-perps/src/**` is the reference implementation (read-only here). `celestial-solana/scripts/client.ts` is a working IDL-based client you can copy patterns from.
+5. `deployments/sepolia.json` and `deployments/solana-devnet.json`: every address, the market order and the keeper.
+6. The ABIs in `celestial-perps/src/abis/` and the IDL in `celestial-perps/src/idl/celestial_perps.json`. **Use these files; don't hand-write ABIs or IDLs.**
+
+If this prompt disagrees with the spec or the deployed code, **the deployed code and the spec win**. Report the disagreement.
 
 ---
 
 ## Context: current state
 
-- **Foundry project:** `celestial-contracts/`. It uses solc `0.8.24` with `via_ir = true`, optimizer on, and 200 runs.
-- **Libraries** are copied into `lib/` as plain files, not git submodules. Don't run `forge install`. The ones available:
-  - OpenZeppelin **5.6.1**: `Ownable2Step`, `Pausable`, `ReentrancyGuard`, `SafeERC20`, `ERC20`, `Math`, `SignedMath`
-  - Chainlink: `AggregatorV3Interface` and `MockV3Aggregator` under `@chainlink/contracts/src/v0.8/...`
-  - forge-std
-- **Existing contracts:**
-  - `src/MockUSDC.sol`: 6 decimals, deployed at `0x88a77050162285276d6346a4Bc07C406572d6cD2`. The deployer holds about 10M.
-  - `src/legacy/CelestialVault.sol`: deprecated. **Don't touch it.**
-  - the `src/test-nfts/*` contracts. **Don't touch them either.**
-- **Chainlink on Sepolia**, 8 decimals, heartbeat 3600 s:
-  - ETH-USD `0x694AA1769357215DE4FAC081bf1f309aDC325306`
-  - BTC-USD `0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43`
-- **Markets on EVM: BTC-USD and ETH-USD only.** SOL-USD is Solana-only and **must not be listed** on EVM.
-- **Deployer:** `0xA0c3A70806983a965e43961DE48658a9D41f2322`. `celestial-contracts/.env` contains `SEPOLIA_RPC_URL`, `PRIVATE_KEY`, and `ETHERSCAN_API_KEY`.
-  - **Never print, log, copy, or commit `.env` or the private key.** Load it only in a subshell: `( set -a; source ./.env; set +a; forge script ... )`.
-  - Filter any output that might echo secrets.
-  - The deployer had **about 0.033 Sepolia ETH** at the end of Phase 2. See step 6.
-- **Git:** create branch `phase-3` from `main` before making changes. **Don't commit or push**; the user commits.
+- **Toolchain:** Node 24, pnpm 11 (no yarn), Foundry (`forge`, `anvil`, `cast`), solana-cli 3.1.10, anchor-cli 1.1.2.
+- **Git:** Phase 4 is uncommitted on branch `phase-4`.
+  - **Before starting, check `git status` and `git log`.** If Phase 4 isn't committed yet, **stop and ask the user to commit it**.
+  - Then create `phase-5` from the branch that contains Phase 4.
+  - **Don't commit or push**; the user commits.
+
+### EVM (Sepolia, chain 11155111)
+- **Contracts:**
+  - PerpEngine `0x49765B9bEFed004A6462ad2025C240191e762b60`
+  - LiquidityPool `0xB2DF5d7C1BCa2d82ECA1D591F0E58B335387b24b` (holds all USDC)
+  - ChainlinkOracle `0xFF6a6Da437b16e5dd29D2eF8Aa38517911320cC0`
+  - MockUSDC `0x88a77050162285276d6346a4Bc07C406572d6cD2`
+- **Markets:** ETH-USD, BTC-USD (`bytes32` = keccak of the symbol; see `deployments/sepolia.json`). Oracle max age is 3960 s (Chainlink heartbeat 3600 s).
+- **Keeper:** the deployer `0xA0c3A70806983a965e43961DE48658a9D41f2322` is the only whitelisted keeper.
+  - Its key is `PRIVATE_KEY` in `celestial-contracts/.env`, and the RPC is `SEPOLIA_RPC_URL`.
+  - **Never print, log, copy into another file, or commit it.** The keeper reads it from its own env (see "Secrets").
+- **Execution fee:** the trader pays at least `minExecutionFee` = 0.0002 ETH per request. `executeRequests` pays every processed request's fee to the keeper.
+- **There is no global list of pending requests on EVM.**
+  - Ids are sequential: `nextRequestId` starts at 1.
+  - `getRequest(id)` returns a status of `Pending`, `Executed` or `Cancelled`.
+  - Use a cursor over ids. Don't rely on the per-account `getPendingRequestIds`.
+- **Positions are keyed** `keccak(account, market, isLong)`, and there's no on-chain list of them.
+  - Build the open set from `PositionIncreased`, and drop keys on `PositionClosed` / `PositionLiquidated`.
+  - Rebuild it from the deploy block on start. Find the block from the Phase 3 broadcast file `celestial-contracts/broadcast/DeployPerps.s.sol/11155111/run-latest.json`, and record it in `deployments/sepolia.json`.
+  - Then keep it current incrementally. **Page `eth_getLogs` in block ranges** that the RPC accepts.
+- **Gas balance:** check the keeper's Sepolia ETH at the start. If it's **below 0.01 ETH, stop** and tell the user how much to get.
+
+### Solana (devnet)
+- **Program:** `EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL`.
+  - PDAs, markets and the market order (**SOL-USD, BTC-USD, ETH-USD**) are in `deployments/solana-devnet.json`.
+  - USDC and CLP are **Token-2022** mints.
+- **Keeper:** the deployer `6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED` (keypair at `~/.config/solana/devnet.json`, about 16 SOL) is the only keeper.
+  - It already has a USDC ATA, which `liquidate` needs as `keeper_usdc`.
+  - **Never read, print or copy the keypair file.** Pass its **path** only.
+- **Execution fee:** at least `min_execution_fee_lamports` = 50,000, held in the `Request` account and paid to the keeper on execute or cancel.
+- **Pending requests:** `getProgramAccounts` with a `memcmp` on the `Request` discriminator (from the IDL). Positions work the same way with the `Position` discriminator.
+- **`execute_request`, `liquidate` and `update_funding` need every market and its oracle** as `remaining_accounts`, in `Config.markets` order, with the **affected market writable**.
+  - A missing or reordered market fails with `InvalidMarketAccounts`.
+  - **Read the order from `Config` on chain at start-up**; don't hard-code it.
+- **Business failures during `execute_request` cancel the request and the instruction still succeeds.** The keeper is paid either way, and a `RequestCancelled { reason }` event is emitted. Only account-validation problems return an error.
+- **The public devnet RPC rate-limits heavily** (HTTP 429, and "Blockhash not found" in preflight were both seen in Phase 4).
+  - Support `SOLANA_RPC_URL`, so a free dedicated devnet endpoint can be plugged in.
+  - Make one `getProgramAccounts` call per tick. Use exponential backoff on 429.
+  - **Only auto-retry errors that happen before the transaction is accepted**; see `celestial-solana/scripts/client.ts`.
+  - **Never blindly re-send** a transaction that may have landed. Re-read the state first.
+- The on-chain IDL upload failed in Phase 4, which is harmless. **Load the IDL from `celestial-perps/src/idl/celestial_perps.json`**, not with `Program.fetchIdl`.
 
 ---
 
-## Architecture
+## Design
+
+### Layout (`celestial-keeper/`)
+
+A pnpm package with **no nested git repository**.
 
 ```
-                 ┌──────────────────┐   latestRoundData
-                 │ ChainlinkOracle  │◄──────────────── Chainlink feeds
-                 └────────┬─────────┘
-                          │ getPrice(market)
-┌────────┐ requestIncrease/Decrease  ┌────────────┐  pool accounting calls  ┌───────────────┐
-│ Trader │──────────────────────────►│ PerpEngine │────────────────────────►│ LiquidityPool │── holds ALL USDC
-└────────┘   (+ ETH execution fee)   └─────▲──────┘   (onlyEngine)          └──────┬────────┘
-                                           │ executeRequests / liquidate           │ mint/burn
-                                     ┌─────┴──┐                              ┌──────▼──┐
-                                     │ Keeper │                              │   CLP   │ LP token
-                                     └────────┘                              └─────────┘
-LPs ── addLiquidity / removeLiquidity ──► LiquidityPool
+celestial-keeper/
+  package.json        scripts: keeper, keeper:evm, keeper:solana, test, test:local, typecheck
+  tsconfig.json
+  .env.example        every variable, documented, no values
+  .gitignore          node_modules, .env, *.log, any keypair JSON
+  README.md
+  src/
+    index.ts          start the loops for the chains enabled in config; graceful SIGINT/SIGTERM
+    config.ts         env parsing + validation (fail fast, never echo secrets)
+    log.ts            JSON lines logger (level, ts, chain, job, msg, fields) — no secret ever logged
+    math.ts           TS port of PerpMath (bigint) — pnl, fees, funding owed, isLiquidatable, liquidationPrice
+    retry.ts          backoff + "retry only if safe" helpers
+    health.ts         balance checks + alert hook (log level=alert; optional webhook URL)
+    evm/              client (ethers v6), requests scanner, positions index, executor, liquidator, funding
+    solana/           client (web3.js 1.x + BorshCoder from the IDL), scanner, executor, liquidator, funding
+  test/
+    math.test.ts      perp-math.md vectors (Ex 1–9) + boundary checks
+    local-evm.test.ts     Anvil + locally deployed contracts with MockV3Aggregator
+    local-solana.test.ts  solana-test-validator + the mock-oracle build of celestial_perps
 ```
 
-- **`LiquidityPool` holds every USDC**: LP liquidity, trader collateral, pending-request escrow, and protocol fees, each tracked in its own accounting bucket. `PerpEngine` holds no USDC. It holds only the ETH execution fees of pending requests.
-- Files:
-  - `src/oracle/ChainlinkOracle.sol`
-  - `src/pool/CLP.sol`
-  - `src/pool/LiquidityPool.sol`
-  - `src/PerpEngine.sol`
-  - `src/libraries/PerpMath.sol`
-  - `src/interfaces/{IChainlinkOracle,ILiquidityPool,IPerpEngine}.sol`
-- **Contract size:** `forge build --sizes` must show every deployable contract under **24,576 bytes**. If `PerpEngine` is too big, move pure maths into `PerpMath` (internal functions) and views into a separate `PerpReader` contract. **Don't turn off the size check.**
+- **Dependencies:** `ethers` v6, `@solana/web3.js` 1.x, `@solana/spl-token`, `@anchor-lang/core` (BorshCoder only), `dotenv`, `tsx`, `typescript`.
+- **Justify any other dependency** in the report. Don't add a logging framework or a job queue.
 
----
+### Jobs (one set per chain, each an independent loop; a failure in one never stops the others)
 
-## Units and precision (use these exactly)
+**1. Executor (poll every 1–2 s)**
+- **EVM:**
+  - Scan ids from the cursor to `nextRequestId − 1` and collect the `Pending` ones.
+  - Call `executeRequests(ids)` in batches, capped by a configurable gas and batch size.
+  - Advance the cursor past ids that are no longer pending.
+  - Estimate gas first. A failing estimate is a bug or an account problem (a failed request is cancelled inside the call, not reverted), so log it and don't spend gas.
+- **Solana:**
+  - Fetch pending `Request` accounts, **oldest first** (by `created_at`).
+  - Pack several `execute_request` instructions into one transaction. Set a compute-unit limit (each takes about 45k CU) and stay under the size limit.
+  - Put the full market list in every instruction, with the request's own market writable.
+- **Both chains:**
+  - Decode the `RequestExecuted` / `RequestCancelled` events from each result and log one line per request (id, owner, market, result, cancel reason).
+  - **Never execute the same request twice in flight.** Keep an in-flight set, and clear an entry only once the result is confirmed.
 
-| Quantity | Unit |
-|---|---|
-| USDC amounts, collateral, `sizeUsd`, fees, PnL | 6 decimals (1 USD = `1e6`) |
-| Prices | 8 decimals (`PRICE_PRECISION = 1e8`). Normalise every feed to this |
-| Basis points | `BPS = 10_000` |
-| Funding rate and funding index | 1e18 fraction of size (`FUNDING_PRECISION = 1e18`) |
-| Aggregate "open tokens" (for AUM) | `tokens = sizeUsd × 1e20 / price`, which is 18 decimals of the base asset |
+**2. Liquidator (every 5 s)**
+- Load the open positions: the EVM index from the events, and `getProgramAccounts` for Solana `Position`s.
+- Load the current oracle price per market:
+  - EVM: `ChainlinkOracle.getPrice`
+  - Solana: decode the Chainlink account (the layout is in `celestial-solana/programs/celestial-perps/src/oracle.rs` and `celestial-solana/scripts/check-oracle.ts`)
+- Load the funding indices.
+- Evaluate `isLiquidatable` **off-chain** with `math.ts`, which must match the on-chain rounding exactly.
+- **Before sending, confirm on-chain:**
+  - EVM: `engine.isLiquidatable(key)` via `eth_call`
+  - Solana: simulate the `liquidate` transaction
+- Then send `liquidate`, one per position.
+- A `NotLiquidatable` revert or simulation failure (the price moved) is **not** an error: log it at info level.
+- **Skip markets whose oracle is stale.** The contract would reject them anyway. Log a warning, rate-limited.
 
-**Rounding always goes against the trader:**
-- round profit down
-- round losses and fees up
-- round LP mint amounts down, and LP redemption amounts down
+**3. Funding updater (hourly per market, with jitter)**
+- Call `updateFunding(market)` on EVM and `update_funding(market)` on Solana (all markets and oracles, the target market writable).
+- Skip a market with no open interest: the index can't move, and the next trade updates the timestamp anyway.
+- Log the `FundingUpdated` values.
 
-Use `Math.mulDiv` with `Math.Rounding.Ceil` where rounding up.
+**Health**
+- On start and every 5 minutes, check:
+  - the keeper's native balance: **alert below 0.02 Sepolia ETH or below 1 SOL**
+  - that the keeper is still whitelisted (EVM `isKeeper`, Solana `Config.keepers`)
+- An alert is a log line with `level: "alert"`, plus an optional POST to `ALERT_WEBHOOK_URL` (a generic JSON body; test it with a local HTTP server, never a real service).
+- If the keeper isn't whitelisted, that chain's loops stop with a clear error.
 
----
+**Reliability**
+- Exponential backoff with jitter on RPC errors.
+- **Retry a send only when it's safe:**
+  - EVM: re-check the nonce and the request status before re-sending. Use one `NonceManager`, and don't allow two transactions with the same nonce in flight.
+  - Solana: re-check that the `Request` account still exists before re-sending.
+- The process must survive an RPC outage without crashing, and resume by itself.
 
-## Parameters (defaults, all settable by the owner within bounds)
-
-| Name | Default | Bound enforced in the setter |
-|---|---|---|
-| `maxLeverage` | 20 | `maxLeverage × maintenanceMarginBps < 10_000` |
-| `maintenanceMarginBps` | 250 (2.5%) | same as above |
-| `positionFeeBps` (charged on both open and close) | 6 | ≤ 100 |
-| `liquidationFeeBps` | 50 (0.5%) | ≤ 200 |
-| `executionSpreadBps` | 10 (0.1%) | ≤ 100 |
-| `maxProfitMultiplier` | 9 (× collateral reserved) | 1–20 |
-| `oiCapBps` (per side, per market, as a share of AUM) | 3_000 (30%) | ≤ 10_000 |
-| `fundingFactorPerHour` | `3e14` (0.03%/h at skew = AUM) | ≤ `1e16` |
-| `maxFundingRatePerHour` | `1e14` (0.01%/h) | ≤ `1e16` |
-| `protocolFeeShareBps` | 1_000 (10% of fees to `feeReserves`, the rest to LPs) | ≤ 5_000 |
-| `lpMintFeeBps` | 10 (0.1%, stays in the pool) | ≤ 100 |
-| `lpCooldown` | 15 minutes | ≤ 1 day |
-| `requestExpiry` | 60 s | 10 s – 1 h |
-| `minExecutionFee` | 0.0002 ether | ≤ 0.01 ether |
-| `minCollateral` | 10 USDC (`10e6`) | — |
-| Oracle `maxAge` per feed | 3960 s (heartbeat + 10%) | 60 s – 1 day |
-
-Emit a `ParamUpdated(bytes32 key, uint256 value)` event from every setter.
-
----
-
-## Formulas: implement in `PerpMath.sol` as pure functions and unit test each one
-
-Notation: `S` = size in USD, `C` = collateral, `E` = entry price, `P` = price, `F` = funding owed, `mm` = maintenanceMarginBps.
-
-1. **Execution price** (spread against the trader; liquidations use the raw oracle price with no spread):
-   - Increasing a long, or decreasing a short: `P × (BPS + spread) / BPS`, rounded up
-   - Increasing a short, or decreasing a long: `P × (BPS − spread) / BPS`, rounded down
-2. **PnL:**
-   - long: `S × (P − E) / E`
-   - short: `S × (E − P) / E`
-   - The result is signed, rounded against the trader.
-3. **Average entry price when a position increases:** keep the position's `tokens = Σ sizeDelta × 1e20 / execPrice`, and derive `E = S × 1e20 / tokens`. This keeps PnL exact.
-4. **Position fee:** `sizeDelta × positionFeeBps / BPS`, rounded up
-5. **Funding:**
-   - `rate = min(maxFundingRatePerHour, fundingFactorPerHour × |longOI − shortOI| / AUM)`
-   - Only the **heavier side** pays: `cumulativeFunding[market][heavySide] += rate × dt / 3600`
-   - A position owes `F = S × (cumulativeFunding[side] − entryFunding) / 1e18`, rounded up
-   - Settle `F` into the pool (it is LP revenue) on every update to the position
-   - If AUM is 0, the rate is 0
-6. **Remaining margin:** `R = C + PnL(P) − F − closeFee(S)`
-   - The position is **liquidatable** when `R < S × mm / BPS`, using the raw oracle price
-7. **Liquidation price** (a view function; ignores funding that hasn't accrued yet):
-   - Let `need = S × mm / BPS + F + closeFee − C`
-   - long: `E × (S + need) / S`
-   - short: `E × (S − need) / S`
-   - If the result is ≤ 0 for a short, return 0
-8. **Profit cap:** a position's realised profit is capped at `position.reserved`. When the position opens, reserve `maxProfitMultiplier × collateral`, and adjust the reserve as collateral changes.
-9. **Aggregate PnL per market** (feeds into AUM):
-   - long: `longTokens × P / 1e20 − longSize`
-   - short: `shortSize − shortTokens × P / 1e20`
-10. **AUM:** `poolAmount − Σ_markets(aggregateTraderPnl)`, floored at 0
-    - Positive trader PnL lowers AUM. Negative trader PnL raises it, capped at the collateral at risk. For v1, clamp **each market's net trader PnL to ≥ −(that market's total collateral)**.
-11. **CLP pricing:**
-    - on add: `mint = amountAfterFee × supply / AUM`, or `amountAfterFee` 1:1 when supply is 0
-    - on remove: `out = clp × AUM / supply`
-
-Also write **`docs/perp-math.md`**. It must list every formula above and **at least 10 worked numeric examples**: long and short, profit and loss, a funding accrual, a liquidation just above and just below the threshold, the liquidation price, the profit cap, and a CLP mint and redeem. The Foundry tests must assert these exact numbers. Phase 4 reuses the same vectors so both chains can be checked for identical results.
-
----
-
-## Contract specs
-
-### `ChainlinkOracle`
-- Owner-managed mapping `bytes32 market → Feed { AggregatorV3Interface feed; uint32 maxAge; uint8 decimals }`, where `market = keccak256("BTC-USD")` and so on.
-- `getPrice(bytes32 market) returns (uint256 price1e8)`. It reverts when:
-  - the feed is unknown
-  - `answer <= 0`
-  - `updatedAt == 0`
-  - `block.timestamp − updatedAt > maxAge`
-  - `answeredInRound < roundId`
-- Normalise the answer to 1e8.
-- `collateralPrice() returns (uint256)`: returns `1e8` (USDC valued at $1), and is marked `// TODO(mainnet): USDC/USD feed`.
-
-### `CLP`
-- ERC20 "Celestial LP" / "CLP", 18 decimals.
-- Only the pool can `mint` and `burn` it; the pool address is set once through the constructor or an init function.
-
-### `LiquidityPool`
-- **Accounting:**
-  - `poolAmount`: LP-owned USDC
-  - `reservedAmount`
-  - `feeReserves`: the protocol's share of fees
-  - `totalCollateral`: all open-position collateral
-  - `totalEscrow`: collateral held for pending requests
-- **LP functions:**
-  - `addLiquidity(uint256 amount, uint256 minClp)`
-  - `removeLiquidity(uint256 clpAmount, uint256 minUsdc)`
-  - Removal is blocked during `lpCooldown` after the address's last add, and when `poolAmount − out < reservedAmount`.
-  - `getAum()` and `getClpPrice()` are views; `getAum` reads prices through the engine or oracle.
-- **Engine-only hooks**, named so it's obvious what each one changes:
-  - `escrowIn(from, amount)`, `escrowToCollateral`, and `escrowRefund(to, amount)`
-  - `collateralOut(to, amount)` and `collateralToPool(amount)`, for losses, fees and funding
-  - `poolToTrader(to, amount)`, for profit (capped)
-  - `reserve` and `unreserve`
-  - `addFees(amount)`, which splits between `feeReserves` and `poolAmount`
-- **Owner:** `withdrawFees(to)` sends out `feeReserves` only.
-- **Invariant (enforce it in tests):** `usdc.balanceOf(pool) >= poolAmount + feeReserves + totalCollateral + totalEscrow` and `reservedAmount <= poolAmount`.
-
-### `PerpEngine`
-- **Markets:** `listMarket(bytes32 market)` by the owner. It checks that the oracle has a feed. Also `setMarketEnabled`.
-- **Requests** (one struct, `kind = Increase | Decrease`):
-  - `requestIncrease(bytes32 market, bool isLong, uint256 collateralDelta, uint256 sizeDelta, uint256 acceptablePrice) payable`
-    - `msg.value` must be at least `minExecutionFee`
-    - pulls `collateralDelta` USDC from the user into pool escrow
-  - `requestDecrease(bytes32 market, bool isLong, uint256 collateralDelta, uint256 sizeDelta, uint256 acceptablePrice) payable`
-    - `sizeDelta == position.size` means a full close
-  - `cancelRequest(uint256 id)`: the owner of the request can call it once `block.timestamp ≥ createdAt + requestExpiry`. It refunds the escrow and the execution fee.
-- **Execution** (keeper only): `executeRequests(uint256[] ids)`
-  - Each request runs through `try this.executeRequestInternal(id)`, an external function guarded by `msg.sender == address(this)`. A single failure must never revert the batch.
-  - On failure: cancel the request, refund the escrow, and emit `RequestCancelled(id, reason)`.
-  - The keeper gets the execution fee whether the request succeeds or fails.
-- **Increase checks:**
-  - market enabled
-  - `acceptablePrice` respected: for a long, `execPrice ≤ acceptablePrice`; for a short, `≥`
-  - `collateral ≥ minCollateral`
-  - `size ≥ collateral` (at least 1x)
-  - `size ≤ collateralAfterFees × maxLeverage`
-  - OI cap per side: `sideOI + sizeDelta ≤ AUM × oiCapBps / BPS`
-  - reserve capacity: `reservedAmount + newReserve ≤ poolAmount`
-  - the position must not be liquidatable after the increase
-- **Decrease:**
-  - realise PnL in proportion to `sizeDelta / size`
-  - settle funding and take the close fee
-  - pay out `collateralDelta ± realised PnL − fees`; profit comes from the pool and is capped by the reserve
-  - after a partial decrease, the position must satisfy the leverage and liquidation checks
-  - a full close deletes the position and unreserves everything
-- **Liquidation:** `liquidate(bytes32 positionKey)`, keeper only in v1
-  - keeper fee = `min(S × liquidationFeeBps / BPS, C)`
-  - the rest of the collateral goes to the pool, and the reserve is released
-  - the trader receives nothing
-- **Position key:** `keccak256(abi.encode(trader, market, isLong))`
-- **Views:**
-  - `getPosition(key)`
-  - `getPositionKey(trader, market, isLong)`
-  - `getPnl(key)`
-  - `getLiquidationPrice(key)`
-  - `getMarketInfo(market)`: returns OI long/short, capacity per side, funding rate per side, the cumulative indices, and the oracle price
-  - `getRequest(id)`
-  - `getPendingRequestIds(user)`
-- **Admin:** `Ownable2Step`, `Pausable` (pausing blocks new requests and execution of increases; decreases, cancels and liquidations keep working), `setKeeper(address, bool)`, and the parameter setters.
-- **Events for every state change:**
-  - `RequestCreated`, `RequestExecuted`, `RequestCancelled`
-  - `PositionIncreased`, `PositionDecreased`, `PositionClosed`, `PositionLiquidated`
-  - `FundingUpdated`, `ParamUpdated`
-  - Include the fields the frontend needs to rebuild history without extra calls.
-- Use `nonReentrant` on every external function that changes state. Use `SafeERC20`. Follow checks-effects-interactions. Send ETH with `call` and check the result. Don't use `tx.origin`, `transfer()`, or unbounded loops over user-controlled arrays apart from the keeper batch.
+### Secrets
+- `celestial-keeper/.env` (gitignored) holds:
+  - `SEPOLIA_RPC_URL`
+  - `EVM_KEEPER_PRIVATE_KEY`
+  - `SOLANA_RPC_URL`
+  - `SOLANA_KEEPER_KEYPAIR_PATH` (a **path**)
+  - `ENABLE_EVM` / `ENABLE_SOLANA`
+  - the intervals
+  - `ALERT_WEBHOOK_URL`
+- **The user fills in the EVM key themselves.** Tell them to copy the value from `celestial-contracts/.env`. Don't copy it yourself, don't `cat` either file, and don't print any env var that holds a secret.
+  - To check that the key is present, only test whether it's non-empty and that its derived address equals the expected keeper address. Log the address, never the key.
+- For the Solana key, load the file only inside the keeper at runtime (`Keypair.fromSecretKey` on the parsed file). **Never log it or send it anywhere.** In your own shell work, only ever pass the path.
 
 ---
 
 ## Steps (in order)
 
-1. **Branch:** `git checkout -b phase-3`.
-2. **Maths first.** Write `PerpMath.sol` and `docs/perp-math.md`, then `test/PerpMath.t.sol`, which asserts every worked example. Get this green before continuing.
-3. **Oracle, CLP and pool**, each with unit tests: `test/ChainlinkOracle.t.sol` and `test/LiquidityPool.t.sol`. Use `MockV3Aggregator` for prices and `vm.warp` for time.
-4. **Engine:** `test/PerpEngine.t.sol` must cover:
-   - request → execute → open, for long and short
-   - increase an existing position (average entry price)
-   - partial and full decrease, with profit and with loss
-   - the profit cap
-   - funding accrual on the heavier side only, and settlement
-   - liquidation just below the threshold succeeds and just above reverts `NotLiquidatable`
-   - **regression:** opening at exactly `maxLeverage` is **not** liquidatable straight away
-   - slippage (`acceptablePrice`) → cancelled and refunded
-   - a stale oracle → cancelled and refunded
-   - OI cap, reserve cap, and `minCollateral`
-   - `cancelRequest` before and after expiry
-   - a batch where one request fails and the others succeed
-   - only keepers can execute and liquidate
-   - pause behaviour
-   - SOL-USD can't be listed without a feed, and requests for unlisted markets revert
-   - execution fee paid to the keeper; the ETH refund on cancel
-5. **Invariants and fuzzing:** `test/invariant/PerpInvariants.t.sol` with a handler that randomly:
-   - adds or removes liquidity
-   - requests and executes increases and decreases
-   - moves prices ±15% within `maxAge`
-   - warps time
-   - liquidates
-   Assert the pool invariants above, plus:
-   - CLP supply > 0 ⇒ AUM > 0
-   - no user gets back more USDC than deposited + capped profit
-   - `totalCollateral` equals the sum of position collaterals (track this in the handler)
-   Run with `runs = 256, depth = 100` at minimum, and add a `[profile.ci]` in `foundry.toml` with more runs.
-6. **Deploy to Sepolia:**
-   - Write `script/DeployPerps.s.sol`. It must:
-     - require `chainid == 11155111`
-     - deploy the oracle (ETH and BTC feeds, `maxAge` 3960), CLP, LiquidityPool (MockUSDC from `deployments/sepolia.json`), and PerpEngine, and link them
-     - list BTC-USD and ETH-USD, and **not** SOL-USD
-     - `setKeeper(KEEPER_ADDRESS)`; the env var defaults to the deployer
-     - approve the pool and `addLiquidity(5_000_000e6)` from the deployer
-   - **Dry-run first (no `--broadcast`).** Read the estimated ETH cost and compare it with the deployer's balance (`cast balance`).
-   - **If balance < 1.5 × estimate, STOP** and tell the user how much Sepolia ETH to add. Don't try to cut gas by changing the code.
-   - Otherwise run with `--broadcast --verify`, and confirm every contract is verified.
-   - **Smoke test on-chain with `cast`:**
-     - read `getAum()`; it should be about 5M
-     - from the deployer: approve, then `requestIncrease` for ETH-USD long, 100 USDC collateral, 5x, and a generous `acceptablePrice`
-     - `executeRequests([id])` as keeper
-     - check `getPosition`
-     - `requestDecrease` for a full close, execute it, and check the USDC came back minus fees
-     - Record the tx hashes.
-7. **Record and export:**
-   - Update `deployments/sepolia.json` with every new address, the keeper, the seed amount, the verification links, and the smoke-test tx hashes.
-   - Export ABIs (the `abi` array only, from `out/`) to `celestial-perps/src/abis/{PerpEngine,LiquidityPool,CLP,ChainlinkOracle,MockUSDC}.json`.
-   - Add addresses to `celestial-perps/lib/contracts.ts`, next to `lib/tokens.ts`.
-   - **Don't change any frontend UI or behaviour.**
-   - Check that `npx tsc --noEmit` still passes in `celestial-perps`.
-8. **Docs:**
-   - Update `celestial-contracts/README.md` (contracts table, deploy command, parameters).
-   - In `phases.md`, tick off the Phase 3 items and write the addresses in.
-   - Update `docs/protocol-spec.md` **only** if you had to settle an ambiguity, and list each change in the report.
+1. **Preflight (stop conditions):**
+   - `git status` must be clean for Phase 4; see Git above.
+   - Sepolia keeper ETH must be ≥ 0.01 and devnet SOL ≥ 1. Otherwise **stop** and state the amount needed.
+   - Both deployments must answer:
+     - EVM: `PerpEngine.nextRequestId()`, `getMarketIds()`, and `isKeeper(keeper)` is true.
+     - Solana: `Config` decodes, `keepers` contains the deployer, and there are 3 markets.
+   - Record the PerpEngine deploy block.
+2. **Scaffold** `celestial-keeper/` (pnpm, TypeScript strict, ESM, Node 24). `pnpm typecheck` must pass.
+3. **Maths first:**
+   - Write `src/math.ts` and `test/math.test.ts`. Every Ex 1–9 number in `docs/perp-math.md` must match exactly.
+   - Add a property check: at the `liquidationPrice` the position is not liquidatable, and 1 unit beyond it is.
+   - **All must pass before step 4.**
+4. **EVM client and jobs**, run against **Anvil** first:
+   - Start `anvil`, deploy the Phase 3 contracts with a `MockV3Aggregator` per market (reuse or mirror the Foundry test setup; don't change `celestial-contracts/src`).
+   - Point the keeper at it.
+   - `test/local-evm.test.ts` covers:
+     - a request is executed within 5 s
+     - a batch with one slippage failure → that request is cancelled, the others fill, and the keeper receives every fee
+     - a price drop past the liquidation price → liquidated within 10 s, and the keeper receives the USDC fee
+     - funding runs on schedule (use a short test interval)
+     - RPC down then back up → the keeper resumes without crashing and executes nothing twice
+5. **Solana client and jobs**, run against a **local validator** first:
+   - Load `celestial-solana`'s **mock-oracle** build (`pnpm build:test` there produces `tests/fixtures/celestial_perps-mock.so` and `idl-mock.json`) with `--bpf-program`.
+   - Initialise local accounts the way `celestial-solana/tests/harness.ts` does, and control prices with `set_mock_price`.
+   - `test/local-solana.test.ts` covers the same five scenarios as EVM, plus:
+     - several requests are executed in **one** transaction
+     - a request whose market is stale is cancelled with `StalePrice` and the keeper is still paid
+   - The keeper's Solana code must work with **both** IDLs (mock and devnet); it never calls the mock instructions itself.
+6. **Live run on Sepolia and devnet:**
+   - Start `pnpm keeper` with both chains enabled.
+   - From a **separate test wallet**, create one `requestIncrease` on each chain and then the matching full close:
+     - EVM: a fresh key funded from the deployer. Use cast with the deployer key loaded only in a subshell from `celestial-contracts/.env`, as in Phase 3.
+     - Solana: a fresh keypair file under the scratchpad, funded with `solana transfer`; then `faucet`.
+   - **Measure the time from request to fill** from the keeper's logs and the block/slot timestamps. It must be **≤ 5 s on Solana**, and ≤ 5 s after the request's block on Sepolia; the ~12 s block time is not the keeper's latency.
+   - Record every signature and hash.
+   - **Don't try to force a liquidation on the live networks.** Real Chainlink prices can't be pushed. Liquidation is proven by the local tests. On live, only show that the liquidator loop scans and finds nothing (or liquidates something that is genuinely underwater).
+   - Let `updateFunding` / `update_funding` run at least once on each chain with open interest present, or explain why it had nothing to do.
+7. **Docs and records:**
+   - `celestial-keeper/README.md`: setup, env, how to run it, what each job does, the logs, the alerts, and troubleshooting (429s, stale oracle, not whitelisted).
+   - Update `deployments/*.json` with the keeper address and, for Sepolia, the PerpEngine deploy block.
+   - Tick off Phase 5 in `phases.md`, and list any deviations.
+   - Add a short "Running the keeper" pointer to the root `README.md`.
 
 ---
 
 ## Checks: everything must pass before you report done
 
-1. `forge build --sizes`: no errors, and every contract under 24,576 bytes
-2. `forge test`: everything passes, including the old MockUSDC, NFT and Chainlink smoke tests
-3. `forge test --match-path 'test/invariant/*'` passes, and `forge coverage --ir-minimum` shows **≥ 90% line coverage** on `src/PerpEngine.sol`, `src/pool/*`, `src/oracle/*`, and `src/libraries/*`
-4. Every contract is deployed and verified on Sepolia, and the on-chain smoke test passed (list the tx hashes)
-5. `cd celestial-perps && npx tsc --noEmit` passes
-6. `git status` shows only the intended changes, and `.env` is untouched and unprinted
+1. `pnpm typecheck` and `pnpm test` in `celestial-keeper` (maths vectors exact).
+2. `pnpm test:local`: the Anvil and local-validator scenarios above all pass.
+3. The live run: one full open/close on **each** chain filled by the keeper, with measured latencies and the tx hashes/signatures listed.
+4. The keeper stays up for at least 10 minutes on live networks with no crash and no unhandled rejection, and the log shows the executor, liquidator, funding and health loops for both chains.
+5. `cd celestial-perps && npx tsc --noEmit` still passes (nothing there should change).
+6. `git status` shows only intended files: no `.env`, keys or keypair files, `node_modules`, logs or nested `.git`.
 
-If something outside this scope blocks you, stop and report it. Examples: the RPC is down, verification fails repeatedly, there isn't enough ETH, or a spec formula contradicts itself. **Don't guess on money maths**; ask.
+If something outside this scope blocks you, **stop and report**. Examples: not enough gas on either chain, the keeper not whitelisted, an RPC that can't serve `eth_getLogs`/`getProgramAccounts`, or a stale Chainlink feed on Sepolia (older than 3960 s) that makes every execution cancel. Don't guess on money maths, and don't change on-chain code.
 
 ---
 
 ## Rules
 
-- Match the existing style: NatSpec headers like `MockUSDC.sol`, custom errors instead of revert strings, and events for every state change.
-- Add no new libraries. The vendored OpenZeppelin, Chainlink and forge-std are enough.
-- Don't change `MockUSDC`, the legacy vault, the NFT contracts, or already-deployed addresses.
-- Don't commit or push. Leave the changes on `phase-3` for the user.
+- **No on-chain changes:** no contract or program edits, redeploys or parameter changes. Don't touch the admin keys beyond what the live test needs: funding a test wallet and the faucet.
+- **Keys:** never print, log, copy, commit or read key material in your own tool calls. The EVM key goes into `celestial-keeper/.env` **by the user**. The Solana key is always referenced by **path**.
+- **Minimal dependencies**, each justified.
+- The keeper must be **idempotent and safe**: it must never execute a request twice, never liquidate a healthy position, and never spend gas on a transaction it already knows will fail.
+- Don't commit or push. Leave everything on `phase-5`.
 
 ## Final report
 
-1. A checklist per step, with each item marked done, skipped or blocked, and reasons for anything not done
-2. The contract addresses with Etherscan links, and the smoke-test tx hashes
-3. `forge build --sizes` output for the new contracts, the test summary, and coverage per file
-4. Any spec ambiguities you settled, and how you settled them
-5. Gas used for deployment and the deployer's remaining ETH
-6. Anything the keeper (Phase 5) or frontend (Phase 6) needs to know: event names and fields, request lifecycle, and which views to poll
+1. A checklist per step, each item marked done, skipped or blocked, with reasons
+2. Preflight: keeper balances on both chains, whitelist status, and the PerpEngine deploy block
+3. Test summaries: maths, local EVM, local Solana
+4. The live run: request/fill hashes and signatures, measured latency per chain, the funding transactions, and 10 minutes of log excerpts (JSON lines)
+5. The dependencies added, and why
+6. Deviations from `phases.md` Phase 5, and anything the contracts or program would need to change for a better keeper (report only, don't implement). Examples: a global pending-request list on EVM, or a position registry.
+7. Notes for Phase 6: how the frontend can show "pending keeper" → filled/cancelled using the same events, and the typical latency to show users

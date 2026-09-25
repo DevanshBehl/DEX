@@ -93,7 +93,7 @@ Files: `celestial-perps/app/trade/page.tsx` (split it into `components/` and `li
 
 ---
 
-## Phase 2 — Mock USDC on both chains ✅ (2026-09-22, except the Solana faucet, which moves to Phase 4)
+## Phase 2 — Mock USDC on both chains ✅ (2026-09-22; Solana faucet done in Phase 4, 2026-09-25)
 
 Addresses are recorded in `deployments/sepolia.json`, `deployments/solana-devnet.json`, and `celestial-perps/lib/tokens.ts`.
 
@@ -109,7 +109,7 @@ Addresses are recorded in `deployments/sepolia.json`, `deployments/solana-devnet
 - [x] Mint `2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y`, created with the Token-2022 program (`TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`, `spl-token create-token --program-2022 --decimals 6 --enable-metadata`). It has 6 decimals and no freeze authority.
 - [x] On-chain metadata: "Mock USD Coin" / "USDC". The URI points to `deployments/mock-usdc-metadata.json` on GitHub `main` (it only resolves after a push).
 - [x] Minted 10M to the deployer `6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED` (`~/.config/solana/devnet.json`)
-- [ ] **Faucet: Phase 4.** The `faucet` instruction lives in the Anchor program. After deploying the program, move the mint authority to its PDA: `spl-token authorize 2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y mint <FAUCET_PDA>`. Until then, top up testers manually with `spl-token transfer`.
+- [x] **Faucet (done in Phase 4).** The `faucet` instruction lives in the Anchor program. The mint authority moved to its `["mint_authority"]` PDA `xAsm3yj7Y1XbBi4DKXPA2UHuLX3GyEgWpVBdR7HkPUB` (2026-09-25), and a live devnet `faucet()` call minted 10,000 USDC.
 - [x] Recorded the mint in `deployments/solana-devnet.json` and in the frontend config
 
 > The Anchor program must use the `token_interface` / `InterfaceAccount` types from `anchor-spl`. It must not use the classic `Token` program types, because the mint is Token-2022.
@@ -181,7 +181,19 @@ All files go in `celestial-contracts/src/`.
 
 ---
 
-## Phase 4 — Solana Anchor program (`celestial-solana/`)
+## Phase 4 — Solana Anchor program (`celestial-solana/`) ✅ (2026-09-25)
+
+**Deployed on devnet:** program `EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL`, with markets SOL-USD, BTC-USD and ETH-USD on the Chainlink OCR2 feeds (max age 120 s) and the pool seeded with 5M USDC. The USDC mint authority is the program's faucet PDA. A live faucet and open/close smoke test passed (see `deployments/solana-devnet.json`). Tests: 20 Rust maths/oracle tests (every `perp-math.md` vector), 48 LiteSVM scenarios, and an integration test against the Chainlink store and feeds cloned from devnet.
+
+Deviations from the plan:
+- The Chainlink feed is decoded by hand (`src/oracle.rs`, no `chainlink_solana` crate).
+- `FaucetState` is folded into `UserState`.
+- Collateral escrow sits in the pool vault (tracked as `total_escrow`), not in a separate PDA token account.
+- CLP has 6 decimals on Solana.
+- A failed execution check cancels the request instead of reverting the transaction.
+- The LiteSVM suite replaces `anchor test`/bankrun.
+
+See `celestial-solana/README.md`.
 
 `anchor init celestial-solana`, program name `celestial_perps`. Dependencies: `anchor-lang`, `anchor-spl` (`token_interface`), `chainlink_solana` (check the current crate version and read API at the start of this phase).
 
@@ -196,22 +208,22 @@ All files go in `celestial-contracts/src/`.
 | `FaucetState` | `["faucet", user]` | last claim timestamp |
 
 ### 4b. Instructions
-- [ ] `initialize`, `add_market`, `set_params`, `set_keeper`, `pause`
-- [ ] `faucet`: mints 10k mock USDC with the PDA mint authority, once every 24 h per user
-- [ ] `add_liquidity`, `remove_liquidity`: mint and burn CLP, with the same AUM maths and cooldown as the EVM version
-- [ ] `request_increase`, `request_decrease`, `cancel_request`: collateral goes into escrow in a PDA token account
-- [ ] `execute_request` (keeper only): reads the market's Chainlink feed account (check that its address equals `Market.feed` and its owner is the OCR2 store program), checks `latest_round_data` timestamp ≤ max age, applies the execution spread
-- [ ] `liquidate` (keeper only), `update_funding`
-- [ ] Use checked maths everywhere (`checked_mul` / `checked_div`, u128 for intermediate values), with custom `#[error_code]` errors and `emit!` events that mirror the EVM events
+- [x] `initialize`, `add_market`, `set_params`, `set_keeper`, `pause`
+- [x] `faucet`: mints 10k mock USDC with the PDA mint authority, once every 24 h per user
+- [x] `add_liquidity`, `remove_liquidity`: mint and burn CLP, with the same AUM maths and cooldown as the EVM version
+- [x] `request_increase`, `request_decrease`, `cancel_request`: collateral goes into escrow in a PDA token account
+- [x] `execute_request` (keeper only): reads the market's Chainlink feed account (check that its address equals `Market.feed` and its owner is the OCR2 store program), checks `latest_round_data` timestamp ≤ max age, applies the execution spread
+- [x] `liquidate` (keeper only), `update_funding`
+- [x] Use checked maths everywhere (`checked_mul` / `checked_div`, u128 for intermediate values), with custom `#[error_code]` errors and `emit!` events that mirror the EVM events
 
 ### 4c. Tests (`tests/` in TypeScript, plus Rust unit tests for the maths)
-- [ ] Put the maths in a pure `math.rs` module and unit test it: PnL, fees, funding, liquidation price. Compare the results with the EVM tests using the same numbers.
-- [ ] Integration tests with `anchor test` on a local validator using a mock price account. Use `solana-bankrun` or the local validator with the Chainlink store program and feed accounts cloned from devnet (`--clone`).
-- [ ] Same scenarios as Phase 3d, including the max-leverage regression test
+- [x] Put the maths in a pure `math.rs` module and unit test it: PnL, fees, funding, liquidation price. Compare the results with the EVM tests using the same numbers.
+- [x] Integration tests with `anchor test` on a local validator using a mock price account. Use `solana-bankrun` or the local validator with the Chainlink store program and feed accounts cloned from devnet (`--clone`).
+- [x] Same scenarios as Phase 3d, including the max-leverage regression test
 
 ### 4d. Deploy to devnet
-- [ ] `anchor deploy --provider.cluster devnet`, run the init script (markets, keeper, seed 5M USDC into the pool), and move the mint authority to the faucet PDA
-- [ ] Write the program ID and PDAs to `deployments/solana-devnet.json`, and copy the IDL to `celestial-perps/src/idl/`
+- [x] `anchor deploy --provider.cluster devnet`, run the init script (markets, keeper, seed 5M USDC into the pool), and move the mint authority to the faucet PDA
+- [x] Write the program ID and PDAs to `deployments/solana-devnet.json`, and copy the IDL to `celestial-perps/src/idl/`
 
 **Done when:** tests pass, the program is on devnet, and a full script flow works: request, execute, close.
 

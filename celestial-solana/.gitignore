@@ -1,0 +1,16 @@
+.anchor
+.DS_Store
+target
+**/*.rs.bk
+node_modules
+test-ledger
+.yarn
+.surfpool
+
+# Keypairs — never commit (back up the program keypair outside the repo)
+*-keypair.json
+**/keypair*.json
+id.json
+
+# Built program binaries used by the tests (rebuilt by `pnpm build:test`)
+tests/fixtures/*.so

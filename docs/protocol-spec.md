@@ -26,6 +26,15 @@ Exact formulas, rounding rules and cross-chain test vectors are in [`perp-math.m
 | Order expiry | 60 s | After that the user can cancel and get the collateral back |
 | Precision | USD values in 1e6 (USDC units), prices normalised to 1e8 | Round against the trader in every calculation |
 
+**Chain-specific deviations (settled in Phase 4, 2026-09-25)**
+
+| Item | EVM | Solana | Why |
+|---|---|---|---|
+| CLP decimals | 18 | 6 | Keeps CLP amounts in `u64`. The first mint is `amountAfterFee × 1` instead of `× 1e12`; every other formula is unchanged (see `perp-math.md` Ex 10) |
+| Max oracle age | 3960 s (heartbeat + 10%) | 120 s | Devnet feeds update every few seconds (see the table above) |
+| Execution fee | ETH (`minExecutionFee` 0.0002 ETH) | Lamports (`min_execution_fee_lamports` 50,000) | Native gas token of each chain |
+| Failed execution | `try/catch` cancels | Checks run first; a failed check cancels and the instruction succeeds | Solana has no try/catch |
+
 **Why not Pyth:** since the Pyth Core upgrade (26 Aug 2026), Hermes and Benchmarks need a paid API key (plans from $500/month). Chainlink push feeds are free to read on both testnets and need no keeper-side price fetching.
 
 **Chainlink feeds**

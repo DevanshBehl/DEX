@@ -1,0 +1,22 @@
+skip_local_validator = true
+
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+celestial_perps = "EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL"
+
+[programs.devnet]
+celestial_perps = "EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/devnet.json"
+
+[scripts]
+test = "cargo test"
+
+[hooks]

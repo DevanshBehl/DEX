@@ -6,13 +6,19 @@
       "mint": "2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y",
       "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
       "decimals": 6,
-      "mintAuthority": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
-      "mintAuthorityNote": "Moves to the perps program's faucet PDA in Phase 4",
+      "mintAuthority": "xAsm3yj7Y1XbBi4DKXPA2UHuLX3GyEgWpVBdR7HkPUB",
+      "mintAuthorityNote": "Program PDA [\"mint_authority\"] of celestial_perps (faucet: 10,000 USDC / 24 h)",
       "freezeAuthority": null,
       "metadataUri": "https://raw.githubusercontent.com/DevanshBehl/DEX/main/deployments/mock-usdc-metadata.json",
       "initialMint": "10000000",
       "explorer": "https://explorer.solana.com/address/2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y?cluster=devnet",
-      "createdAt": "2026-09-22"
+      "createdAt": "2026-09-22",
+      "mintAuthorityChange": {
+        "from": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
+        "to": "xAsm3yj7Y1XbBi4DKXPA2UHuLX3GyEgWpVBdR7HkPUB",
+        "signature": "5GN57cmS5ufPDa4ZFm8YnGbGLSCzwYsBTZGcXuE7VZfMAVQYv6vTESJvoJwV3WpMMDy4EoWdiJjP1VpGmmP9knb8",
+        "date": "2026-09-25"
+      }
     }
   },
   "oracles": {
@@ -22,5 +28,70 @@
       "BTC-USD": "6PxBx93S8x3tno1TsFZwT5VqP8drrRCbCXygEXYNkFJe",
       "ETH-USD": "669U43LNHx7LsVj95uYksnhXUfWKDsdzVqev3V4Jpw3P"
     }
+  },
+  "perps": {
+    "programId": "EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL",
+    "upgradeAuthority": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
+    "admin": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
+    "keeper": "6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED",
+    "pdas": {
+      "config": "CCof8LtZZpL6U2wXDS7sp3yV2r6v5QuTbvE6ms8m2wgX",
+      "pool": "2jZjsSQMRrRWhRupktSbHeo1SDLgAs4fePT5ndhtTNmF",
+      "vault": "5spmkMFD9EiX9LFd7dAXzXDAjm6UDVea6wUEsNthJv5o",
+      "clpMint": "JCboCWJVi1qq3P1vhSwqc1TEhq1udxf3AnxT2UJ27iTz",
+      "mintAuthority": "xAsm3yj7Y1XbBi4DKXPA2UHuLX3GyEgWpVBdR7HkPUB"
+    },
+    "markets": {
+      "SOL-USD": {
+        "market": "2TJGAiKhFDB8L59PYjy5vQ11Gh4T2CozTGNcU8RBK3dJ",
+        "oracle": "99B2bTijsU6f1GCT73HmdR7HCFFjGMBcPZY6jZ96ynrR",
+        "oracleKind": "Chainlink",
+        "maxAge": 120
+      },
+      "BTC-USD": {
+        "market": "H2T9yj2qZjcgEutpjZRjmCtzSBPJ32oNo2JiWBSMrmfs",
+        "oracle": "6PxBx93S8x3tno1TsFZwT5VqP8drrRCbCXygEXYNkFJe",
+        "oracleKind": "Chainlink",
+        "maxAge": 120
+      },
+      "ETH-USD": {
+        "market": "CXrmiKWoB6WpbHtUAedUdi17drAJax7sxSDavwkBzZW3",
+        "oracle": "669U43LNHx7LsVj95uYksnhXUfWKDsdzVqev3V4Jpw3P",
+        "oracleKind": "Chainlink",
+        "maxAge": 120
+      }
+    },
+    "marketOrder": [
+      "SOL-USD",
+      "BTC-USD",
+      "ETH-USD"
+    ],
+    "seed": {
+      "amountUsdc": "5000000",
+      "poolAmount": "5000001539003"
+    },
+    "clpDecimals": 6,
+    "signatures": {
+      "initialize": "3o3KoPAXTDxszuS5NmQUBVZpD7sxUFbuucWtmYec6pn183pv6LQP1JpVehZo1jAJEy4otuHYiNQNx3pp81JaWEiq",
+      "add_market SOL-USD": "34HLr2ihra1EE4szuJKhSCNd5JJu9rgEhmowpRVVCMemDtxRtXAYWh1ZM5w1qC3G3DpSZKJrmmuM3aUSak5k9Q1V",
+      "add_market BTC-USD": "9MKdDQM4HMyVHPQK9xX5VDZyLwxWtP9dkBZpR1SWrFcrRn1MreBxfTMYsswSRE7jAxtV3zbT61iomdps3YzFE3U",
+      "add_market ETH-USD": "5rYoNa9ejvhGoZ7GuBsCSZbsVdLDSbx5RRQz8KiPTBepmztj2jbsRVTu7BRWhCLntbASHaJGZmX1w8diHASAXACh",
+      "set_keeper": "4Dqfwqd5SHYYykVfw7QrXR8k9G99VVpkinXn2RCk6FEJR7ouJaoS3XcxKVoL8DATdG39chZLiUQPE6WWg5LSsa3h",
+      "add_liquidity": "3vVwDzWSSN2FzzVyxRefMoPGAFddCZvTeRd1AHJx6U4YCutcwT5XRP7qgQjgtGdhxP2meujqjBUUoqJuyVgPACL3"
+    },
+    "explorer": "https://explorer.solana.com/address/EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL?cluster=devnet",
+    "smokeTest": {
+      "date": "2026-09-25",
+      "faucet": "5TZJwcMmeHzUeCMSSzm64bcyN4Nm66dJQTkU3mkufnEsp82uJ29SvgsXcTAgbw8NZ8NEBva5bx97GxxfGJ3grNm1",
+      "request_increase": "5TUYLXdhZ2WtBE97g3FsE5sYdsStyMDANTTL7zkozrYyt5e7dfj8fKFz8JJYKqEZ2u3LQQsVpXRU2CBxgUjUWATa",
+      "execute_increase": "2WCUbSjm6VTUQziJzkoyBU8JVEKociYhNBVb5vvUFTA12o8DQnwVSbUiZvExc8eZ84hWhZij9UqKsXzUBJewZV74",
+      "request_decrease": "2eBk5gfDRYz1s15LxnDBKxihfkSe8LjA9BdffTGTJQiBA9qoLbN5CEKcqsEmiAxdxyZA4fobpDsDa569xgFUAoBu",
+      "execute_decrease": "KXm1rzDcSUyXzn6inz7CVV48ozNYZnxQhg8E1Tn1hefjNKMAKyyPoD9Q9dSZuNypoD5Gn5U2LAa2grA4vamwRTq"
+    },
+    "deployedAt": "2026-09-25",
+    "programData": "GKBdY3BzTW5hBZvuBLVhicTcLfenzHmjUCkgAbah6YoB",
+    "deploySlot": 503955960,
+    "build": "anchor build (no mock-oracle feature); IDL has 22 instructions, none mock",
+    "onChainIdl": "not uploaded (metadata write failed on devnet RPC 429s); use celestial-perps/src/idl/celestial_perps.json"
   }
 }

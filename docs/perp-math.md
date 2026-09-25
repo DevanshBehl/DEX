@@ -14,7 +14,7 @@ Parameters come from [`protocol-spec.md`](protocol-spec.md).
 | Prices `P`, `E` | 8 decimals (`1e8` = $1) |
 | `tokens` (base-asset amount held by a position) | `S × 1e20 / P`, 18 decimals |
 | Funding rate and index | 1e18 fraction of size |
-| CLP (LP token) | 18 decimals |
+| CLP (LP token) | 18 decimals on EVM, **6 decimals on Solana** (so balances fit in `u64`; see Ex 10) |
 | Basis points | `BPS = 10_000` |
 
 `mulDiv(a, b, c)` is the exact `a × b / c` in 512-bit maths. **Floor** rounds down and **Ceil** rounds up. **Every rounding choice goes against the trader.**
@@ -46,7 +46,7 @@ Parameters come from [`protocol-spec.md`](protocol-spec.md).
 9. **Aggregate trader PnL per market:** formula 3 applied to the side totals `(longSize, longTokens)` and `(shortSize, shortTokens)`. The market's net PnL is floored at `−(long collateral + short collateral)`.
 10. **AUM:** `max(0, poolAmount − Σ_markets netTraderPnl)`
 11. **CLP**
-    - mint: `supply == 0 ? amountAfterFee × 1e12 : floor(amountAfterFee × supply / AUM)`, where `amountAfterFee = amount − ceil(amount × lpMintFeeBps / BPS)`
+    - mint: `supply == 0 ? amountAfterFee × SCALE : floor(amountAfterFee × supply / AUM)`, where `amountAfterFee = amount − ceil(amount × lpMintFeeBps / BPS)` and `SCALE` is `1e12` on EVM (18-decimal CLP) and `1` on Solana (6-decimal CLP)
     - redeem: `floor(clp × AUM / supply)`
 
 ## Worked examples
@@ -132,11 +132,15 @@ Collateral 1000e6, ETH at $3,000. This is the largest size where `S ≤ 20 × (C
 This is the Ex 1 position with reserved = `9 × 994000000` = `8946000000`, closed at $6,000 (price doubles): execution `599400000000`, raw PnL `9960039960`, **realised profit is capped at `8946000000`**.
 
 ### Ex 10: CLP (LP token)
-| Value | Result |
-|---|---|
-| seed deposit | `5000000000000` ($5M) |
-| seed fee `ceil(5e12 × 10 / 10000)` | `5000000000` |
-| seed mint (supply 0) `(5e12 − 5e9) × 1e12` | `4995000000000000000000000` CLP |
-| later: AUM $5.1M, deposit $1,000, fee | `1000000` |
-| minted `floor(999000000 × 4.995e24 / 5100000000000)` | `978432352941176470588` |
-| redeeming those CLP immediately, with AUM $5,101,000 and the new supply | `999000195` |
+The formulas are the same on both chains. Only the first-deposit scale differs (EVM `× 1e12`, Solana `× 1`), and the later results scale with the supply.
+
+| Value | EVM (18-dec CLP) | Solana (6-dec CLP) |
+|---|---|---|
+| seed deposit | `5000000000000` ($5M) | `5000000000000` |
+| seed fee `ceil(5e12 × 10 / 10000)` | `5000000000` | `5000000000` |
+| seed mint (supply 0) `(5e12 − 5e9) × SCALE` | `4995000000000000000000000` CLP | `4995000000000` CLP |
+| later: AUM $5.1M, deposit $1,000, fee | `1000000` | `1000000` |
+| minted `floor(999000000 × supply / 5100000000000)` | `978432352941176470588` | `978432352` |
+| redeeming those CLP immediately, with AUM $5,101,000 and the new supply | `999000195` | `999000194` |
+
+The Solana redemption is 1 unit (1e-6 USDC) lower because the coarser CLP amount is floored. The difference rounds against the LP, as the rounding rules require.

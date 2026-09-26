@@ -6,10 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:math": "node --import tsx --test lib/perpMath.test.ts",
+    "test:chain": "node --import tsx --test --test-concurrency=1 test/chain-evm.test.mts test/chain-solana.test.mts",
+    "typecheck:test": "tsc --noEmit -p test"
   },
   "dependencies": {
+    "@anchor-lang/core": "1.1.2",
     "@gsap/react": "^2.1.2",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0",
+    "bn.js": "^5.2.5",
+    "buffer": "^6.0.3",
     "ethers": "^6.17.0",
     "gsap": "^3.13.0",
     "lightweight-charts": "^5.2.0",
@@ -20,10 +28,12 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
+    "@types/bn.js": "^5.2.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "tailwindcss": "^4.1.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.0"
   }
 }

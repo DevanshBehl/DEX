@@ -4,12 +4,15 @@ import { ethers } from 'ethers';
 interface SignTransactionViewProps {
   id: string;
   origin: string;
-  privateKey: string;
+  /** every unlocked EVM account; the transaction's `from` picks the signer */
+  accounts: { address: string; privateKey: string }[];
+  /** active account, used when the dApp sends no `from` */
+  defaultAddress: string;
   providerUrl: string;
   networkName?: string;
 }
 
-export function SignTransactionView({ id, origin, privateKey, providerUrl, networkName = 'Ethereum' }: SignTransactionViewProps) {
+export function SignTransactionView({ id, origin, accounts, defaultAddress, providerUrl, networkName = 'Ethereum' }: SignTransactionViewProps) {
   const isTestnetNetwork = networkName.toLowerCase().includes('sepolia') || networkName.toLowerCase().includes('testnet');
   const [txPayload, setTxPayload] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -42,8 +45,13 @@ export function SignTransactionView({ id, origin, privateKey, providerUrl, netwo
     setIsSigning(true);
     setError(null);
     try {
+      // Sign with the account the dApp named: after "Add account", the active account in the
+      // popup is not necessarily the one the site is connected with.
+      const from = String(txPayload.from || defaultAddress).toLowerCase();
+      const account = accounts.find((a) => a.address.toLowerCase() === from);
+      if (!account) throw new Error(`The site asked to send from ${txPayload.from}, which is not an account in this wallet.`);
       const provider = new ethers.JsonRpcProvider(providerUrl);
-      const wallet = new ethers.Wallet(privateKey, provider);
+      const wallet = new ethers.Wallet(account.privateKey, provider);
       
       const tx = {
         to: txPayload.to,

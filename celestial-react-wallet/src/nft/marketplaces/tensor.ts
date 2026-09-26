@@ -1,14 +1,14 @@
 import { cached, marketGet, providerReachable } from './client.ts';
 import type { CollectionStats, MarketplaceProvider } from './types.ts';
 
-// ---- Tensor — Solana (nft.md — Phase 4.1) -------------------------------------------
+// ---- Tensor — Solana (docs/wallet-nfts.md) -------------------------------------------
 //
 // Tensor's API requires an `x-tensor-api-key` header, so it is reachable only through
 // the Celestial API proxy. Until that is deployed `isConfigured()` is false and the
 // registry silently falls back to Magic Eden.
 //
 // ⚠️ Response shapes below follow Tensor's published REST v1 docs but have NOT been
-// verified against a live key yet (see nft.md Open Question 1). Re-check when the
+// verified against a live key yet (see docs/wallet-nfts.md, Marketplace data). Re-check when the
 // partner key lands — the mappers are deliberately defensive about missing fields.
 
 const LAMPORTS_PER_SOL = 1e9;

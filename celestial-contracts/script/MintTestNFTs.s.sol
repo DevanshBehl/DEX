@@ -8,7 +8,7 @@ import {TestERC1155} from "../src/test-nfts/TestERC1155.sol";
 /**
  * @title MintTestNFTs
  * @notice Deploys the NFT fixture contracts on Sepolia and mints a full test
- *         set to the Celestial wallet address (nft.md — Phase 0).
+ *         set to the Celestial wallet address (docs/wallet-nfts.md, Test fixtures).
  *
  * Mints to RECIPIENT:
  *   ERC-721  "Celestial Test Collection"

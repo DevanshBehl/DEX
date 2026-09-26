@@ -21,6 +21,7 @@ import { CollectionPage } from './components/nft/CollectionPage';
 import { BuyModal } from './components/BuyModal';
 import { ConnectionModal } from './components/ConnectionModal';
 import { SignTransactionView } from './components/SignTransactionView';
+import { SignSolanaView } from './components/SignSolanaView';
 import { sendEVMTransaction, sendSolanaTransaction, sendBitcoinTransaction, sendERC20Transaction, sendSPLTokenTransaction } from './utils/txUtils';
 import { CONFIG } from './config/networks';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -109,7 +110,7 @@ export default function App() {
   const [shaking, setShaking] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSwapOpen, setIsSwapOpen] = useState(false);
-  // nft.md Phase 4.3 — Explore: marketplace collections the user doesn't own
+  // docs/wallet-nfts.md — Explore: marketplace collections the user doesn't own
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [exploreCollection, setExploreCollection] = useState<{ handle: string; name: string } | null>(null);
   const [isSendOpen, setIsSendOpen] = useState(false);
@@ -162,6 +163,7 @@ export default function App() {
   // ---- EIP-1193 Connection Requests ----
   const [connectionRequest, setConnectionRequest] = useState<{ id: string, origin: string } | null>(null);
   const [signTxRequest, setSignTxRequest] = useState<{ id: string, origin: string } | null>(null);
+  const [signSolRequest, setSignSolRequest] = useState<{ id: string, origin: string } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -173,6 +175,8 @@ export default function App() {
       setConnectionRequest({ id: reqId, origin: origin || 'Unknown App' });
     } else if (reqType === 'sign-tx' && reqId) {
       setSignTxRequest({ id: reqId, origin: origin || 'Unknown App' });
+    } else if (reqType === 'sign-sol' && reqId) {
+      setSignSolRequest({ id: reqId, origin: origin || 'Unknown App' });
     }
 
     if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
@@ -182,6 +186,9 @@ export default function App() {
           sendResponse({ received: true });
         } else if (message.type === 'INCOMING_SIGN_TX') {
           setSignTxRequest({ id: message.id, origin: message.origin || 'Unknown App' });
+          sendResponse({ received: true });
+        } else if (message.type === 'INCOMING_SIGN_SOL') {
+          setSignSolRequest({ id: String(message.id), origin: message.origin || 'Unknown App' });
           sendResponse({ received: true });
         }
       };
@@ -391,10 +398,12 @@ export default function App() {
     if (allAccounts.length === 0) return;
     
     if (typeof chrome !== 'undefined' && chrome.runtime?.id) {
-      chrome.runtime.sendMessage({
-        type: 'ACCOUNTS_UPDATE',
-        payload: { accounts: allAccounts }
-      });
+      // Addresses only: the background never needs keys (signing happens in this popup).
+      const accounts = allAccounts.map((g) => ({
+        name: g.name,
+        chains: g.chains.map(({ chain, address, derivationPath }) => ({ chain, address, derivationPath })),
+      }));
+      chrome.runtime.sendMessage({ type: 'ACCOUNTS_UPDATE', payload: { accounts } });
     }
   }, [allAccounts]);
 
@@ -416,7 +425,7 @@ export default function App() {
     return saved === 'true';
   });
 
-  // ---- NFTs (nft.md Phase 1–2) — fetched when the NFTs tab is opened, or always
+  // ---- NFTs (docs/wallet-nfts.md) — fetched when the NFTs tab is opened, or always
   // when NFT floor value is folded into the portfolio total (Phase 4.3).
   const [includeNftsInTotal, setIncludeNftsInTotal] = useState<boolean>(
     () => localStorage.getItem('celestial_include_nfts_in_total') === 'true',
@@ -429,7 +438,7 @@ export default function App() {
   });
   const activeNft = activeNftKey ? nftState.nfts.find(n => n.key === activeNftKey) || null : null;
 
-  // ---- NFT market data (nft.md Phase 4) — floors for non-hidden NFTs, mainnet only
+  // ---- NFT market data (docs/wallet-nfts.md) — floors for non-hidden NFTs, mainnet only
   const nftMarket = useNFTMarket({
     nfts: nftState.visibleNfts,
     evmAddress: ethAccount,
@@ -446,18 +455,36 @@ export default function App() {
   // Floors carry no 24h series, so the change figure stays token-only (see the toggle copy).
   const displayedTotalUsd = totalUsdValue + (includeNftsInTotal ? nftFloorUsd : 0);
 
+  // The background owns the network once a dApp can switch it (wallet_switchEthereumChain):
+  // adopt its value on open and follow later changes, then push ours only after that sync.
+  const [networkSynced, setNetworkSynced] = useState(() => typeof chrome === 'undefined' || !chrome.storage);
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.storage) return;
+    chrome.storage.local.get('isTestnet', (r) => {
+      if (typeof r.isTestnet === 'boolean') setIsTestnet(r.isTestnet);
+      setNetworkSynced(true);
+    });
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && typeof changes.isTestnet?.newValue === 'boolean') setIsTestnet(changes.isTestnet.newValue);
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+    return () => chrome.storage.onChanged.removeListener(onChanged);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('celestial_is_testnet', isTestnet.toString());
+    if (!networkSynced) return;
     if (typeof chrome !== 'undefined' && chrome.runtime?.id) {
-      chrome.runtime.sendMessage({ 
-        type: 'NETWORK_CHANGE', 
-        payload: { 
+      chrome.runtime.sendMessage({
+        type: 'NETWORK_CHANGE',
+        payload: {
           isTestnet,
-          rpcUrl: isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL
-        } 
+          rpcUrl: isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL,
+          rpcUrls: { mainnet: CONFIG.ALCHEMY_ETH_URL, sepolia: CONFIG.ALCHEMY_SEPOLIA_URL },
+        }
       }).catch(() => {});
     }
-  }, [isTestnet]);
+  }, [isTestnet, networkSynced]);
 
   // Fetch real portfolio history from CoinGecko
   const [portfolioChartData, setPortfolioChartData] = useState<{ time: string; value: number }[]>([]);
@@ -867,9 +894,20 @@ export default function App() {
         <SignTransactionView
           id={signTxRequest!.id}
           origin={signTxRequest!.origin}
-          privateKey={accounts.find(c => c.chain === 'EVM')!.privateKey}
+          accounts={allAccounts.flatMap(g => g.chains.filter(c => c.chain === 'EVM'))}
+          defaultAddress={accounts.find(c => c.chain === 'EVM')!.address}
           providerUrl={isTestnet ? CONFIG.ALCHEMY_SEPOLIA_URL : CONFIG.ALCHEMY_ETH_URL}
           networkName={isTestnet ? 'Ethereum Sepolia' : 'Ethereum Mainnet'}
+        />
+      )}
+
+      {/* Overlay for Solana signature requests (window.solana / Wallet Standard) */}
+      {signSolRequest && allAccounts.length > 0 && (
+        <SignSolanaView
+          id={signSolRequest.id}
+          origin={signSolRequest.origin}
+          accounts={allAccounts.flatMap(g => g.chains.filter(c => c.chain === 'Solana').map(c => ({ address: c.address, privateKey: c.privateKey })))}
+          isTestnet={isTestnet}
         />
       )}
 
@@ -1183,7 +1221,7 @@ export default function App() {
       </div>
       </div>
 
-      {/* ---- Explore (nft.md Phase 4.3) ---- */}
+      {/* ---- Explore (docs/wallet-nfts.md) ---- */}
       {isExploreOpen && (
         <ExploreScreen
           isTestnet={isTestnet}
@@ -1684,7 +1722,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* nft.md Phase 4.3 — NFT floor value in the portfolio total */}
+            {/* docs/wallet-nfts.md — NFT floor value in the portfolio total */}
             <div className="bg-[#111111] border border-white/5 p-4 rounded-3xl">
               <div className="flex items-center justify-between mb-2">
                 <div className="pr-3">

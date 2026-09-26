@@ -3,7 +3,9 @@
 /* ------------------------------------------------------------------ */
 
 export type Eip1193Provider = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
+  request: (args: { method: string; params?: unknown[] }) => Promise<any>;
+  on?: (event: string, handler: (...args: any[]) => void) => void;
+  removeListener?: (event: string, handler: (...args: any[]) => void) => void;
 };
 
 export type SolanaProvider = {
@@ -20,7 +22,13 @@ export type ConnectedWallet = {
   address: string;
   chain: "Ethereum" | "Solana";
   walletName?: string;
+  /** the EIP-1193 provider of the wallet the user picked (EIP-6963) — never window.ethereum blindly */
+  evmProvider?: Eip1193Provider;
+  /** the Wallet Standard wallet object (for solana:signTransaction / standard:events) */
+  solanaWallet?: StandardWallet;
 };
+
+export const SEPOLIA_CHAIN_HEX = "0xaa36a7";
 
 // --- EIP-6963 (multi-wallet discovery for EVM — MetaMask, Celestial, etc.) ---
 export type Eip6963ProviderDetail = {
@@ -33,6 +41,9 @@ type StandardConnectFeature = {
   connect: () => Promise<{ accounts: readonly { address: string }[] }>;
 };
 type StandardDisconnectFeature = { disconnect: () => Promise<void> };
+type StandardEventsFeature = {
+  on: (event: "change", listener: (props: { accounts?: readonly { address: string }[] }) => void) => () => void;
+};
 export type StandardWallet = {
   name: string;
   icon?: string;
@@ -40,6 +51,7 @@ export type StandardWallet = {
   features: Record<string, unknown> & {
     "standard:connect"?: StandardConnectFeature;
     "standard:disconnect"?: StandardDisconnectFeature;
+    "standard:events"?: StandardEventsFeature;
   };
 };
 

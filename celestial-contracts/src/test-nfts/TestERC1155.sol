@@ -10,7 +10,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  * @title TestERC1155
  * @author Celestial Protocol — Devansh Behl
  * @notice TESTNET-ONLY ERC-1155 fixture for building the Celestial wallet NFT
- *         features (see nft.md, Phase 0). Exercises multi-quantity display
+ *         features (see docs/wallet-nfts.md, Test fixtures). Exercises multi-quantity display
  *         and quantity-aware transfers.
  *
  *         Token ids:

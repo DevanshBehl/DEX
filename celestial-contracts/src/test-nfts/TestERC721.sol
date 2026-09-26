@@ -10,7 +10,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  * @title TestERC721
  * @author Celestial Protocol — Devansh Behl
  * @notice TESTNET-ONLY ERC-721 fixture collection for building the Celestial
- *         wallet NFT features (see nft.md, Phase 0).
+ *         wallet NFT features (see docs/wallet-nfts.md, Test fixtures).
  *
  *         Metadata and SVG artwork are generated fully on-chain as base64
  *         data URIs, so no IPFS / hosting is required.

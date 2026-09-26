@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { NFTTransferError, type NFTTransferEstimate, type NFTTransferParams } from './types.ts';
 
-// ---- ERC-721 / ERC-1155 transfers (nft.md — Phase 3.1) ------------------------------
+// ---- ERC-721 / ERC-1155 transfers (docs/wallet-nfts.md) ------------------------------
 // Signing happens locally with ethers.Wallet; only the signed transaction is broadcast.
 
 const ERC721_ABI = [

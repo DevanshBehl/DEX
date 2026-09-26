@@ -5,7 +5,7 @@ import { computeVisibility } from '../../src/nft/spam.ts';
 import type { NFTAsset } from '../../src/nft/types.ts';
 import { loadFixture } from './helpers.ts';
 
-// Recorded from the Phase 0 fixture wallets (nft.md)
+// Recorded from the Phase 0 fixture wallets (docs/wallet-nfts.md)
 const helius = loadFixture<{ result: { items: HeliusAsset[] } }>('helius-devnet-getAssetsByOwner.json').result.items;
 const alchemy = loadFixture<{ ownedNfts: AlchemyOwnedNft[] }>('alchemy-sepolia-getNFTsForOwner.json').ownedNfts;
 

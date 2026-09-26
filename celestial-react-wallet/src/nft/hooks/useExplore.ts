@@ -3,7 +3,7 @@ import { ALL_PROVIDERS } from '../marketplaces/index.ts';
 import type { CollectionStats, CollectionSummary, Listing, MarketplaceProvider } from '../marketplaces/types.ts';
 import type { NFTChain } from '../types.ts';
 
-// ---- Explore data (nft.md — Phase 4.3) ---------------------------------------------
+// ---- Explore data (docs/wallet-nfts.md) ---------------------------------------------
 //
 // Explore is marketplace-only: it shows collections the user does not own, so nothing
 // here touches the wallet's keys or ownership data.

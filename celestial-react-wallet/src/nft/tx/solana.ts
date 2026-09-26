@@ -17,7 +17,7 @@ import bs58 from 'bs58';
 import { NFTTransferError, type NFTTransferEstimate, type NFTTransferParams } from './types.ts';
 import type { SentTransaction } from './evm.ts';
 
-// ---- Solana NFT transfers (nft.md — Phase 3.1) ---------------------------------------
+// ---- Solana NFT transfers (docs/wallet-nfts.md) ---------------------------------------
 //
 //   metaplex-nft / token-2022-nft → SPL transferChecked (+ idempotent recipient ATA)
 //   metaplex-pnft / -cnft / -core → Metaplex programs via lazily loaded solana-metaplex.ts

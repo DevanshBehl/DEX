@@ -1,7 +1,7 @@
 import { normalizeHeliusAsset, type HeliusAsset } from '../normalize.ts';
 import type { NFTAsset } from '../types.ts';
 
-// ---- Solana ownership via Helius DAS (nft.md — Phase 1.3) -------------------------
+// ---- Solana ownership via Helius DAS (docs/wallet-nfts.md) -------------------------
 
 const PAGE_LIMIT = 1000; // DAS maximum per page
 const MAX_PAGES = 10; // 10,000 assets

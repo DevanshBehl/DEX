@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { PublicKey } from '@solana/web3.js';
 import type { NFTAsset } from '../types.ts';
 
-// ---- Send-flow validation (nft.md — Phase 3.2) -------------------------------------
+// ---- Send-flow validation (docs/wallet-nfts.md) -------------------------------------
 // Pure checks — no network — so they run on every keystroke and in unit tests.
 
 export interface RecipientCheck {

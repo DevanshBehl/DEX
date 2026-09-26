@@ -1,7 +1,7 @@
 import { CONFIG } from '../../config/networks.ts';
 import type { MarketplaceId } from './types.ts';
 
-// ---- Shared marketplace HTTP client (nft.md — Phase 4.2) ---------------------------
+// ---- Shared marketplace HTTP client (docs/wallet-nfts.md) ---------------------------
 //
 // Every partner request goes through here so key handling lives in exactly one place.
 //

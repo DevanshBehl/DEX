@@ -1,6 +1,6 @@
 import type { NFTAsset, NFTVisibility } from './types.ts';
 
-// ---- Spam heuristics (nft.md — Phase 1.5) ----------------------------------------
+// ---- Spam heuristics (docs/wallet-nfts.md) ----------------------------------------
 //
 // Providers only classify spam on some networks/plans (Alchemy returns
 // `isSpam: false` on Sepolia for obvious scams), so the wallet scores every NFT

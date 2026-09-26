@@ -4,11 +4,11 @@ import { opensea } from './opensea.ts';
 import { tensor } from './tensor.ts';
 import type { MarketplaceProvider, NFTMarketData } from './types.ts';
 
-// ---- Provider registry (nft.md — Phase 4.1) -----------------------------------------
+// ---- Provider registry (docs/wallet-nfts.md) -----------------------------------------
 //
 // Preference order per chain. The first *configured* provider that returns stats for a
 // collection wins; the rest are not queried. Magic Eden leads on both chains because it
-// is the only keyless provider (nft.md Open Question 3 — flip these lists to change the
+// is the only keyless provider (see docs/wallet-nfts.md — flip these lists to change the
 // default once partner keys land).
 
 const PROVIDER_ORDER: Record<NFTChain, MarketplaceProvider[]> = {

@@ -1,7 +1,7 @@
 import { cached, marketGet, providerReachable } from './client.ts';
 import type { CollectionStats, MarketplaceProvider } from './types.ts';
 
-// ---- OpenSea — Ethereum (nft.md — Phase 4.1) ----------------------------------------
+// ---- OpenSea — Ethereum (docs/wallet-nfts.md) ----------------------------------------
 //
 // OpenSea API v2 requires an `X-API-KEY` header on every route, so like Tensor it is
 // reachable only through the Celestial API proxy.

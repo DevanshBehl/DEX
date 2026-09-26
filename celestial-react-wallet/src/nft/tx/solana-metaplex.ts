@@ -23,7 +23,7 @@ import { MPL_ACCOUNT_COMPRESSION_PROGRAM_ID } from '@metaplex-foundation/mpl-acc
 import { setComputeUnitLimit } from '@metaplex-foundation/mpl-toolbox';
 import { NFTTransferError, type NFTTransferParams } from './types.ts';
 
-// ---- Metaplex transfers: pNFT, compressed NFT, Core (nft.md — Phase 3.1) -------------
+// ---- Metaplex transfers: pNFT, compressed NFT, Core (docs/wallet-nfts.md) -------------
 // Loaded lazily from solana.ts so the Umi/Metaplex bundle only downloads when a user
 // actually sends one of these standards. The Umi identity is created from the locally
 // held secret key; nothing but the signed transaction leaves the device.

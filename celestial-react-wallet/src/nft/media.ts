@@ -1,6 +1,6 @@
 import type { NFTMediaKind } from './types.ts';
 
-// ---- Media URL resolution (nft.md — Phase 1.4) -----------------------------------
+// ---- Media URL resolution (docs/wallet-nfts.md) -----------------------------------
 
 /** Public IPFS gateway used when an indexer hasn't already cached the asset. */
 export const IPFS_GATEWAY = 'https://dweb.link/ipfs/';

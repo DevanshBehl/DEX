@@ -1,7 +1,7 @@
 import { cached, marketGet, providerReachable, proxyBase } from './client.ts';
 import type { CollectionStats, CollectionSummary, MarketplaceProvider } from './types.ts';
 
-// ---- Magic Eden (nft.md — Phase 4.1) ------------------------------------------------
+// ---- Magic Eden (docs/wallet-nfts.md) ------------------------------------------------
 //
 // The default provider on both chains: its v2 read API is keyless, so floor prices
 // work out of the box while Tensor/OpenSea wait on partner keys.
@@ -99,7 +99,7 @@ async function evmStats(contract: string, signal?: AbortSignal): Promise<Collect
   };
 }
 
-// ---- Explore (nft.md — Phase 4.3) --------------------------------------------------
+// ---- Explore (docs/wallet-nfts.md) --------------------------------------------------
 //
 // Magic Eden has no keyless "trending collections" route: `popular_collections` returns
 // an empty array, and `/v2/collections` pages through arbitrary unranked collections

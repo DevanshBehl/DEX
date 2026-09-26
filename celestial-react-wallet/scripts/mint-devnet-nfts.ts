@@ -1,5 +1,5 @@
 /**
- * Celestial Wallet — Solana devnet NFT fixtures (nft.md, Phase 0)
+ * Celestial Wallet — Solana devnet NFT fixtures (docs/wallet-nfts.md, Test fixtures)
  *
  * Mints one of every Solana NFT standard the wallet must support to YOUR
  * Celestial wallet address, so the NFT tab / detail page / send flows can be

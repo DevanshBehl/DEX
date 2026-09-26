@@ -13,7 +13,7 @@ export const CONFIG = {
   MEMPOOL_TESTNET_URL: env.VITE_MEMPOOL_TESTNET_URL || '',
   ETHERSCAN_API_KEY: env.VITE_ETHERSCAN_API_KEY || '',
   /**
-   * Base URL of the Celestial API proxy (nft.md — Phase 4.2). It injects partner
+   * Base URL of the Celestial API proxy (docs/wallet-nfts.md). It injects partner
    * marketplace keys server-side, so no partner key ever ships in the extension
    * bundle. Unset → only keyless marketplace endpoints are used.
    */

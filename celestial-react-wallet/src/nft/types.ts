@@ -1,4 +1,4 @@
-// ---- NFT domain model (nft.md — Phase 1.2) -------------------------------------
+// ---- NFT domain model (docs/wallet-nfts.md) -------------------------------------
 //
 // Every indexer payload (Alchemy for EVM, Helius DAS for Solana) is normalized
 // into `NFTAsset` so the UI, send flow and marketplace layers never deal with

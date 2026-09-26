@@ -13,7 +13,7 @@ interface NFTImageProps {
 }
 
 /**
- * Indexer "cached" URLs are not guaranteed to load (see nft.md Phase 0 findings),
+ * Indexer "cached" URLs are not guaranteed to load (see docs/wallet-nfts.md, Ownership indexing),
  * so walk the candidate list and finish on a bundled placeholder. Shows a
  * pulsing skeleton until the current candidate has loaded.
  */

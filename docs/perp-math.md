@@ -1,10 +1,21 @@
-# Celestial Perps — Math Reference & Test Vectors
+# Perp Maths & Test Vectors
 
-These are the formulas and exact integer test vectors shared by **both chains**.
-- EVM implementation: `celestial-contracts/src/libraries/PerpMath.sol`, asserted by `test/PerpMath.t.sol`
-- Solana implementation (Phase 4): `math.rs`, which **must reproduce every number below exactly**
+> **Normative.** These formulas and integer test vectors are shared by every implementation. Each implementation must reproduce **every number below exactly**:
+>
+> | Implementation | File | Asserted by |
+> |---|---|---|
+> | EVM | `celestial-contracts/src/libraries/PerpMath.sol` | `celestial-contracts/test/PerpMath.t.sol` |
+> | Solana | `celestial-solana/programs/celestial-perps/src/math.rs` | `cargo test -p celestial-perps --lib` |
+> | Keeper | `celestial-keeper/src/math.ts` | `celestial-keeper/test/math.test.ts` |
+> | Trading app | `celestial-perps/lib/perpMath.ts` | `celestial-perps/lib/perpMath.test.ts` |
+>
+> Parameters come from [`protocol-spec.md`](protocol-spec.md).
 
-Parameters come from [`protocol-spec.md`](protocol-spec.md).
+- [Units](#units)
+- [Rounding](#rounding)
+- [Formulas](#formulas)
+- [Worked examples](#worked-examples) (Ex 1–10)
+- [Changing a formula](#changing-a-formula)
 
 ## Units
 
@@ -17,9 +28,38 @@ Parameters come from [`protocol-spec.md`](protocol-spec.md).
 | CLP (LP token) | 18 decimals on EVM, **6 decimals on Solana** (so balances fit in `u64`; see Ex 10) |
 | Basis points | `BPS = 10_000` |
 
-`mulDiv(a, b, c)` is the exact `a × b / c` in 512-bit maths. **Floor** rounds down and **Ceil** rounds up. **Every rounding choice goes against the trader.**
+Why `1e20`: size (1e6) × 1e20 / price (1e8) gives 18-decimal token amounts. That precision is enough to hold the average entry price exactly across many increases.
+
+## Rounding
+
+`mulDiv(a, b, c)` is the exact `a × b / c` with a full-width intermediate: 512-bit in Solidity (`Math.mulDiv`), `u128` with checked overflow in Rust (an overflow is a `MathOverflow` error, which keeper execution turns into a `MathError` cancel), and native `bigint` in TypeScript. **Floor** rounds down and **Ceil** rounds up.
+
+**Every rounding choice goes against the trader** (and, for CLP, against the LP who is entering or leaving). The pool therefore never loses a unit to rounding, and a trader can't extract value by splitting orders.
+
+| Quantity | Direction | Effect |
+|---|---|---|
+| Execution price, buying side | ceil | Trader pays more |
+| Execution price, selling side | floor | Trader receives less |
+| Long tokens | floor | Fewer tokens → lower PnL |
+| Short tokens | ceil | More tokens owed → lower PnL |
+| Fees, funding owed, maintenance margin | ceil | Trader pays more |
+| CLP minted, USDC redeemed | floor | LP receives less |
 
 ## Formulas
+
+```mermaid
+flowchart LR
+    P[oracle P] --> X[1 · execution price X]
+    X --> TK[2 · tokens]
+    TK --> PNL[3 · PnL at P]
+    S[size S] --> FEE[4 · position fee]
+    OI[long/short OI, AUM] --> FR[5 · funding rate → index → F]
+    PNL & FEE & FR --> R[6 · remaining margin R]
+    R --> LIQ{"R below mm?"}
+    TK & FEE & FR --> LP[7 · liquidation price]
+    C[collateral C] --> RES[8 · reserve / profit cap]
+    PNL --> AGG[9 · market net PnL] --> AUM[10 · AUM] --> CLP[11 · CLP mint / redeem]
+```
 
 1. **Execution price** (spread `s` in bps; liquidations use the raw oracle price)
    - Increasing a long or decreasing a short: `ceil(P × (BPS + s) / BPS)`
@@ -48,6 +88,11 @@ Parameters come from [`protocol-spec.md`](protocol-spec.md).
 11. **CLP**
     - mint: `supply == 0 ? amountAfterFee × SCALE : floor(amountAfterFee × supply / AUM)`, where `amountAfterFee = amount − ceil(amount × lpMintFeeBps / BPS)` and `SCALE` is `1e12` on EVM (18-decimal CLP) and `1` on Solana (6-decimal CLP)
     - redeem: `floor(clp × AUM / supply)`
+
+Two derived helpers the trading app also uses (not on-chain):
+
+- **Maximum size for a collateral:** the largest `S` with `S ≤ maxLeverage × (C − fee(S))`. This is the value Ex 8 exercises.
+- **Acceptable price for a market order:** `ceil(X × (BPS + slippage) / BPS)` for longs and `floor(X × (BPS − slippage) / BPS)` for shorts, where `X` is the previewed execution price.
 
 ## Worked examples
 
@@ -144,3 +189,10 @@ The formulas are the same on both chains. Only the first-deposit scale differs (
 | redeeming those CLP immediately, with AUM $5,101,000 and the new supply | `999000195` | `999000194` |
 
 The Solana redemption is 1 unit (1e-6 USDC) lower because the coarser CLP amount is floored. The difference rounds against the LP, as the rounding rules require.
+
+## Changing a formula
+
+1. Update the formula and **recompute the affected vectors** here. Keep old vectors whose inputs didn't change.
+2. Update [`protocol-spec.md`](protocol-spec.md) if a parameter or rule changed.
+3. Port the change to all four implementations and run all four test suites (see [testing.md](testing.md)).
+4. Check the invariant suites (Foundry `test/invariant/`, Solana bucket checks). A rounding change can break solvency even when every vector passes.

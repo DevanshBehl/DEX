@@ -1,7 +1,7 @@
 import { imageCandidates, mediaKind, resolveMediaUrl } from './media.ts';
 import type { NFTAsset, NFTAttribute, NFTStandard } from './types.ts';
 
-// ---- Indexer payload → NFTAsset (nft.md — Phase 1.3) ------------------------------
+// ---- Indexer payload → NFTAsset (docs/wallet-nfts.md) ------------------------------
 //
 // Pure functions (no network, no Vite env) so they can be unit-tested against
 // recorded provider responses in tests/nft/fixtures.

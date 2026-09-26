@@ -1,6 +1,6 @@
 import type { NFTWithVisibility } from './types.ts';
 
-// ---- Collection grouping for the NFT grid (nft.md — Phase 2.2) -------------------
+// ---- Collection grouping for the NFT grid (docs/wallet-nfts.md) -------------------
 
 export interface CollectionGroup {
   key: string;

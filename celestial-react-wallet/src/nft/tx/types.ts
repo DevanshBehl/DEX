@@ -1,6 +1,6 @@
 import type { NFTAsset } from '../types.ts';
 
-// ---- NFT transfer contracts shared by EVM + Solana builders (nft.md — Phase 3.1) ----
+// ---- NFT transfer contracts shared by EVM + Solana builders (docs/wallet-nfts.md) ----
 
 export interface NFTTransferParams {
   nft: NFTAsset;

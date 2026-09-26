@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Orbit, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Check, ChevronDown, Droplets, Loader2, Orbit, Wallet } from "lucide-react";
 import { fmtPct, fmtUsd } from "@/lib/format";
 import { MARKETS, marketOf, type MarketId } from "@/lib/marketData";
 import type { ConnectedWallet } from "@/lib/wallet";
 import type { FeedStatus } from "@/hooks/useLivePrice";
-import type { OracleStatus } from "@/hooks/useOraclePrice";
+import type { OracleStatus } from "./MarketInfo";
 import { AccountMenu } from "./AccountMenu";
 import { Stat } from "./ui";
 
@@ -26,6 +27,8 @@ export function TradeHeader({
   change24h,
   oraclePrice,
   oracleStatus,
+  fundingPerHour,
+  faucet,
   wallet,
   onConnect,
   onDisconnect,
@@ -38,6 +41,9 @@ export function TradeHeader({
   change24h: number | null;
   oraclePrice: number | null;
   oracleStatus: OracleStatus;
+  /** signed funding rate per hour for longs (+ = longs pay), as a fraction */
+  fundingPerHour: number | null;
+  faucet: { canClaim: boolean; nextClaimAt: number | null; busy: boolean; onClaim: () => void } | null;
   wallet: ConnectedWallet | null;
   onConnect: () => void;
   onDisconnect: () => Promise<void>;
@@ -55,6 +61,10 @@ export function TradeHeader({
           </span>
           <span className="hidden text-sm font-bold tracking-tight sm:block">CELESTIAL PERPS</span>
         </div>
+        <nav className="hidden items-center gap-1 text-xs font-semibold md:flex">
+          <Link href="/trade" className="rounded-md px-2 py-1 text-white">Trade</Link>
+          <Link href="/earn" className="rounded-md px-2 py-1 text-[#888] hover:text-white">Earn</Link>
+        </nav>
         <div className="relative">
           <button
             type="button"
@@ -127,11 +137,28 @@ export function TradeHeader({
             value={oraclePrice !== null ? fmtUsd(oraclePrice) : "—"}
             color={oracleStatus === "stale" || oracleStatus === "error" ? "text-[#f7931a]" : "text-white"}
             className="hidden md:flex"
-            title={oracleStatus === "unavailable" ? "No Chainlink feed on Sepolia" : "Chainlink (Sepolia)"}
+            title="Chainlink — the price orders fill at"
           />
           <span className="hidden h-7 w-px bg-white/[0.07] lg:block" />
-          <Stat label="Funding" value="—" className="hidden lg:flex" title="Available after the pool launches" />
+          <Stat
+            label="Funding / h"
+            value={fundingPerHour !== null ? `${fundingPerHour >= 0 ? "+" : ""}${(fundingPerHour * 100).toFixed(4)}%` : "—"}
+            className="hidden lg:flex"
+            title="Positive: longs pay; negative: shorts pay"
+          />
         </div>
+        {faucet && (
+          <button
+            type="button"
+            onClick={faucet.onClaim}
+            disabled={!faucet.canClaim || faucet.busy}
+            title={faucet.canClaim ? "Get 10,000 test USDC" : `Next claim ${faucet.nextClaimAt ? new Date(faucet.nextClaimAt * 1000).toLocaleString() : "later"}`}
+            className="hidden items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/85 transition-colors hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:flex"
+          >
+            {faucet.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Droplets className="h-3.5 w-3.5" />}
+            {faucet.canClaim ? "Get test USDC" : "Faucet claimed"}
+          </button>
+        )}
         {wallet ? (
           <AccountMenu wallet={wallet} onDisconnect={onDisconnect} />
         ) : (

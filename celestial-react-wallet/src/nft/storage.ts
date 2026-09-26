@@ -1,6 +1,6 @@
 import type { NFTAsset, NFTChain } from './types.ts';
 
-// ---- Persistence (nft.md — Phase 1.5 / 1.6) ----------------------------------------
+// ---- Persistence (docs/wallet-nfts.md) ----------------------------------------
 //
 // chrome.storage.local in the extension; localStorage when running `vite dev`.
 

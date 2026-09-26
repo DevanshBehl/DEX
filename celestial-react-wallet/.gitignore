@@ -25,5 +25,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# NFT fixture scripts (nft.md Phase 0) — fixture payer keypairs are secret
+# NFT fixture scripts (docs/wallet-nfts.md, Test fixtures) — fixture payer keypairs are secret
 scripts/.keys/

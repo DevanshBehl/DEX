@@ -1,25 +1,28 @@
 "use client";
 
-// Wallet discovery + connect/disconnect + ETH balance, moved out of the trade page
-// without behaviour changes.
+// Wallet discovery (EIP-6963 + Wallet Standard), connect/disconnect, and the connected wallet's
+// provider + events. Writes always go through the provider the user picked, never through
+// window.ethereum directly.
 
-import { useEffect, useState } from "react";
-import { ethers } from "ethers";
+import { createContext, createElement, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import {
+  SEPOLIA_CHAIN_HEX,
   isSolanaWallet,
   type ConnectedWallet,
+  type Eip1193Provider,
   type Eip6963ProviderDetail,
   type StandardWallet,
   type Web3Window,
 } from "@/lib/wallet";
 
-export function useWallet() {
+function useWalletState() {
   const [connectedWallet, setConnectedWallet] = useState<ConnectedWallet | null>(null);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [evmWallets, setEvmWallets] = useState<Eip6963ProviderDetail[]>([]);
   const [solWallets, setSolWallets] = useState<StandardWallet[]>([]);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  /** EVM chain id (hex) of the connected wallet; null for Solana / disconnected */
+  const [evmChainId, setEvmChainId] = useState<string | null>(null);
 
   // Persistent wallet discovery on mount. Both standards are handshake-based, so
   // we must have listeners registered *before* asking wallets to announce — a
@@ -62,15 +65,16 @@ export function useWallet() {
   const connectEVM = async (detail?: Eip6963ProviderDetail): Promise<boolean> => {
     const provider = detail?.provider ?? (window as Web3Window).ethereum;
     if (!provider) {
-      alert("No EVM wallet detected.");
+      setConnectError("No EVM wallet detected.");
       return false;
     }
     try {
       setIsConnecting(true);
       setConnectError(null);
-      const accounts = await provider.request({ method: "eth_requestAccounts" });
+      const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
       if (accounts.length > 0) {
-        setConnectedWallet({ address: accounts[0], chain: "Ethereum", walletName: detail?.info.name });
+        setEvmChainId(((await provider.request({ method: "eth_chainId" })) as string).toLowerCase());
+        setConnectedWallet({ address: accounts[0], chain: "Ethereum", walletName: detail?.info.name, evmProvider: provider });
         return true;
       }
       return false;
@@ -94,7 +98,8 @@ export function useWallet() {
         const res = await wallet.features["standard:connect"]!.connect();
         const address = res?.accounts?.[0]?.address;
         if (address) {
-          setConnectedWallet({ address, chain: "Solana", walletName: wallet.name });
+          setEvmChainId(null);
+          setConnectedWallet({ address, chain: "Solana", walletName: wallet.name, solanaWallet: wallet });
           return true;
         }
         return false;
@@ -104,6 +109,7 @@ export function useWallet() {
       if (legacy) {
         const response = await legacy.connect();
         if (response.publicKey) {
+          setEvmChainId(null);
           setConnectedWallet({ address: response.publicKey.toString(), chain: "Solana" });
           return true;
         }
@@ -127,8 +133,7 @@ export function useWallet() {
   const disconnectWallet = async () => {
     try {
       if (connectedWallet?.chain === "Solana") {
-        const w = solWallets.find((x) => x.name === connectedWallet.walletName);
-        const disc = w?.features?.["standard:disconnect"];
+        const disc = connectedWallet.solanaWallet?.features?.["standard:disconnect"];
         if (disc?.disconnect) {
           await disc.disconnect();
         } else {
@@ -139,30 +144,74 @@ export function useWallet() {
       console.error("Disconnect error:", error);
     } finally {
       setConnectedWallet(null);
+      setEvmChainId(null);
       setConnectError(null);
     }
   };
 
-  // Fetch wallet balance when connected
+  // Follow the connected EVM wallet: account switches and network switches.
+  const evmProvider = connectedWallet?.evmProvider;
   useEffect(() => {
-    if (!connectedWallet || connectedWallet.chain !== "Ethereum") {
-      setWalletBalance(null);
-      return;
-    }
-    let cancelled = false;
-    const fetchBalance = async () => {
-      try {
-        const provider = new ethers.BrowserProvider((window as Web3Window).ethereum!);
-        const bal = await provider.getBalance(connectedWallet.address);
-        if (!cancelled) setWalletBalance(ethers.formatEther(bal));
-      } catch {
-        if (!cancelled) setWalletBalance(null);
+    if (!evmProvider?.on) return;
+    const onAccounts = (accounts: string[]) => {
+      if (!accounts?.length) {
+        setConnectedWallet(null);
+        setEvmChainId(null);
+      } else {
+        setConnectedWallet((w) => (w && w.chain === "Ethereum" ? { ...w, address: accounts[0] } : w));
       }
     };
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 15000);
-    return () => { cancelled = true; clearInterval(interval); };
+    const onChain = (chainId: string) => setEvmChainId(String(chainId).toLowerCase());
+    evmProvider.on("accountsChanged", onAccounts);
+    evmProvider.on("chainChanged", onChain);
+    return () => {
+      evmProvider.removeListener?.("accountsChanged", onAccounts);
+      evmProvider.removeListener?.("chainChanged", onChain);
+    };
+  }, [evmProvider]);
+
+  // Follow the connected Solana wallet (Wallet Standard `change`: account switched / disconnected).
+  const solanaWallet = connectedWallet?.solanaWallet;
+  useEffect(() => {
+    const events = solanaWallet?.features?.["standard:events"];
+    if (!events) return;
+    return events.on("change", ({ accounts }) => {
+      if (!accounts) return;
+      if (accounts.length === 0) setConnectedWallet(null);
+      else setConnectedWallet((w) => (w && w.chain === "Solana" ? { ...w, address: accounts[0].address } : w));
+    });
+  }, [solanaWallet]);
+
+  /** EVM network guard: ask the wallet to switch to Sepolia (adding it if unknown). */
+  const switchToSepolia = useCallback(async (): Promise<boolean> => {
+    const provider: Eip1193Provider | undefined = connectedWallet?.evmProvider;
+    if (!provider) return false;
+    try {
+      await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: SEPOLIA_CHAIN_HEX }] });
+    } catch (e) {
+      if ((e as { code?: number })?.code !== 4902) {
+        setConnectError(e instanceof Error ? e.message : "Could not switch network.");
+        return false;
+      }
+      await provider.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: SEPOLIA_CHAIN_HEX,
+            chainName: "Sepolia",
+            nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: [process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com"],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"],
+          },
+        ],
+      });
+    }
+    setEvmChainId(((await provider.request({ method: "eth_chainId" })) as string).toLowerCase());
+    return true;
   }, [connectedWallet]);
+
+  /** true when writes are allowed: Solana always (app sends via devnet), EVM only on Sepolia */
+  const onRightNetwork = !connectedWallet || connectedWallet.chain === "Solana" || evmChainId === SEPOLIA_CHAIN_HEX;
 
   return {
     connectedWallet,
@@ -171,9 +220,25 @@ export function useWallet() {
     solWallets,
     connectError,
     setConnectError,
-    walletBalance,
+    evmChainId,
+    onRightNetwork,
+    switchToSepolia,
     connectEVM,
     connectSolana,
     disconnectWallet,
   };
+}
+
+type WalletState = ReturnType<typeof useWalletState>;
+const WalletContext = createContext<WalletState | null>(null);
+
+/** One wallet connection for the whole app, so navigating /trade ↔ /earn keeps it. */
+export function WalletProvider({ children }: { children: ReactNode }) {
+  return createElement(WalletContext.Provider, { value: useWalletState() }, children);
+}
+
+export function useWallet(): WalletState {
+  const ctx = useContext(WalletContext);
+  if (!ctx) throw new Error("useWallet must be used inside <WalletProvider>");
+  return ctx;
 }

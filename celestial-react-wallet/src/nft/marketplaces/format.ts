@@ -1,6 +1,6 @@
 import type { NFTChain } from '../types.ts';
 
-// ---- Market value formatting (nft.md — Phase 4.3) ----------------------------------
+// ---- Market value formatting (docs/wallet-nfts.md) ----------------------------------
 
 export const nativeSymbol = (chain: NFTChain) => (chain === 'EVM' ? 'ETH' : 'SOL');
 

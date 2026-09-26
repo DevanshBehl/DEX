@@ -1,1042 +1,489 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/CELESTIAL-Ecosystem-black?style=for-the-badge&labelColor=000000&color=22c55e&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTEyIDJ2MjAiLz48cGF0aCBkPSJNMiAxMmgyMCIvPjwvc3ZnPg=="/>
+  <img src="https://img.shields.io/badge/CELESTIAL-Ecosystem-black?style=for-the-badge&labelColor=000000&color=22c55e"/>
 </p>
 
 <h1 align="center">
-  <br/>
   ✦ CELESTIAL ✦
   <br/>
-  <sub>The Next-Generation Decentralized Finance Ecosystem</sub>
-  <br/>
+  <sub>A self-custody wallet and a two-chain perpetuals exchange — one monorepo</sub>
 </h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white"/>
-  <img src="https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black"/>
-  <img src="https://img.shields.io/badge/Next.js_15-000000?style=flat-square&logo=nextdotjs&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Vite_8-646CFF?style=flat-square&logo=vite&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white"/>
-  <img src="https://img.shields.io/badge/GSAP-88CE02?style=flat-square&logo=greensock&logoColor=black"/>
-  <img src="https://img.shields.io/badge/Solana-14F195?style=flat-square&logo=solana&logoColor=black"/>
-  <img src="https://img.shields.io/badge/Ethereum-3C3C3D?style=flat-square&logo=ethereum&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Bitcoin-F7931A?style=flat-square&logo=bitcoin&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Solidity-0.8.24-363636?style=flat-square&logo=solidity&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Foundry-forge%20%7C%20anvil-DEA584?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Rust-Anchor%201.1.2-000000?style=flat-square&logo=rust&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Chainlink-oracles-375BD2?style=flat-square&logo=chainlink&logoColor=white"/>
+  <img src="https://img.shields.io/badge/TypeScript-5%20%2F%206-007ACC?style=flat-square&logo=typescript&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=nextdotjs&logoColor=white"/>
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black"/>
+  <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Ethereum-Sepolia-3C3C3D?style=flat-square&logo=ethereum&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Solana-Devnet-14F195?style=flat-square&logo=solana&logoColor=black"/>
 </p>
 
 <p align="center">
-  <strong>Self-custody wallet · Perpetual trading terminal · Multi-chain onboarding</strong>
-  <br/>
-  <em>Built by <a href="https://github.com/DevanshBehl">Devansh Behl</a></em>
+  <strong>Celestial Perps</strong> · pool-backed perpetual futures on <strong>Ethereum Sepolia</strong> and <strong>Solana devnet</strong>, priced by Chainlink, filled by a keeper<br/>
+  <strong>Celestial Wallet</strong> · a multi-chain (EVM · Solana · Bitcoin) browser extension &nbsp;·&nbsp; <strong>Celestial Landing</strong> · onboarding and vault creation
 </p>
 
----
+<p align="center"><em>Built by <a href="https://github.com/DevanshBehl">Devansh Behl</a></em></p>
 
-<br/>
-
-## 📑 Table of Contents
-
-| # | Section |
-|:-:|---------|
-| 1 | [Overview](#-overview) |
-| 2 | [Monorepo Structure](#-monorepo-structure) |
-| 3 | [High-Level Architecture](#-high-level-architecture) |
-| 4 | [Celestial Landing](#-celestial-landing--onboarding-portal) |
-| 5 | [Celestial Wallet](#-celestial-wallet--browser-extension) |
-| 6 | [Celestial Perps](#-celestial-perps--perpetual-trading-terminal) |
-| 7 | [Security Architecture](#-security-architecture) |
-| 8 | [Multi-Chain Support](#-multi-chain-support) |
-| 9 | [Tech Stack Deep Dive](#-tech-stack-deep-dive) |
-| 10 | [Getting Started](#-getting-started) |
-| 11 | [Environment Variables](#-environment-variables) |
-| 12 | [Development Scripts](#-development-scripts) |
-| 13 | [Project Roadmap](#-project-roadmap) |
-| 14 | [Contributing](#-contributing) |
-| 15 | [License](#-license) |
+> [!WARNING]
+> **Testnet software.** Everything here runs on Sepolia and Solana devnet with **mock USDC**. The contracts and program have not been externally audited. Do not use real funds.
 
 ---
 
-<br/>
+## 📑 Contents
 
-## 🌌 Overview
-
-**Celestial** is a complete, production-grade decentralized finance ecosystem consisting of three tightly integrated applications. Together, they provide users with a fully non-custodial experience — from wallet creation and asset management to advanced perpetual futures trading — all without ever surrendering control of private keys.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   ╔═══════════════╗   ╔═══════════════╗   ╔═══════════════╗    │
-│   ║   CELESTIAL   ║   ║   CELESTIAL   ║   ║   CELESTIAL   ║    │
-│   ║   LANDING     ║──▶║    WALLET     ║──▶║    PERPS      ║    │
-│   ║  (Onboarding) ║   ║  (Extension)  ║   ║  (Terminal)   ║    │
-│   ╚═══════════════╝   ╚═══════════════╝   ╚═══════════════╝    │
-│         │                     │                    │            │
-│    Vault Creation        Asset Mgmt         50x Leverage       │
-│    Seed Generation     Multi-Chain TX     Live Order Book       │
-│    AES-256 Encrypt     NFT Gallery        WebSocket Feeds      │
-│    Extension Bridge    Token Swaps        Wallet Connect        │
-│                                                                 │
-│         ▼─────────────────────▼────────────────────▼            │
-│                                                                 │
-│              ┌──────────────────────────┐                       │
-│              │    BLOCKCHAIN LAYER      │                       │
-│              │  Ethereum · Solana · BTC │                       │
-│              └──────────────────────────┘                       │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### ✦ Core Principles
-
-| Principle | Description |
-|-----------|-------------|
-| **🔐 True Self-Custody** | Private keys never leave the user's device. Not even Celestial developers can access funds. |
-| **🌐 Multi-Chain Native** | First-class support for Ethereum (EVM), Solana, and Bitcoin from a single recovery phrase. |
-| **⚡ Performance First** | Sub-second interactions, real-time WebSocket data feeds, optimized rendering pipelines. |
-| **🎨 Premium Design** | Apple-tier visual quality with micro-animations, glassmorphism, and obsidian dark themes. |
-| **🛡️ Military-Grade Crypto** | AES-256-GCM encryption, 600K PBKDF2 iterations, zero-knowledge vault architecture. |
+| | | |
+|:--|:--|:--|
+| 1. [At a glance](#-at-a-glance) | 7. [Getting started](#-getting-started) | 13. [Wallet support](#-wallet-support) |
+| 2. [Live deployments](#-live-deployments) | 8. [Configuration](#-configuration) | 14. [Security model](#-security-model) |
+| 3. [Architecture](#-architecture) | 9. [Testing](#-testing) | 15. [Roadmap & status](#-roadmap--status) |
+| 4. [How a trade works](#-how-a-trade-works) | 10. [Celestial Perps — app](#-celestial-perps--the-trading-app) | 16. [Documentation index](#-documentation-index) |
+| 5. [Protocol economics](#-protocol-economics) | 11. [Celestial Wallet](#-celestial-wallet--browser-extension) | 17. [Contributing](#-contributing) |
+| 6. [Repository map](#-repository-map) | 12. [Celestial Landing](#-celestial-landing--onboarding) | 18. [License](#-license) |
 
 ---
 
-<br/>
+## 🌌 At a glance
 
-## 📁 Monorepo Structure
+**Celestial Perps** is a GMX-style perpetual exchange implemented **twice, identically** — once in Solidity for Ethereum and once as an Anchor program for Solana. Traders go long or short with up to **20× leverage** against a shared **USDC liquidity pool (CLP)**; LPs are the counterparty and earn trading fees and funding. Prices come from **Chainlink**; orders are two-step (request → keeper fills at the oracle price), which keeps execution simple and fair on a push oracle.
 
-```
-DEx/
-├── 📂 celestial-landing/          ← Onboarding portal & marketing site
-│   ├── src/
-│   │   ├── App.tsx                   # Router + global nav/footer
-│   │   ├── pages/
-│   │   │   ├── LandingPage.tsx       # Animated marketing page
-│   │   │   └── OnboardingPage.tsx    # 4-step wallet creation wizard
-│   │   ├── components/
-│   │   │   ├── PasswordStrength.tsx  # Real-time strength meter
-│   │   │   └── SeedPhraseGrid.tsx    # Interactive 12-word display
-│   │   └── lib/
-│   │       ├── crypto.ts            # AES-256-GCM + PBKDF2 vault encryption
-│   │       └── validation.ts        # Zod password schema + strength scoring
-│   ├── index.html
-│   ├── vite.config.ts
-│   └── package.json
-│
-├── 📂 celestial-react-wallet/     ← Chrome extension popup
-│   ├── src/
-│   │   ├── App.tsx                   # 2058-line wallet UI (states/views)
-│   │   ├── components/
-│   │   │   ├── TokenPage.tsx         # Individual asset detail view
-│   │   │   ├── ReceiveModal.tsx      # QR code + address copy
-│   │   │   ├── SwapModal.tsx         # DEX swap interface
-│   │   │   ├── BuyModal.tsx          # Fiat on-ramp (Transak)
-│   │   │   ├── ActivityTab.tsx       # Transaction history feed
-│   │   │   ├── NFTTab.tsx            # NFT gallery viewer
-│   │   │   ├── ConnectionModal.tsx   # dApp connection approval
-│   │   │   └── SignTransactionView.tsx # TX signing confirmation
-│   │   ├── utils/
-│   │   │   ├── walletUtils.ts        # HD key derivation (BIP-39/44/84)
-│   │   │   ├── rpcUtils.ts           # Balance & price fetching
-│   │   │   ├── txUtils.ts            # Transaction signing & broadcast
-│   │   │   ├── swapUtils.ts          # 0x Protocol swap quotes
-│   │   │   ├── historyUtils.ts       # Cross-chain TX history
-│   │   │   ├── nftUtils.ts           # NFT fetching (Alchemy + Helius)
-│   │   │   └── onrampUtils.ts        # Transak fiat integration
-│   │   ├── config/
-│   │   │   └── networks.ts           # RPC endpoints & API keys
-│   │   ├── types/
-│   │   │   └── index.ts              # TransactionRecord, NFTRecord
-│   │   └── lib/
-│   │       └── crypto.ts             # Vault decryption mirror
-│   ├── index.html                    # 360×600 popup dimensions
-│   ├── vite.config.ts                # WASM + top-level-await plugins
-│   └── package.json
-│
-├── 📂 celestial-perps/            ← Perpetual futures trading terminal
-│   ├── app/
-│   │   ├── layout.tsx                # Root layout + Inter/JetBrains Mono
-│   │   ├── globals.css               # Obsidian dark theme design system
-│   │   ├── page.tsx                  # Landing page with GSAP animations
-│   │   └── trade/
-│   │       └── page.tsx              # Full trading terminal
-│   ├── next.config.ts
-│   ├── postcss.config.mjs
-│   └── package.json
-│
-└── package.json                   # Root workspace configuration
-```
+| Package | What it is | Stack | Status |
+|:--|:--|:--|:--|
+| [`celestial-contracts/`](celestial-contracts/README.md) | EVM protocol: `PerpEngine`, `LiquidityPool`, `CLP`, `ChainlinkOracle`, `MockUSDC` | Solidity 0.8.24 · Foundry | ✅ Deployed & verified on Sepolia |
+| [`celestial-solana/`](celestial-solana/README.md) | Solana protocol: the `celestial_perps` Anchor program (same economics as EVM) | Rust · Anchor 1.1.2 · Token-2022 | ✅ Deployed on devnet |
+| [`celestial-keeper/`](celestial-keeper/README.md) | One process that executes orders, liquidates and updates funding on **both** chains | TypeScript · ethers 6 · web3.js | ✅ Running live on both chains |
+| `celestial-perps/` | Trading terminal + `/earn` LP page, one UI for both chains | Next.js 15 · React 19 · Tailwind 4 | 🟡 Phase 6: Solana verified live, Sepolia browser run pending |
+| `celestial-react-wallet/` | Self-custody Chrome extension (EVM · Solana · BTC), NFTs, swaps, dApp connector | Vite 8 · React 19 · MV3 | ✅ Working (Solana dApp signing not yet implemented) |
+| `celestial-landing/` | Marketing site + 4-step onboarding that encrypts the vault and hands it to the extension | Vite 8 · React 19 · Framer Motion | ✅ Working |
+
+**One set of numbers, two chains.** The protocol maths is specified once in [`docs/perp-math.md`](docs/perp-math.md) with worked examples, and **four** implementations reproduce every example to the last unit: `PerpMath.sol`, the Rust `math.rs`, the keeper's `math.ts`, and the frontend's `perpMath.ts`.
 
 ---
 
-<br/>
+## 🛰 Live deployments
 
-## 🏗 High-Level Architecture
+Markets: **BTC-USD, ETH-USD** on Sepolia; **SOL-USD, BTC-USD, ETH-USD** on Solana devnet (Sepolia has no Chainlink SOL/USD feed). Each pool was seeded with **5,000,000 mock USDC**.
+
+### Ethereum Sepolia (chain id 11155111)
+
+| Contract | Address |
+|:--|:--|
+| `PerpEngine` | [`0x49765B9bEFed004A6462ad2025C240191e762b60`](https://sepolia.etherscan.io/address/0x49765B9bEFed004A6462ad2025C240191e762b60) |
+| `LiquidityPool` — holds all USDC, **approve this** | [`0xB2DF5d7C1BCa2d82ECA1D591F0E58B335387b24b`](https://sepolia.etherscan.io/address/0xB2DF5d7C1BCa2d82ECA1D591F0E58B335387b24b) |
+| `CLP` (18 decimals) | [`0x303C049BF526bD40d82E2Bd405af34bB095A55DA`](https://sepolia.etherscan.io/address/0x303C049BF526bD40d82E2Bd405af34bB095A55DA) |
+| `ChainlinkOracle` | [`0xFF6a6Da437b16e5dd29D2eF8Aa38517911320cC0`](https://sepolia.etherscan.io/address/0xFF6a6Da437b16e5dd29D2eF8Aa38517911320cC0) |
+| `MockUSDC` (6 decimals, public faucet) | [`0x88a77050162285276d6346a4Bc07C406572d6cD2`](https://sepolia.etherscan.io/address/0x88a77050162285276d6346a4Bc07C406572d6cD2) |
+| Keeper | `0xA0c3A70806983a965e43961DE48658a9D41f2322` · engine deploy block `11757411` |
+| ~~`CelestialVault`~~ (legacy, deprecated) | `0x786f4037924772c79F39D49C302dC3D3eDd14b04` |
+
+### Solana devnet
+
+| Account | Address |
+|:--|:--|
+| Program `celestial_perps` | [`EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL`](https://explorer.solana.com/address/EK1KpDGfUiZ4XkWixAaRFonDexZYSKnJm8oJz5s7HLTL?cluster=devnet) |
+| `Config` PDA | `CCof8LtZZpL6U2wXDS7sp3yV2r6v5QuTbvE6ms8m2wgX` |
+| `Pool` PDA / USDC vault | `2jZjsSQMRrRWhRupktSbHeo1SDLgAs4fePT5ndhtTNmF` / `5spmkMFD9EiX9LFd7dAXzXDAjm6UDVea6wUEsNthJv5o` |
+| CLP mint (Token-2022, 6 decimals) | `JCboCWJVi1qq3P1vhSwqc1TEhq1udxf3AnxT2UJ27iTz` |
+| Mock USDC mint (Token-2022) | [`2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y`](https://explorer.solana.com/address/2LW8DzDa2KVxDxqUqZLALc6htcVSDwGK1JGz4VaaTn1Y?cluster=devnet) — mint authority is the program's faucet PDA `xAsm3yj7Y1XbBi4DKXPA2UHuLX3GyEgWpVBdR7HkPUB` |
+| Markets (AUM order) | SOL-USD `2TJGAi…K3dJ` · BTC-USD `H2T9yj…Mrmfs` · ETH-USD `CXrmiK…BzZW3` |
+| Chainlink feeds | SOL `99B2bT…6ynrR` · BTC `6PxBx9…kFJe` · ETH `669U43…Jpw3P` (OCR2 store `HEvSKo…WHny`) |
+| Keeper | `6DoRfsEtFC2LFEEvSEuYjeNo7vJHnFrx8EzffksVy5ED` |
+
+Full records, including every deployment and smoke-test transaction: [`deployments/sepolia.json`](deployments/sepolia.json), [`deployments/solana-devnet.json`](deployments/solana-devnet.json).
+
+---
+
+## 🏗 Architecture
 
 ```mermaid
-graph TB
-    subgraph "User Layer"
-        A[("🌐 Browser")]
+flowchart LR
+    subgraph Browser
+        UI["celestial-perps<br/>Next.js terminal + /earn"]
+        W1["Wallets<br/>MetaMask · Phantom · Celestial"]
     end
 
-    subgraph "Celestial Landing"
-        B["Marketing Page<br/>(Framer Motion + GSAP)"]
-        C["Onboarding Wizard<br/>(4-step flow)"]
-        D["Crypto Engine<br/>(Web Crypto API)"]
+    subgraph ChainLayer["lib/chains — one interface"]
+        EVMC["evm.ts<br/>ethers 6"]
+        SOLC["solana.ts<br/>web3.js + Anchor coder"]
     end
 
-    subgraph "Celestial Wallet Extension"
-        E["Popup UI<br/>(360×600 React)"]
-        F["Vault Manager<br/>(Encrypted Storage)"]
-        G["HD Key Derivation<br/>(BIP-39/44/84)"]
-        H["Transaction Engine"]
-        I["DApp Connector<br/>(EIP-1193 / EIP-6963)"]
+    subgraph Sepolia["Ethereum Sepolia"]
+        ENG["PerpEngine"]
+        POOL["LiquidityPool + CLP"]
+        ORA["ChainlinkOracle"]
+        CLE["Chainlink ETH/BTC feeds"]
     end
 
-    subgraph "Celestial Perps Terminal"
-        J["Trading UI<br/>(Next.js SSR)"]
-        K["Chart Engine<br/>(Lightweight Charts)"]
-        L["Order Book<br/>(WebSocket Depth)"]
-        M["Wallet Bridge<br/>(EVM + Solana)"]
+    subgraph Devnet["Solana devnet"]
+        PROG["celestial_perps<br/>(Anchor)"]
+        CLS["Chainlink OCR2 feeds<br/>SOL/BTC/ETH"]
     end
 
-    subgraph "External Services"
-        N[("Alchemy RPC<br/>ETH Mainnet/Sepolia")]
-        O[("Helius RPC<br/>Solana Mainnet/Devnet")]
-        P[("Mempool.space<br/>Bitcoin API")]
-        Q[("CoinGecko<br/>Price Feeds")]
-        R[("0x Protocol<br/>Swap Aggregator")]
-        S[("Transak<br/>Fiat On-Ramp")]
-        T[("Binance<br/>Market Data WS")]
-    end
+    K["celestial-keeper<br/>executor · liquidator · funding · health"]
+    CB[("Coinbase Exchange<br/>candles + ticker<br/>(display only)")]
 
-    A --> B
-    A --> E
-    A --> J
-
-    B --> C
-    C --> D
-    D -->|"postMessage<br/>(VAULT_INIT)"| F
-
-    F --> G
-    G --> H
-    E --> I
-
-    J --> K
-    J --> L
-    J --> M
-    M -->|"EIP-6963<br/>Wallet Standard"| I
-
-    H --> N
-    H --> O
-    H --> P
-    E --> Q
-    E --> R
-    E --> S
-    K --> T
-    L --> T
-
-    style A fill:#1a1a2e,stroke:#22c55e,color:#fff
-    style B fill:#0d0d0d,stroke:#627EEA,color:#fff
-    style E fill:#0d0d0d,stroke:#14F195,color:#fff
-    style J fill:#0d0d0d,stroke:#F7931A,color:#fff
+    UI --> EVMC & SOLC
+    UI -. chart .-> CB
+    W1 -- sign --> EVMC & SOLC
+    EVMC --> ENG & POOL
+    SOLC --> PROG
+    ENG --> POOL
+    ENG --> ORA --> CLE
+    PROG --> CLS
+    K -- executeRequests · liquidate · updateFunding --> ENG
+    K -- execute_request · liquidate · update_funding --> PROG
 ```
+
+- **Contracts / program** hold all funds and enforce every rule. The keeper and frontend can't move money on their own.
+- **The keeper** is a convenience, not a trusted party. It can only execute orders the trader signed, at the on-chain oracle price, within the trader's `acceptablePrice`. If it stops, traders can still cancel after 60 s and get a full refund.
+- **The frontend** talks to both chains through one `PerpsChain` interface (`celestial-perps/lib/chains/`). It uses the connected wallet's own provider and never touches a private key.
 
 ---
 
-<br/>
-
-## 🚀 Celestial Landing — Onboarding Portal
-
-The landing application serves dual purpose: a high-fidelity marketing showcase and a secure onboarding portal where users create their Celestial wallet.
-
-### ✦ Landing Page Features
-
-| Feature | Implementation |
-|---------|---------------|
-| **Interactive Wallet Mockup** | 3D tilt-responsive card with live token balances, tab switching, and hover states |
-| **Security Vault Animation** | Concentric rotating rings with floating AES-256, PBKDF2, Zero-Knowledge labels |
-| **Multi-Chain Visual** | Animated blockchain cards (ETH, SOL, BTC) with connection status indicators |
-| **Animated Counters** | Intersection Observer–triggered count-up animations for key statistics |
-| **Floating Network Logos** | Parallax-scrolling blockchain icons (Solana, Bitcoin, Ethereum, Arbitrum, Sui) |
-| **Ambient Gradient Blobs** | Morphing CSS backdrop blurs creating a living, breathing background |
-
-### ✦ Onboarding Wizard — 4-Step Wallet Creation
-
-```mermaid
-stateDiagram-v2
-    [*] --> Welcome: User clicks "Get Started"
-
-    Welcome --> SetPassword: Extension detected ✓
-    Welcome --> Welcome: Extension not found ✗
-
-    SetPassword --> SeedPhrase: Zod validation passes
-    SetPassword --> SetPassword: Validation fails
-
-    SeedPhrase --> Completion: Vault encrypted & sent to extension
-    SeedPhrase --> SeedPhrase: Extension ACK timeout
-
-    Completion --> [*]: User closes tab
-
-    note right of Welcome
-        Checks for Celestial extension
-        via window.celestial injection
-        (polls up to 15 attempts × 100ms)
-    end note
-
-    note right of SetPassword
-        • Wallet name (required)
-        • Password (min 8, upper, number, special)
-        • Confirm password (must match)
-        • Non-custodial acknowledgement ✓
-        • Live strength meter (0–4 score)
-    end note
-
-    note right of SeedPhrase
-        • 12-word BIP-39 mnemonic generated
-        • Blur-on-hover reveal mechanism
-        • Copy to clipboard support
-        • WARNING card (never share phrase)
-        • PBKDF2 → AES-256-GCM encryption
-        • postMessage → extension bridge
-    end note
-```
-
-### ✦ Vault Encryption Pipeline
-
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Password   │     │  Random Salt │     │  Random IV   │
-│   (user)     │     │  (16 bytes)  │     │  (12 bytes)  │
-└──────┬───────┘     └──────┬───────┘     └──────┬───────┘
-       │                    │                    │
-       ▼                    ▼                    │
-   ┌──────────────────────────┐                  │
-   │       PBKDF2-SHA256      │                  │
-   │   600,000 iterations     │                  │
-   │   Non-extractable key    │                  │
-   └────────────┬─────────────┘                  │
-                │                                │
-                ▼                                ▼
-        ┌──────────────────────────────────────────┐
-        │            AES-256-GCM Encrypt           │
-        │    plaintext: BIP-39 mnemonic phrase     │
-        └───────────────────┬──────────────────────┘
-                            │
-                            ▼
-                 ┌─────────────────────┐
-                 │     VaultBlob       │
-                 │  ─────────────────  │
-                 │  version: 1         │
-                 │  id: wallet_xxx     │
-                 │  name: "Wallet 1"   │
-                 │  salt: base64(...)  │
-                 │  mnemonic: {        │
-                 │    iv: base64(...)   │
-                 │    ciphertext: ...   │
-                 │  }                  │
-                 │  createdAt: unix    │
-                 └──────────┬──────────┘
-                            │
-                  postMessage(VAULT_INIT)
-                            │
-                            ▼
-                 ┌─────────────────────┐
-                 │  Chrome Extension   │
-                 │  Background Script  │
-                 │  (chrome.storage)   │
-                 └─────────────────────┘
-```
-
----
-
-<br/>
-
-## 💎 Celestial Wallet — Browser Extension
-
-The wallet is a feature-complete Chrome extension (360×600 popup) that manages multi-chain assets with a premium, iOS-inspired interface.
-
-### ✦ Wallet State Machine
-
-```mermaid
-stateDiagram-v2
-    [*] --> Loading: App mounts
-
-    Loading --> Uninitialized: No vault found
-    Loading --> Locked: Vault exists, needs password
-    Loading --> Unlocked: Session still active
-
-    Uninitialized --> Locked: User creates wallet via Landing
-
-    Locked --> Unlocked: Correct password entered
-    Locked --> Locked: Wrong password (shake animation)
-
-    Unlocked --> Locked: User locks / timeout
-
-    state Unlocked {
-        [*] --> Portfolio: Default view
-
-        Portfolio --> TokenPage: Tap asset
-        Portfolio --> SendFlow: Tap "Send"
-        Portfolio --> ReceiveModal: Tap "Receive"
-        Portfolio --> SwapModal: Tap "Swap"
-        Portfolio --> BuyModal: Tap "Buy"
-        Portfolio --> ActivityTab: Switch tab
-        Portfolio --> NFTTab: Switch tab
-        Portfolio --> Settings: Gear icon
-
-        TokenPage --> Portfolio: Back
-        SendFlow --> Portfolio: Complete/Cancel
-        ReceiveModal --> Portfolio: Close
-        SwapModal --> Portfolio: Close
-        BuyModal --> Portfolio: Close
-
-        Settings --> ManageAccounts: View accounts
-        Settings --> SeedReveal: Show seed (password)
-        Settings --> KeyReveal: Show private key
-        Settings --> Networks: Switch network
-        Settings --> DeleteWallet: Danger zone
-    }
-```
-
-### ✦ Core Features
-
-<table>
-<thead>
-<tr>
-<th width="200">Feature</th>
-<th>Description</th>
-<th width="180">Key Technologies</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>🏠 Portfolio Dashboard</strong></td>
-<td>Real-time portfolio value with animated odometer transitions, per-asset P&L, and interactive area chart showing historical performance across configurable time ranges (1D, 1W, 1M, 3M, 1Y, ALL)</td>
-<td><code>recharts</code>, CoinGecko API</td>
-</tr>
-<tr>
-<td><strong>📤 Send Transactions</strong></td>
-<td>Multi-chain native transfers with asset picker, address validation, amount input, and a satisfying slide-to-confirm gesture. Supports ETH, SOL, and BTC with proper gas/fee estimation</td>
-<td><code>ethers.js</code>, <code>@solana/web3.js</code>, <code>bitcoinjs-lib</code></td>
-</tr>
-<tr>
-<td><strong>📥 Receive</strong></td>
-<td>Per-chain address display with QR code generation, one-tap copy, and clear chain identification badges</td>
-<td><code>qrcode.react</code></td>
-</tr>
-<tr>
-<td><strong>🔄 Token Swaps</strong></td>
-<td>DEX aggregation via 0x Protocol (mainnet) with testnet mock quotes. Shows exchange rate, expected output, gas estimates, and slippage protection</td>
-<td>0x Protocol v2, <code>ethers.js</code></td>
-</tr>
-<tr>
-<td><strong>💰 Fiat On-Ramp</strong></td>
-<td>Transak integration allowing users to buy crypto with fiat currency. Pre-fills wallet address, chain, and preferred currency</td>
-<td>Transak Staging SDK</td>
-</tr>
-<tr>
-<td><strong>📊 Activity History</strong></td>
-<td>Cross-chain transaction feed with send/receive classification, status indicators, relative timestamps, and direct links to block explorers</td>
-<td>Blockscout, Solana Explorer, Mempool.space</td>
-</tr>
-<tr>
-<td><strong>🖼️ NFT Gallery</strong></td>
-<td>Fetches and displays NFT collections from Ethereum (Alchemy NFT API v3) and Solana (Helius DAS API) with IPFS gateway resolution</td>
-<td>Alchemy v3, Helius DAS</td>
-</tr>
-<tr>
-<td><strong>🔗 DApp Connector</strong></td>
-<td>EIP-1193 provider injection for Ethereum dApps + EIP-6963 multi-wallet discovery. Handles connection requests and transaction signing confirmations</td>
-<td>EIP-1193, EIP-6963, Wallet Standard</td>
-</tr>
-<tr>
-<td><strong>🧑‍💼 Account Management</strong></td>
-<td>Hierarchical deterministic (HD) multi-account support — add unlimited derived accounts from a single seed phrase with per-account chain breakdowns</td>
-<td>BIP-32, BIP-39, BIP-44, BIP-84</td>
-</tr>
-<tr>
-<td><strong>🌐 Network Switching</strong></td>
-<td>Toggle between Mainnet and Testnet (Sepolia, Devnet, Testnet) with separate RPC endpoints and explorer links</td>
-<td>Alchemy, Helius, Mempool</td>
-</tr>
-</tbody>
-</table>
-
-### ✦ HD Key Derivation Paths
-
-```mermaid
-graph TD
-    A["🔑 BIP-39 Mnemonic<br/>(12 or 24 words)"] --> B["Seed Buffer<br/>(512-bit)"]
-
-    B --> C["EVM Derivation<br/>ethers.HDNodeWallet"]
-    B --> D["Solana Derivation<br/>ed25519-hd-key"]
-    B --> E["Bitcoin Derivation<br/>BIP32 + tiny-secp256k1"]
-
-    C --> F["m/44'/60'/0'/0/{index}<br/>──────────────<br/>Format: 0x... (42 chars)<br/>Lib: ethers.js v6"]
-
-    D --> G["m/44'/501'/{index}'/0'<br/>──────────────<br/>Format: Base58 (44 chars)<br/>Lib: @solana/web3.js"]
-
-    E --> H["m/84'/0'/0'/0/{index}<br/>──────────────<br/>Format: bc1... (Native SegWit)<br/>Lib: bitcoinjs-lib"]
-
-    style A fill:#22c55e,stroke:#22c55e,color:#000
-    style F fill:#627EEA,stroke:#627EEA,color:#fff
-    style G fill:#14F195,stroke:#14F195,color:#000
-    style H fill:#F7931A,stroke:#F7931A,color:#000
-```
-
----
-
-<br/>
-
-## 📈 Celestial Perps — Perpetual Trading Terminal
-
-A professional-grade decentralized perpetual futures trading terminal with live market data, real-time order books, and wallet connectivity.
-
-### ✦ Landing Page
-
-The perps landing page is a high-impact marketing showcase featuring:
-
-| Section | Details |
-|---------|---------|
-| **Hero** | Bold "Trade Perps. Stay Sovereign." headline with GSAP stagger animations and a live green pulse indicator |
-| **Stats Band** | `$2.4B+` volume, `180+` markets, `50×` leverage, `Zero` custody |
-| **Terminal Preview** | Full SVG candlestick chart with 38 deterministic candles, 7-period moving average, volume bars, order book (asks/bids), and live last-price indicator |
-| **Features Grid** | Self-custodial by default · Works with any wallet · Built for real trading |
-| **Chain Logos** | Floating Ethereum, Solana, Bitcoin, Arbitrum, Base, Optimism icons with GSAP multi-directional oscillation |
-
-### ✦ Trading Terminal Architecture
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│  CELESTIAL PERPS — Trade Terminal                        [Wallet: 0x…]│
-├────────┬───────────────────────────────────────────────┬──────────────┤
-│        │                                               │              │
-│ Market │          CANDLESTICK CHART                     │  ORDER FORM  │
-│ Select │     (Lightweight Charts v5)                    │              │
-│        │  ┌─────────────────────────────────────────┐  │  ┌────────┐  │
-│ BTC-USD│  │  🟩🟥🟩🟩🟥🟩🟩🟥🟩🟥🟩🟩🟥🟩🟥│  │  │ LONG   │  │
-│ ETH-USD│  │  ║  │ ║║  │ ║║  │ ║  │ ║║  │ ║  │ ║  │  │  │ SHORT  │  │
-│ SOL-USD│  │  ║  │ ║║  │ ║║  │ ║  │ ║║  │ ║  │ ║  │  │  ├────────┤  │
-│        │  │  ║  │ ║║  │ ║║  │ ║  │ ║║  │ ║  │ ║  │  │  │ Market │  │
-│        │  │▃▃▅▃▃▅▅▃▃▅▃▃▅▅▃▃▅▃▃▅▅▃▃▅▃▃▅ VOLUME  │  │  │ Limit  │  │
-│        │  └─────────────────────────────────────────┘  │  │ Stop   │  │
-│        │                                               │  ├────────┤  │
-│        ├───────────────────┬───────────────────────────┤  │ Lever- │  │
-│        │    ORDER BOOK     │      MARKET STATS         │  │ age:   │  │
-│        │  ┌─────────────┐  │  Price:  $67,432.10       │  │ [10x]  │  │
-│        │  │ ASKS (red)  │  │  24h:    +2.34%           │  ├────────┤  │
-│        │  │ 64,452.5    │  │  Volume: $1.24B           │  │  Size  │  │
-│        │  │ 64,448.0    │  │  Funding:+0.0102%         │  │ [____] │  │
-│        │  │ ── SPREAD ──│  │  Spread: 0.5              │  │        │  │
-│        │  │ 64,425.0    │  │                           │  │[Place] │  │
-│        │  │ 64,420.5    │  │                           │  │[Order] │  │
-│        │  │ BIDS (green)│  │                           │  │        │  │
-│        │  └─────────────┘  │                           │  └────────┘  │
-├────────┴───────────────────┴───────────────────────────┴──────────────┤
-│                        POSITIONS / ORDERS / HISTORY                    │
-│  BTC-USD │ Long │ 10x │ 0.75 BTC │ Entry: $65,900 │ PnL: +$1,149   │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-### ✦ Live Data Pipeline
+## 🔁 How a trade works
 
 ```mermaid
 sequenceDiagram
-    participant UI as Trading Terminal
-    participant REST as Binance REST API
-    participant WS as Binance WebSocket
+    autonumber
+    actor T as Trader (wallet)
+    participant UI as Terminal
+    participant C as PerpEngine / celestial_perps
+    participant K as Keeper
+    participant O as Chainlink
 
-    UI->>REST: GET /api/v3/klines?symbol=BTCUSDT&interval=1m&limit=100
-    REST-->>UI: Historical candlestick data (100 candles)
-    UI->>UI: Render chart via Lightweight Charts
-
-    UI->>WS: Connect wss://stream.binance.com:9443/ws/btcusdt@kline_1m
-    loop Every ~2 seconds
-        WS-->>UI: Live kline update
-        UI->>UI: Update/add candle in real-time
+    T->>UI: 100 USDC, 5× long, 0.5% slippage
+    UI->>UI: Preview with perp-math (entry, liq. price, fees)
+    UI->>C: requestIncrease(collateral, size, acceptablePrice) + execution fee
+    Note over C: USDC escrowed · request stored (EVM id / Solana PDA)
+    K->>C: executeRequests / execute_request (batched)
+    C->>O: read price (must be fresh)
+    alt price within acceptablePrice & all checks pass
+        C-->>C: fill at oracle ± 0.1% spread · reserve 9× collateral
+        C-->>K: execution fee
+        C-->>UI: PositionIncreased + RequestExecuted
+    else slippage / stale oracle / OI cap / leverage …
+        C-->>T: escrow refunded
+        C-->>K: execution fee (keeper is still paid)
+        C-->>UI: RequestCancelled(reason)
     end
-
-    UI->>REST: GET /api/v3/depth?symbol=BTCUSDT&limit=10
-    REST-->>UI: Initial order book snapshot
-
-    UI->>WS: Subscribe btcusdt@depth10@100ms
-    loop Every 100ms
-        WS-->>UI: Incremental depth update
-        UI->>UI: Recalculate cumulative totals, re-render book
-    end
-
-    Note over UI: Market switch triggers:<br/>1. Close old WebSocket<br/>2. Fetch new REST snapshot<br/>3. Open new WebSocket stream
+    Note over T,C: If no keeper acts, the trader may cancel after 60 s for a full refund
 ```
 
-### ✦ Wallet Connection Flow
+A business failure (slippage, stale oracle, open-interest cap, reserve cap, leverage, minimum collateral) **cancels** the request instead of failing the transaction, on both chains. So a keeper can fill a whole batch even when one order in it cancels. Closing, partial closing, adding and removing collateral are the same two-step flow with `requestDecrease` / `requestIncrease`.
 
-The trading terminal supports wallet connectivity through two modern discovery standards:
+Measured on the live testnets: Solana fills land about **2 s** after the request. On Sepolia the keeper sends the fill about **2–3 s** after the request's block, and it lands 1–2 blocks later (about 12–24 s).
 
-```mermaid
-graph LR
-    subgraph "EVM Wallets"
-        A["EIP-6963<br/>Provider Discovery"]
-        B["MetaMask"]
-        C["Celestial Wallet"]
-        D["Other EVM Wallets"]
-    end
+---
 
-    subgraph "Solana Wallets"
-        E["Wallet Standard<br/>Event API"]
-        F["Phantom"]
-        G["Celestial Wallet"]
-        H["Other Solana Wallets"]
-    end
+## 📐 Protocol economics
 
-    A --> B
-    A --> C
-    A --> D
+Source of truth: [`docs/protocol-spec.md`](docs/protocol-spec.md) (parameters) and [`docs/perp-math.md`](docs/perp-math.md) (formulas, rounding, 10 worked examples).
 
-    E --> F
-    E --> G
-    E --> H
+| Parameter | Value |
+|:--|:--|
+| Collateral | Mock USDC, 6 decimals (valued at $1) |
+| Max leverage / maintenance margin | **20×** / **2.5%** of size |
+| Open & close fee | **0.06%** of size each (90% to LPs, 10% protocol) |
+| Execution spread | **0.1%** against the trader (longs fill at oracle × 1.001, shorts × 0.999) |
+| Liquidation | when `collateral + PnL − funding − close fee < 2.5% × size`; keeper fee **0.5%** of size, capped at collateral; the rest goes to LPs |
+| Profit cap | **9 × collateral**, reserved in the pool when the position opens, so the pool is always solvent |
+| Open-interest cap | **30%** of pool AUM per side, per market |
+| Funding | `min(0.01%/h, 0.03%/h × |longOI − shortOI| / AUM)`; the heavier side pays LPs |
+| Oracle max age | 3,960 s on Sepolia (heartbeat + 10%) · 120 s on Solana devnet |
+| Orders | Two-step; the owner can cancel after 60 s |
+| LP pool (CLP) | Mint fee 0.1%; withdrawals open 15 min after your last deposit and only use unreserved liquidity |
+| Rounding | **Always against the trader**, identical on both chains |
 
-    subgraph "Connection Result"
-        I["Connected Wallet<br/>{ address, chain, name }"]
-    end
+Where the chains differ (settled and documented in the spec): CLP has **18 decimals on EVM and 6 on Solana**, so balances fit in `u64`. The execution fee is ETH on Sepolia (0.0002) and lamports on Solana (50,000). On Solana a new position also prepays about 0.0014 SOL of account rent, refunded on close.
 
-    B --> I
-    C --> I
-    D --> I
-    F --> I
-    G --> I
-    H --> I
+---
 
-    style A fill:#627EEA,stroke:#627EEA,color:#fff
-    style E fill:#14F195,stroke:#14F195,color:#000
-    style I fill:#22c55e,stroke:#22c55e,color:#000
+## 🗂 Repository map
+
+```
+DEx/
+├── celestial-contracts/      Foundry · Solidity protocol (EVM)
+│   ├── src/PerpEngine.sol          two-step orders, positions, funding, liquidation, views
+│   ├── src/pool/                   LiquidityPool (all USDC) + CLP (LP token)
+│   ├── src/oracle/                 ChainlinkOracle (staleness, answer checks, 8-dp normalisation)
+│   ├── src/libraries/PerpMath.sol  every formula (mirrors docs/perp-math.md)
+│   ├── src/MockUSDC.sol            testnet collateral with a 24 h faucet
+│   ├── src/legacy/                 deprecated CelestialVault prototype
+│   ├── src/test-nfts/              ERC-721/1155 fixtures for the wallet
+│   ├── script/                     DeployPerps, DeployMockUSDC, …
+│   └── test/                       unit · fuzz · invariant suites
+│
+├── celestial-solana/         Anchor workspace · Solana protocol
+│   ├── programs/celestial-perps/src/
+│   │   ├── instructions/           one file per instruction (22 in the devnet build)
+│   │   ├── engine.rs · math.rs     execution core + maths (mirrors PerpMath.sol)
+│   │   └── oracle.rs               Chainlink OCR2 decoder (+ test-only mock oracle)
+│   ├── tests/                      LiteSVM suites + Chainlink cloned-validator test
+│   └── scripts/                    check-oracle · init-devnet
+│
+├── celestial-keeper/         Keeper service for both chains
+│   ├── src/evm/ · src/solana/      executor, liquidator, funding, health per chain
+│   ├── src/math.ts                 off-chain liquidation checks (bit-exact)
+│   └── test/                       maths vectors · Anvil + local-validator end-to-end
+│
+├── celestial-perps/          Next.js trading terminal + /earn
+│   ├── app/                        routes: /, /trade, /earn
+│   ├── components/                 TradeForm, PositionsPanel, OrderTracker, MarketInfo, …
+│   ├── lib/chains/                 PerpsChain interface · evm.ts · solana.ts · errors
+│   ├── lib/perpMath.ts             bigint port of the protocol maths (+ tests)
+│   ├── hooks/                      usePerps · useOrders · useWallet (provider)
+│   ├── src/abis · src/idl          exported ABIs and the Anchor IDL
+│   └── test/                       chain-layer end-to-end on Anvil + local validator
+│
+├── celestial-react-wallet/   Chrome MV3 extension (EVM · Solana · BTC)
+├── celestial-landing/        Marketing site + onboarding wizard
+├── deployments/              Deployed addresses + tx records per network
+├── docs/                     Technical reference (architecture, spec, maths, per-package docs, ops, security)
+└── phases.md                 Build plan and status, phase by phase
 ```
 
 ---
 
-<br/>
+## 🚀 Getting started
 
-## 🔐 Security Architecture
+### Prerequisites
 
-### ✦ Threat Model & Mitigations
+| Tool | Version | Needed for |
+|:--|:--|:--|
+| Node.js | **24.x** | everything TypeScript |
+| npm | 10+ | `celestial-perps`, `celestial-react-wallet`, `celestial-landing` |
+| pnpm | **11.x** | `celestial-keeper`, `celestial-solana` |
+| Foundry (`forge`, `anvil`, `cast`) | latest | contracts, EVM end-to-end tests |
+| Rust + solana-cli **3.1.10** (Agave) + anchor-cli **1.1.2** (avm) | — | Solana program, local-validator tests |
+| Chrome + a wallet | — | MetaMask / Phantom (and the Celestial extension) |
 
-| Threat Vector | Mitigation | Implementation |
-|:---|:---|:---|
-| **Brute-force password attack** | 600,000 PBKDF2-SHA256 iterations with 16-byte random salt | `crypto.ts` → `deriveKey()` |
-| **Memory extraction** | CryptoKey marked `extractable: false` — key bytes can never leave the JS VM | Web Crypto API constraint |
-| **Ciphertext tampering** | AES-256-GCM provides authenticated encryption — any modification causes decryption failure | GCM authentication tag |
-| **Seed phrase exposure** | Blur-by-default display, hover-to-reveal UX, clipboard auto-clear warnings | `SeedPhraseGrid.tsx` |
-| **Cross-origin data leak** | Vault transmitted via `postMessage` with explicit target, content script isolation | `window.postMessage()` |
-| **Malicious dApp** | Connection request modal with explicit origin display, user must approve | `ConnectionModal.tsx` |
-| **Transaction manipulation** | Full transaction details shown before signing, user must confirm | `SignTransactionView.tsx` |
-| **Plaintext seed in storage** | Seed phrase is **always** encrypted at rest in `chrome.storage.local` | `VaultBlob` format |
-
-### ✦ Encryption Specification
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║                   CELESTIAL VAULT v1 SPEC                    ║
-╠══════════════════╦════════════════════════════════════════════╣
-║ Algorithm        ║ AES-256-GCM (Galois/Counter Mode)         ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Key Derivation   ║ PBKDF2-SHA256                             ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ KDF Iterations   ║ 600,000                                   ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Salt             ║ 16 bytes (crypto.getRandomValues)         ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ IV / Nonce       ║ 12 bytes (crypto.getRandomValues)         ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Key Length       ║ 256 bits                                   ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Key Extractable  ║ false (non-exportable CryptoKey)          ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Auth Tag         ║ 128 bits (GCM default)                    ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Plaintext        ║ BIP-39 mnemonic (12 or 24 words)         ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Encoding         ║ Base64 for all binary fields              ║
-╠══════════════════╬════════════════════════════════════════════╣
-║ Runtime          ║ Native Web Crypto API (zero dependencies) ║
-╚══════════════════╩════════════════════════════════════════════╝
-```
-
----
-
-<br/>
-
-## 🌐 Multi-Chain Support
-
-### ✦ Chain Comparison Matrix
-
-| | **Ethereum (EVM)** | **Solana** | **Bitcoin** |
-|:---|:---:|:---:|:---:|
-| **Derivation Standard** | BIP-44 | SLIP-0044 (ed25519) | BIP-84 (SegWit) |
-| **Derivation Path** | `m/44'/60'/0'/0/x` | `m/44'/501'/x'/0'` | `m/84'/0'/0'/0/x` |
-| **Key Curve** | secp256k1 | ed25519 | secp256k1 |
-| **Address Format** | `0x` + 40 hex chars | Base58 (44 chars) | `bc1` (Bech32) |
-| **Signing Library** | `ethers.js` v6 | `@solana/web3.js` | `bitcoinjs-lib` + `ecpair` |
-| **RPC Provider** | Alchemy | Helius | Mempool.space |
-| **Balance Method** | `eth_getBalance` | `getBalance` (RPC) | UTXO sum (REST) |
-| **TX Broadcast** | `wallet.sendTransaction` | `sendAndConfirmTransaction` | Mempool REST `POST /tx` |
-| **Block Explorer** | Etherscan / Sepolia | Solana Explorer | Mempool.space |
-| **NFT Standard** | ERC-721 / ERC-1155 | Metaplex / cNFT | *N/A* |
-| **NFT API** | Alchemy NFT v3 | Helius DAS | *N/A* |
-| **Swap Protocol** | 0x Protocol v2 | — | — |
-| **Fiat On-Ramp** | Transak | Transak | Transak |
-| **Testnet** | Sepolia | Devnet | Testnet |
-
-### ✦ RPC & API Provider Map
-
-```mermaid
-graph LR
-    subgraph "Celestial Wallet"
-        W["Wallet Core"]
-    end
-
-    subgraph "Ethereum Infrastructure"
-        A1["Alchemy ETH Mainnet"]
-        A2["Alchemy ETH Sepolia"]
-        E1["Etherscan API"]
-        E2["Blockscout API"]
-    end
-
-    subgraph "Solana Infrastructure"
-        H1["Helius SOL Mainnet"]
-        H2["Helius SOL Devnet"]
-    end
-
-    subgraph "Bitcoin Infrastructure"
-        M1["Mempool.space Mainnet"]
-        M2["Mempool.space Testnet"]
-    end
-
-    subgraph "Market Data"
-        CG["CoinGecko API"]
-        BN["Binance REST + WS"]
-    end
-
-    subgraph "DeFi Protocols"
-        ZX["0x Protocol v2"]
-        TR["Transak On-Ramp"]
-    end
-
-    W --> A1 & A2
-    W --> H1 & H2
-    W --> M1 & M2
-    W --> CG
-    W --> ZX & TR
-    W --> E1 & E2
-
-    style W fill:#22c55e,stroke:#22c55e,color:#000
-```
-
----
-
-<br/>
-
-## 🔧 Tech Stack Deep Dive
-
-### ✦ Frontend Technologies
-
-| Technology | Version | Used In | Purpose |
-|:---|:---:|:---:|:---|
-| **React** | `19.x` | All | UI component framework with concurrent features |
-| **TypeScript** | `5.9+` / `6.0` | All | Static type safety across entire codebase |
-| **Tailwind CSS** | `v4` | All | Utility-first CSS with `@theme` design tokens |
-| **Vite** | `8.x` | Landing, Wallet | Lightning-fast HMR and optimized bundling |
-| **Next.js** | `15.x` | Perps | SSR, file-based routing, React Server Components |
-| **Framer Motion** | `12.x` | Landing | Declarative animations, layout transitions, gestures |
-| **GSAP** | `3.13` | Perps | ScrollTrigger animations, timeline sequencing |
-| **Lightweight Charts** | `5.2` | Perps | High-performance financial candlestick charting |
-| **Recharts** | `3.9` | Wallet | Portfolio history area charts |
-| **Lucide React** | latest | All | Consistent SVG icon library |
-| **React Router** | `7.x` | Landing | Client-side routing (SPA) |
-
-### ✦ Blockchain & Crypto Libraries
-
-| Library | Purpose | Chain |
-|:---|:---|:---:|
-| `ethers.js` v6 | EVM interactions, HD wallet derivation, transaction signing | ETH |
-| `@solana/web3.js` | Solana RPC client, keypair management, transaction building | SOL |
-| `bitcoinjs-lib` | Bitcoin transaction construction, P2WPKH outputs | BTC |
-| `bip32` + `bip39` | Hierarchical deterministic key derivation | BTC |
-| `ed25519-hd-key` | Ed25519 curve key derivation for Solana | SOL |
-| `tiny-secp256k1` | Secp256k1 elliptic curve operations | BTC |
-| `ecpair` | Bitcoin key pair creation from WIF | BTC |
-| `bs58` | Base58 encoding/decoding for Solana keys | SOL |
-| `@scure/bip39` | Mnemonic generation (landing page) | All |
-| `qrcode.react` | QR code generation for receive addresses | All |
-| Web Crypto API | AES-256-GCM encryption, PBKDF2 key derivation | — |
-
-### ✦ Validation & Developer Tooling
-
-| Tool | Purpose |
-|:---|:---|
-| `zod` v4 | Runtime schema validation (password rules, env parsing) |
-| `ESLint` v10 | Static analysis with React Hooks + Refresh plugins |
-| `PostCSS` | CSS processing pipeline (Perps) |
-| `vite-plugin-wasm` | WebAssembly support for `tiny-secp256k1` |
-| `vite-plugin-top-level-await` | Top-level await for WASM initialization |
-
----
-
-<br/>
-
-## 🚀 Getting Started
-
-### ✦ Prerequisites
-
-| Requirement | Minimum Version |
-|:---|:---|
-| **Node.js** | `20.x` LTS |
-| **npm** | `10.x` |
-| **Git** | `2.x` |
-| **Chrome** | Latest (for wallet extension) |
-
-### ✦ Installation
+### 1 · Run the trading app against the live testnets (fastest path)
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/DevanshBehl/DEX.git
-cd DEX
-
-# 2. Install root dependencies
+git clone https://github.com/DevanshBehl/DEX.git && cd DEX/celestial-perps
 npm install
-
-# 3. Install all subproject dependencies
-cd celestial-landing && npm install && cd ..
-cd celestial-react-wallet && npm install && cd ..
-cd celestial-perps && npm install && cd ..
+cp .env.example .env.local        # optional: add your own devnet RPC (see Configuration)
+npm run dev                       # → http://localhost:3000/trade
 ```
 
-### ✦ Running Each Project
+Connect a wallet on **Sepolia** (MetaMask, Phantom, or Celestial) or **Solana devnet** (Phantom), then click **Get test USDC**. You need a little Sepolia ETH or devnet SOL for fees; the USDC comes from the faucet. Orders are only filled while a keeper is running (see step 3).
 
-<table>
-<thead>
-<tr>
-<th>Project</th>
-<th>Command</th>
-<th>URL</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Celestial Landing</strong></td>
-<td>
+### 2 · Build & test the protocols
 
 ```bash
-cd celestial-landing
-npm run dev
+# EVM
+cd celestial-contracts && forge build && forge test
+
+# Solana (maths + LiteSVM suite with a test-only mock oracle)
+cd celestial-solana && pnpm install
+cargo test -p celestial-perps --lib     # every perp-math.md vector
+pnpm test                               # builds with `mock-oracle`, runs the TS suite
+pnpm test:chainlink                     # devnet build + real Chainlink accounts cloned into a local validator
 ```
 
-</td>
-<td><code>http://localhost:5173</code></td>
-</tr>
-<tr>
-<td><strong>Celestial Wallet</strong></td>
-<td>
+### 3 · Run the keeper
 
 ```bash
-cd celestial-react-wallet
-npm run dev
-# — or —
-npm run build  # then load dist/ in chrome://extensions
+cd celestial-keeper && pnpm install
+cp .env.example .env    # RPC URLs, EVM keeper key, Solana keypair PATH (never commit .env)
+pnpm keeper             # both chains · or keeper:evm / keeper:solana
 ```
 
-</td>
-<td><code>http://localhost:5174</code><br/>(or Chrome extension popup)</td>
-</tr>
-<tr>
-<td><strong>Celestial Perps</strong></td>
-<td>
+The keeper key must be whitelisted on-chain (`PerpEngine.isKeeper` / `Config.keepers`). See [`celestial-keeper/README.md`](celestial-keeper/README.md) for its jobs, JSON logs, alerts and troubleshooting.
+
+### 4 · Wallet extension & landing
 
 ```bash
-cd celestial-perps
-npm run dev
-```
-
-</td>
-<td><code>http://localhost:3000</code></td>
-</tr>
-</tbody>
-</table>
-
-### ✦ Running the Keeper
-
-The perps protocol needs a keeper to execute orders, liquidate and update funding on Sepolia and Solana devnet. It is one process for both chains:
-
-```bash
-cd celestial-keeper
-pnpm install
-cp .env.example .env   # RPC URLs, the EVM keeper key, the Solana keypair PATH
-pnpm keeper            # or keeper:evm / keeper:solana
-```
-
-See [`celestial-keeper/README.md`](celestial-keeper/README.md) for the jobs, logs, alerts and tests.
-
-### ✦ Loading the Chrome Extension
-
-```
-1. Run `npm run build` in celestial-react-wallet/
-2. Open Chrome → navigate to chrome://extensions
-3. Enable "Developer mode" (toggle in top-right)
-4. Click "Load unpacked"
-5. Select the celestial-react-wallet/dist/ folder
-6. The Celestial icon appears in your browser toolbar
-7. Visit the Landing page to create your wallet
+cd celestial-react-wallet && npm install && npm run build
+# chrome://extensions → Developer mode → Load unpacked → celestial-react-wallet/dist
+cd ../celestial-landing && npm install && npm run dev   # → http://localhost:5173 (create a wallet)
 ```
 
 ---
 
-<br/>
+## ⚙️ Configuration
 
-## 🔑 Environment Variables
+Every package ships an `.env.example`. **Never commit a real `.env` / `.env.local` / keypair**; they are gitignored.
 
-### `celestial-react-wallet/.env`
+| Package | File | Variables |
+|:--|:--|:--|
+| `celestial-perps` | `.env.local` | `NEXT_PUBLIC_SEPOLIA_RPC_URL`, `NEXT_PUBLIC_SOLANA_RPC_URL`, `NEXT_PUBLIC_MARKET_REST_URL`, `NEXT_PUBLIC_MARKET_WS_URL` |
+| `celestial-keeper` | `.env` | `SEPOLIA_RPC_URL`, `EVM_KEEPER_PRIVATE_KEY`, `SOLANA_RPC_URL`, `SOLANA_KEEPER_KEYPAIR_PATH`, `ENABLE_EVM`/`ENABLE_SOLANA`, interval + alert settings |
+| `celestial-contracts` | `.env` | `SEPOLIA_RPC_URL`, `PRIVATE_KEY`, `ETHERSCAN_API_KEY` (deploy/verify only) |
+| `celestial-react-wallet` | `.env` | Alchemy / Helius / Mempool / CoinGecko / Etherscan / 0x keys (`VITE_*`) |
 
-```env
-# ═══════════════════════════════════════════════
-#  CELESTIAL WALLET — Environment Configuration
-# ═══════════════════════════════════════════════
-
-# Ethereum RPC (Alchemy)
-VITE_ALCHEMY_ETH_URL=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
-VITE_ALCHEMY_SEPOLIA_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
-
-# Solana RPC (Helius)
-VITE_HELIUS_SOL_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
-VITE_HELIUS_DEVNET_URL=https://devnet.helius-rpc.com/?api-key=YOUR_KEY
-
-# Bitcoin API (Mempool.space)
-VITE_MEMPOOL_BTC_URL=https://mempool.space/api/address/
-VITE_MEMPOOL_TESTNET_URL=https://mempool.space/testnet/api/address/
-
-# Price Data (CoinGecko)
-VITE_COINGECKO_API_KEY=YOUR_COINGECKO_DEMO_KEY
-
-# Block Explorer (Etherscan)
-VITE_ETHERSCAN_API_KEY=YOUR_ETHERSCAN_KEY
-
-# DEX Aggregator (0x Protocol) — mainnet only
-VITE_ZEROEX_API_KEY=YOUR_0X_API_KEY
-```
-
-> **⚠️ Important:** Never commit real API keys. Copy `.env.example` to `.env` and fill in your own keys. The wallet functions in degraded mode (mock data) without keys configured.
+> [!IMPORTANT]
+> `NEXT_PUBLIC_*` values are **bundled into the browser**. Only put RPC keys there that are fine to expose (devnet-only, or domain-restricted in your provider's dashboard).
+> The public Solana devnet RPC rate-limits heavily, so a dedicated devnet endpoint (for example Helius) is strongly recommended for both the app and the keeper.
 
 ---
 
-<br/>
+## 🧪 Testing
 
-## 📜 Development Scripts
+Every layer is tested against the same maths vectors, and every end-to-end suite runs the **real keeper** against **real deployments of the protocol on local chains**.
 
-### ✦ Celestial Landing
+| Package | Command | What it proves | Result |
+|:--|:--|:--|:--|
+| `celestial-contracts` | `forge test` | Unit, fuzz and 6 invariants (pool solvency, reserve ≤ pool, payouts ≤ inflows) | 107 tests · 98–100% line coverage on the protocol |
+| `celestial-solana` | `cargo test -p celestial-perps --lib` | `math.rs` reproduces Ex 1–10 exactly; oracle decoding on a real devnet account | 20/20 |
+| | `pnpm test` | Every trading, LP, faucet, admin and cancel path on LiteSVM, with an invariant check after every scenario | 48/48 |
+| | `pnpm test:chainlink` | Real Chainlink store + feeds cloned from devnet: list markets, read prices, open and close | ✅ |
+| `celestial-keeper` | `pnpm test` | `math.ts` vectors + oracle, config and logging units | 18/18 |
+| | `pnpm test:local` | Anvil + local validator: fills within 5 s, batching, liquidation, funding, RPC outage with exactly-once recovery | 11/11 |
+| `celestial-perps` | `npm run test:math` | `perpMath.ts`: Ex 1–10 including both CLP columns, the UI order preview, unit parsing | 9/9 |
+| | `npm run test:chain` | The chain layer end-to-end on Anvil and a local validator, with the keeper: faucet → open → partial close → collateral changes → close → history → LP → cancel. Solana client state equals the on-chain `get_*` views | 19/19 |
+| `celestial-react-wallet` | `npm test` | NFT module: indexers, normalisation, spam filter, media, transfers, marketplaces | unit suite (`tests/nft`) |
 
-| Script | Command | Description |
-|:---|:---|:---|
-| **Dev Server** | `npm run dev` | Start Vite dev server with HMR |
-| **Production Build** | `npm run build` | TypeScript check + Vite production bundle |
-| **Preview** | `npm run preview` | Preview production build locally |
-| **Lint** | `npm run lint` | ESLint with React rules |
-
-### ✦ Celestial Wallet
-
-| Script | Command | Description |
-|:---|:---|:---|
-| **Dev Server** | `npm run dev` | Start Vite dev server (browser mode) |
-| **Extension Build** | `npm run build` | Build for Chrome extension loading |
-| **Preview** | `npm run preview` | Preview production build |
-| **Lint** | `npm run lint` | ESLint static analysis |
-
-### ✦ Celestial Perps
-
-| Script | Command | Description |
-|:---|:---|:---|
-| **Dev Server** | `npm run dev` | Start Next.js dev server |
-| **Production Build** | `npm run build` | Next.js optimized production build |
-| **Start** | `npm run start` | Serve production build |
-| **Lint** | `npm run lint` | Next.js built-in ESLint |
+The local suites need `forge build` (contracts artifacts) and `pnpm build:test` in `celestial-solana` (the mock-oracle program fixture).
 
 ---
 
-<br/>
+## 📈 Celestial Perps — the trading app
 
-## 🗺 Project Roadmap
+`celestial-perps/` is one UI for both chains. The chain is chosen by the connected wallet: an EVM wallet trades on Sepolia, a Solana wallet on devnet. SOL-USD data always comes from Solana.
 
-```mermaid
-gantt
-    title Celestial Ecosystem Roadmap
-    dateFormat YYYY-Q
-    axisFormat %Y Q%q
+| Area | What you get |
+|:--|:--|
+| **Trade form** | USDC collateral with balance and % buttons, a leverage slider (max read on-chain) and slippage presets. The order summary shows size, estimated entry, acceptable price, **liquidation price**, open fee, execution fee (plus the refundable position rent on Solana), funding per hour and remaining side capacity. It is computed with the same bigint maths as the chain. |
+| **Pre-flight checks** | Nothing is sent if it would cancel: minimum collateral, leverage bounds, capacity, balances, market enabled, not paused, fresh oracle. On Sepolia a USDC **approve** step (exact or max) appears first. |
+| **Order tracker** | *Confirm in wallet → submitted → pending keeper (elapsed seconds) → filled* (price, fee) or *cancelled* (a readable reason), with explorer links for the request and the fill. |
+| **Positions** | Size, collateral, entry, mark (oracle), liquidation price, net PnL (capped profit − close fee − funding), funding owed. **Close**, **Partial** (%), **+Coll**, **−Coll** (checked against leverage and liquidation). |
+| **Orders & history** | Pending requests with a **Cancel** button that enables after 60 s. History comes from on-chain events: orders, fills, cancellations with reasons, increases and decreases with realised PnL, liquidations, faucet and LP actions. |
+| **Market info** | Oracle price and age, gap to the Coinbase index, available liquidity, long/short OI with a skew bar, capacity per side, funding for each side, max leverage and fees. |
+| **`/earn`** | Pool AUM, CLP price, unreserved and reserved liquidity, your CLP, share and value, and a 7-day fee APR estimate. Add liquidity with a min-CLP guard. Remove with a min-USDC guard, a **cooldown countdown**, and a clear message when reserved liquidity blocks the withdrawal. |
+| **Guards & errors** | A Sepolia network guard (switch or add the chain; writes are blocked until then). Contract and program errors are decoded into plain language ("Price moved past your slippage limit", "Rejected in wallet", …). Slow or rate-limited RPCs show a retrying banner instead of hanging. |
 
-    section Wallet
-    Core Multi-Chain Wallet       :done, w1, 2025-Q1, 2025-Q2
-    NFT Gallery & Activity Feed   :done, w2, 2025-Q2, 2025-Q3
-    DApp Connector (EIP-6963)     :done, w3, 2025-Q3, 2025-Q3
-    Token Swaps (0x Protocol)     :done, w4, 2025-Q3, 2025-Q4
-    Fiat On-Ramp (Transak)        :done, w5, 2025-Q4, 2025-Q4
-    Hardware Wallet Support       :active, w6, 2026-Q1, 2026-Q3
-    Cross-Chain Bridging          :w7, 2026-Q3, 2027-Q1
-
-    section Perps
-    Landing Page + Terminal UI    :done, p1, 2025-Q3, 2025-Q4
-    Live Binance Data Feeds       :done, p2, 2025-Q4, 2025-Q4
-    Wallet Connect Integration    :done, p3, 2025-Q4, 2026-Q1
-    Smart Contract Integration    :active, p4, 2026-Q1, 2026-Q3
-    Live Order Matching Engine    :p5, 2026-Q3, 2027-Q1
-    Multi-Market Support          :p6, 2027-Q1, 2027-Q2
-
-    section Landing
-    Marketing Page                :done, l1, 2025-Q1, 2025-Q2
-    Onboarding Wizard             :done, l2, 2025-Q2, 2025-Q3
-    Vault Encryption Pipeline     :done, l3, 2025-Q2, 2025-Q3
-    Multi-Language Support        :l4, 2026-Q2, 2026-Q4
-```
+Chart and index price come from the Coinbase Exchange public API and are **display only**. Every fill uses the on-chain Chainlink price.
 
 ---
 
-<br/>
+## 💎 Celestial Wallet — browser extension
+
+`celestial-react-wallet/` is a Chrome **Manifest V3** extension (360 × 600 popup) with an encrypted vault created by Celestial Landing.
+
+| Feature | Details |
+|:--|:--|
+| Multi-chain HD accounts | One BIP-39 phrase → EVM `m/44'/60'/0'/0/i`, Solana `m/44'/501'/i'/0'`, Bitcoin native SegWit `m/84'/0'/0'/0/i`; unlimited derived accounts |
+| Portfolio & assets | Live balances and prices, token pages, ERC-20 and SPL tokens, activity history per chain |
+| Send / receive | Native and token transfers with fee estimation; QR receive |
+| NFTs | EVM (Alchemy) and Solana (Helius DAS) indexers, spam filtering, media resolution, detail pages, send flows, marketplace data (OpenSea, Magic Eden, Tensor) |
+| Swaps & on-ramp | 0x Protocol quotes (mainnet) · Transak fiat on-ramp |
+| dApp connector | EIP-1193 provider + **EIP-6963** discovery with connect and **`eth_sendTransaction` signing popups**; Solana **Wallet Standard** registration (connect/disconnect) |
+| Networks | Mainnet ↔ testnet toggle (Sepolia, Solana devnet, Bitcoin testnet) |
+
+---
+
+## 🚀 Celestial Landing — onboarding
+
+`celestial-landing/` is the marketing site plus a **4-step onboarding wizard**: detect the extension → set a password (Zod rules and a live strength meter) → generate and back up a 12-word BIP-39 phrase → encrypt and hand the vault to the extension.
+
+The vault is encrypted in the browser with the Web Crypto API: **PBKDF2-SHA256 (600,000 iterations, 16-byte salt) → AES-256-GCM (12-byte IV)**, with a non-extractable key. Only the encrypted `VaultBlob` is sent to the extension (`postMessage` → `chrome.storage.local`). The plaintext phrase never leaves the page.
+
+---
+
+## 🔌 Wallet support
+
+| Wallet | Sepolia (EVM) | Solana devnet |
+|:--|:--|:--|
+| **MetaMask** | 🟡 supported via EIP-6963 (connect + signing); live browser run pending | — |
+| **Phantom** | 🟡 supported (EVM provider); live browser run pending | ✅ **verified live**: faucet, open, partial and full close, history, add liquidity |
+| **Celestial Wallet** | 🟡 connect + `eth_sendTransaction` signing popup; live browser run pending | ⚠️ connect only: its `solana:signTransaction` / `signAndSendTransaction` are not implemented yet; the app says so clearly |
+
+Phantom tips: turn on **Testnet Mode** and select **Solana Devnet** / **Sepolia**, so the wallet previews transactions on the right network.
+
+---
+
+## 🛡 Security model
+
+**Protocol**
+- **Solvent by construction:** every position reserves its maximum profit (9 × collateral) in the pool when it opens. LPs can't withdraw reserved liquidity, and open interest is capped at 30% of AUM per side.
+- **Rounding always goes against the trader**, identically on both chains. Four implementations are cross-checked against the same worked examples.
+- **Oracle hygiene:** Chainlink answers are checked for staleness (per-chain max age), a positive value and a future-timestamp skew, and normalised to 8 decimals. Solana verifies the feed account's owner (the OCR2 store) and key.
+- **Two-step orders:** fills happen at the oracle price at execution time, bounded by the trader's `acceptablePrice`. Stale, slipped or over-cap orders cancel with a full refund. Unfilled orders are cancellable after 60 s.
+- **Solana account validation:** every PDA, mint and token program is checked. The AUM instructions require **every** market and its oracle in `Config` order, so leaving one out to game AUM fails.
+- **EVM:** Checks-Effects-Interactions, `ReentrancyGuard`, `SafeERC20`, `Ownable2Step`, parameter setters with bounds, and a global pause (which blocks increases; decreases, cancels and liquidations keep working).
+
+**Keeper**
+- It never double-executes: EVM skips non-pending ids, and a Solana request account is closed on execution.
+- It never pays for a transaction it knows will fail: EVM sends are gas-estimated first, and Solana sends run with preflight.
+- It only retries sends that failed before being accepted. Solana reads use `minContextSlot`, so a lagging RPC node can't show stale state.
+- Secrets are never logged. The Solana keypair is loaded by path inside the process only.
+
+**Wallet & app**
+- Non-custodial: keys live only in the encrypted vault. The trading app signs through the connected wallet and never holds a key.
+- Writes go through the **provider the user picked** (EIP-6963), never `window.ethereum` blindly. EVM writes are blocked until the wallet is on Sepolia.
+
+> Not yet done (planned for Phase 7/8): external audit, timelock + multisig admin, permissionless liquidations, low-latency pull oracle for front-running protection.
+
+---
+
+## 🗺 Roadmap & status
+
+| Phase | Scope | Status |
+|:--|:--|:--|
+| 0 | Cleanup, toolchains, shared protocol spec | ✅ 2026-09-22 |
+| 1 | Frontend data: Coinbase chart + Chainlink oracle price, order book removed | ✅ 2026-09-22 |
+| 2 | Mock USDC on both chains (+ faucets) | ✅ 2026-09-22 (Solana faucet in Phase 4) |
+| 3 | EVM contracts: tests, invariants, Sepolia deploy + verification | ✅ 2026-09-22 |
+| 4 | Solana Anchor program: tests, Chainlink integration, devnet deploy | ✅ 2026-09-25 |
+| 5 | Keeper service for both chains, live on testnets | ✅ 2026-09-25 |
+| 6 | Frontend integration: chain layer, trade flow, positions & history, `/earn`, faucet, network guard | 🟡 In progress: built and fully tested locally; Solana verified live in the browser; Sepolia browser run next |
+| 7 | Hardening & public testnet: cross-chain consistency test, longer fuzzing, Slither/clippy, internal security review, monitoring dashboard, user/LP guides | ⏳ |
+| 8 | Mainnet-only: limit/stop orders, pull oracle, real USDC + depeg handling, permissionless liquidations, audits, multisig + timelock | ⏳ |
+
+Detailed checklists, decisions and deviations for every phase: [`phases.md`](phases.md).
+
+---
+
+## 📚 Documentation index
+
+The full technical reference lives in [`docs/`](docs/README.md). Start with the [reading guide](docs/README.md).
+
+| Document | Contents |
+|:--|:--|
+| [`docs/architecture.md`](docs/architecture.md) | System context, the two-chain design, order lifecycle, money flow, app and wallet architecture |
+| [`docs/protocol-spec.md`](docs/protocol-spec.md) | Every protocol rule and parameter (with admin bounds), order checks, funding, liquidation, LP, fees, per-chain deviations |
+| [`docs/perp-math.md`](docs/perp-math.md) | Formulas, rounding rules and 10 worked examples (EVM and Solana CLP columns) |
+| [`docs/contracts.md`](docs/contracts.md) | EVM contracts: pool buckets, storage, execution, oracle adapter, events, errors, access control |
+| [`docs/solana-program.md`](docs/solana-program.md) | Anchor program: PDAs, instructions, the `remaining_accounts` market set, copy-then-commit execution, OCR2 decoding |
+| [`docs/keeper.md`](docs/keeper.md) | Keeper process, jobs, correctness guarantees, configuration, observability |
+| [`docs/frontend.md`](docs/frontend.md) | Trading app: `PerpsChain` layer, EVM/Solana implementations, hooks, order tracking, config |
+| [`docs/wallet.md`](docs/wallet.md) | Browser extension: components, vault crypto, derivation, dApp providers, known limitations |
+| [`docs/wallet-nfts.md`](docs/wallet-nfts.md) | Wallet NFT module: indexing, spam/media, sending all 7 standards, marketplace data, fixtures |
+| [`docs/landing.md`](docs/landing.md) | Onboarding flow and the encrypted vault handoff to the extension |
+| [`docs/operations.md`](docs/operations.md) | Addresses, deploy runbooks, routine admin tasks, RPC guidance, troubleshooting |
+| [`docs/testing.md`](docs/testing.md) | Test matrix, invariants, local end-to-end suites |
+| [`docs/security.md`](docs/security.md) | Trust boundaries, protections, known risks per component |
+| [`phases.md`](phases.md) | Build plan, status, and done-when criteria per phase |
+| [`deployments/`](deployments) | Addresses and transaction records for Sepolia and Solana devnet |
+
+---
 
 ## 🤝 Contributing
 
-### ✦ Development Conventions
-
 | Convention | Rule |
-|:---|:---|
-| **File naming** | `kebab-case` for files, `PascalCase` for components |
-| **Component style** | Functional components with hooks, no class components |
-| **State management** | Local state + `useReducer` for complex flows, no global store |
-| **Styling** | Tailwind CSS v4 utility classes, `@theme` tokens for design system |
-| **Type safety** | Strict TypeScript everywhere, explicit return types on exports |
-| **Error handling** | Graceful fallbacks, user-facing error messages, no silent failures |
-| **Commit style** | Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`) |
-
-### ✦ Branch Strategy
-
-```
-main              ← Production-ready, always stable
-├── dev           ← Integration branch
-│   ├── feat/*    ← New features
-│   ├── fix/*     ← Bug fixes
-│   └── chore/*   ← Maintenance tasks
-```
+|:--|:--|
+| **Spec first** | Change `docs/protocol-spec.md` / `docs/perp-math.md` first, then **both** chains. The four maths implementations must keep matching the worked examples. |
+| **Money is integer maths** | USD 1e6 · price 1e8 · funding 1e18 · bigint / `u128` / `uint256` everywhere; floats only for display |
+| **Branches** | One branch per phase (`phase-N`) merged into `main` with `--no-ff`; conventional commits (`feat:`, `fix:`, `docs:`, `chore:`) |
+| **Tests** | Every behaviour change comes with tests at the layer it touches, plus the local end-to-end suite |
+| **Secrets** | Never commit `.env`, `.env.local`, private keys or keypair JSON. Keypairs are passed to tools by **path** only |
+| **Style** | Strict TypeScript, functional React, Tailwind v4, no silent failures: every error reaches the user in plain language |
 
 ---
-
-<br/>
 
 ## 📄 License
 
-This project is licensed under the **ISC License** — see the [package.json](./package.json) for details.
-
----
-
-<br/>
+ISC — see [`package.json`](package.json).
 
 <p align="center">
   <sub>
-    Built with obsessive attention to detail by <a href="https://github.com/DevanshBehl"><strong>Devansh Behl</strong></a>
-    <br/>
-    <br/>
+    Built by <a href="https://github.com/DevanshBehl"><strong>Devansh Behl</strong></a><br/><br/>
     <img src="https://img.shields.io/badge/Self--Custody-Always-22c55e?style=for-the-badge&labelColor=000000"/>
-    <img src="https://img.shields.io/badge/Your_Keys-Your_Crypto-F7931A?style=for-the-badge&labelColor=000000"/>
-    <img src="https://img.shields.io/badge/Zero-Compromise-627EEA?style=for-the-badge&labelColor=000000"/>
+    <img src="https://img.shields.io/badge/Two_Chains-One_Protocol-627EEA?style=for-the-badge&labelColor=000000"/>
+    <img src="https://img.shields.io/badge/Testnet-Only-F7931A?style=for-the-badge&labelColor=000000"/>
   </sub>
 </p>

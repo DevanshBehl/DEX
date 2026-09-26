@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "types": ["node", "chrome", "vite/client"]
   },
-  "include": ["./**/*.ts", "../src/nft/types.ts", "../src/nft/media.ts", "../src/nft/spam.ts", "../src/nft/normalize.ts", "../src/nft/indexers/*.ts", "../src/nft/tx/*.ts", "../src/nft/marketplaces/*.ts", "../src/config/networks.ts"]
+  "include": ["./**/*.ts", "../src/nft/types.ts", "../src/nft/media.ts", "../src/nft/spam.ts", "../src/nft/normalize.ts", "../src/nft/indexers/*.ts", "../src/nft/tx/*.ts", "../src/nft/marketplaces/*.ts", "../src/config/networks.ts", "../src/solana/*.ts"]
 }

@@ -6,7 +6,7 @@ import { addRecentRecipient, readRecentRecipients } from '../../nft/storage';
 import { NFTImage } from './NFTImage';
 import { SlideToConfirm } from './SlideToConfirm';
 
-// ---- Send NFT flow (nft.md — Phase 3.2) -------------------------------------------------
+// ---- Send NFT flow (docs/wallet-nfts.md) -------------------------------------------------
 // form → review (live fee estimate + ownership check) → sending → success | error
 // The private key is only handed to the local transaction builder; it is never sent anywhere.
 

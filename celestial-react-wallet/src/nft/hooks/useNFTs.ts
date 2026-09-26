@@ -13,7 +13,7 @@ import {
 } from '../storage.ts';
 import type { NFTAsset, NFTChain, NFTWithVisibility } from '../types.ts';
 
-// ---- useNFTs (nft.md — Phase 1.6) ---------------------------------------------------
+// ---- useNFTs (docs/wallet-nfts.md) ---------------------------------------------------
 //
 // Stale-while-revalidate: cached NFTs render immediately, both chains refresh in
 // parallel, and a failure on one chain never blanks the other.

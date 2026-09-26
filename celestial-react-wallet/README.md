@@ -1,73 +1,39 @@
-# React + TypeScript + Vite
+# celestial-react-wallet — Celestial Wallet
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A non-custodial Chrome MV3 extension for **EVM**, **Solana** and **Bitcoin** from one BIP-39 seed. It injects EIP-1193 / EIP-6963 and Wallet Standard providers and has a full NFT module.
 
-Currently, two official plugins are available:
+Full documentation: [`docs/wallet.md`](../docs/wallet.md) · NFTs: [`docs/wallet-nfts.md`](../docs/wallet-nfts.md) · Onboarding: [`docs/landing.md`](../docs/landing.md) · Security notes: [`docs/security.md`](../docs/security.md#wallet-extension)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick start
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+# create .env with the VITE_* variables listed in docs/wallet.md#configuration
+# (they are bundled into the extension — use restricted keys)
+npm run build            # → dist/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Load `dist/` at `chrome://extensions` → Developer mode → **Load unpacked**, then create a wallet on the onboarding site (`celestial-landing`, route `/onboarding`).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Script | Purpose |
+|---|---|
+| `npm run dev` | Vite dev server (popup UI only; extension APIs are stubbed) |
+| `npm run build` | Type-check and build the extension into `dist/` |
+| `npm test` | NFT module unit tests (`node:test`) |
+| `npm run typecheck:tests` / `typecheck:scripts` | Type-check tests and scripts |
+| `npm run fixtures:solana -- --owner <address>` | Mint the Solana devnet NFT fixtures |
+| `npm run lint` | ESLint |
+
+## Layout
+
+```
+public/          manifest.json · background.js (service worker) · content.js · inpage.js (providers)
+src/App.tsx      popup UI
+src/nft/         NFT indexers, normalisers, spam, media, transfers, marketplaces
+src/components/  popup components (nft/ for the NFT UI)
+src/utils/       derivation, balances, tokens, transactions, history, swap, on-ramp
+tests/nft/       unit tests with recorded indexer payloads
+scripts/         devnet NFT fixture minting (scripts/.keys/ is gitignored)
 ```

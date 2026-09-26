@@ -1,6 +1,6 @@
 import type { NFTAsset, NFTChain } from '../types.ts';
 
-// ---- Marketplace provider abstraction (nft.md — Phase 4.1) --------------------------
+// ---- Marketplace provider abstraction (docs/wallet-nfts.md) --------------------------
 //
 // Providers are READ-ONLY in Phase 4: they fetch floor prices and collection stats.
 // Phase 5 extends this interface with `build*Tx` methods that return *unsigned*

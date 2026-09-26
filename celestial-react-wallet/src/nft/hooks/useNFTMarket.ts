@@ -3,7 +3,7 @@ import { fetchMarketData } from '../marketplaces/index.ts';
 import type { NFTMarketData } from '../marketplaces/types.ts';
 import type { NFTAsset, NFTChain } from '../types.ts';
 
-// ---- useNFTMarket (nft.md — Phase 4.3) ----------------------------------------------
+// ---- useNFTMarket (docs/wallet-nfts.md) ----------------------------------------------
 //
 // Floor prices for the NFTs the user actually holds. Read-only, best-effort and always
 // secondary to ownership data: market lookups never block or blank the grid.

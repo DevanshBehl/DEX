@@ -1,13 +1,11 @@
-// Protocol constants — mirrors docs/protocol-spec.md. Change the spec first.
+// UI defaults. Protocol parameters (max leverage, fees, margins, execution fee…) are read from
+// the chain at runtime (lib/chains) — docs/protocol-spec.md is the source of truth.
 
-import type { MarketId } from "@/lib/marketData";
-
-export const MAX_LEVERAGE = 20;
-export const DEFAULT_LEVERAGE = 10;
+export const MAX_LEVERAGE = 20; // fallback before params load
+export const DEFAULT_LEVERAGE = 5;
 export const LEV_PRESETS = [2, 5, 10, 15, 20];
-export const OPEN_FEE_BPS = 6; // 0.06% of size (new engine)
+export const OPEN_FEE_BPS = 6; // fallback before params load
 
-// ── Legacy CelestialVault (Sepolia) — what "Execute" still calls until Phase 6 ──
-export const LEGACY_VAULT_ADDRESS = "0x786f4037924772c79F39D49C302dC3D3eDd14b04";
-export const LEGACY_VAULT_FEE_BPS = 10; // 0.1% of collateral, taken on open
-export const LEGACY_VAULT_MARKETS: MarketId[] = ["ETH-USD", "BTC-USD"];
+/** Worst-price tolerance on market orders (acceptablePrice = execution price ± slippage). */
+export const SLIPPAGE_PRESETS_BPS = [30, 50, 100];
+export const DEFAULT_SLIPPAGE_BPS = 50;

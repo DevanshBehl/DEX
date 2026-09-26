@@ -300,13 +300,18 @@ export default function Page() {
             </div>
           </div>
           <div className="hidden items-center gap-8 md:flex">
-            {["Trade", "Markets", "Docs"].map((l) => (
+            {[
+              { label: "Trade", href: "/trade" },
+              { label: "Earn", href: "/earn" },
+              { label: "Markets", href: "#" },
+              { label: "Docs", href: "#" },
+            ].map((l) => (
               <a
-                key={l}
-                href="#"
+                key={l.label}
+                href={l.href}
                 className="text-sm font-medium text-[var(--ink-2)] transition-colors hover:text-white"
               >
-                {l}
+                {l.label}
               </a>
             ))}
           </div>

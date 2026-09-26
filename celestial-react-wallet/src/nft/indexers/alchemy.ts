@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { normalizeAlchemyNFT, type AlchemyOwnedNft } from '../normalize.ts';
 import type { NFTAsset } from '../types.ts';
 
-// ---- EVM ownership via Alchemy NFT API v3 (nft.md — Phase 1.3) --------------------
+// ---- EVM ownership via Alchemy NFT API v3 (docs/wallet-nfts.md) --------------------
 
 const PAGE_SIZE = 100;
 const MAX_PAGES = 20; // 2,000 NFTs — protects the popup from pathological wallets

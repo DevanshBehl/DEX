@@ -3,8 +3,9 @@
 import { Info } from "lucide-react";
 import { fmtAgo, fmtPct, fmtPrice, fmtUsdCompact } from "@/lib/format";
 import type { MarketId } from "@/lib/marketData";
-import type { OracleStatus } from "@/hooks/useOraclePrice";
 import { PANEL } from "./ui";
+
+export type OracleStatus = "loading" | "live" | "stale" | "error";
 
 export type MarketInfoData = {
   oraclePrice: number | null;
@@ -19,6 +20,9 @@ export type MarketInfoData = {
   fundingShortPerHour: number | null;
   maxLeverage: number;
   openFeeBps: number;
+  /** which chain these numbers come from */
+  chainLabel: string;
+  oracleIssue?: string;
 };
 
 const usd = (v: number | null) => (v === null ? "—" : fmtUsdCompact(v));
@@ -61,12 +65,12 @@ export function MarketInfo({
   const longShare = hasOi && oiTotal > 0 ? (data.longOiUsd! / oiTotal) * 100 : 50;
 
   const oracleLine =
-    oracleStatus === "unavailable"
-      ? "No Sepolia oracle for this market"
-      : oracleStatus === "error"
-        ? "Oracle unreachable"
+    oracleStatus === "error"
+      ? "Oracle unreachable"
+      : oracleStatus === "stale"
+        ? `Chainlink · ${data.oracleIssue ?? "stale"} — orders would cancel`
         : oracleUpdatedAt !== null
-          ? `Chainlink · updated ${fmtAgo(oracleUpdatedAt)}${oracleStatus === "stale" ? " · stale" : ""}`
+          ? `Chainlink (${data.chainLabel}) · updated ${fmtAgo(oracleUpdatedAt)}`
           : "Chainlink · loading…";
 
   return (
@@ -133,7 +137,7 @@ export function MarketInfo({
       {data.poolLiquidityUsd === null && (
         <div className="flex shrink-0 items-center gap-1.5 border-t border-white/5 px-3 py-2 text-[10px] text-[#666]">
           <Info className="h-3 w-3 shrink-0" />
-          Pool, OI and funding are available after the pool launches
+          Loading pool data from {data.chainLabel}…
         </div>
       )}
     </div>

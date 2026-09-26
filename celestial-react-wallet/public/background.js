@@ -180,7 +180,7 @@ async function handleMessage(message) {
     // ---- Solana Requests (from content script) ------------------------------
     
     case 'SOLANA_REQUEST': {
-      const { method, origin } = payload || {};
+      const { method, origin, params } = payload || {};
       if (method === 'connect') {
         // Mirror the EVM eth_requestAccounts flow: open the approval popup (which
         // also lets the user unlock) instead of hard-failing when the wallet is
@@ -189,21 +189,27 @@ async function handleMessage(message) {
         return new Promise((resolve) => {
           const reqId = nextReqId++;
           pendingConnectionRequests.set(reqId.toString(), { resolve, origin, type: 'sol' });
-
-          chrome.runtime.sendMessage({ type: 'INCOMING_CONNECT', id: reqId, origin }, (response) => {
-            if (chrome.runtime.lastError || !response || !response.received) {
-              chrome.windows.create({
-                url: `index.html?request=connect&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
-                type: 'popup',
-                width: 360,
-                height: 600,
-                focused: true
-              });
-            }
-          });
+          openApproval('connect', 'INCOMING_CONNECT', reqId, origin);
         });
       }
-      return { success: false, error: 'Unknown method' };
+      if (SOLANA_SIGN_METHODS.includes(method)) {
+        return openSolanaSignRequest(method, params || {}, origin);
+      }
+      return { error: { code: 4200, message: `Celestial does not support the Solana method: ${method}` } };
+    }
+
+    // ---- Solana signature approvals (from React Popup) ----------------------
+
+    case 'SOL_SIGN_RESOLVED': {
+      const { id, result } = payload;
+      settleSolanaRequest(id, { result });
+      return { success: true };
+    }
+
+    case 'SOL_SIGN_REJECTED': {
+      const { id, message } = payload;
+      settleSolanaRequest(id, { error: { code: 4001, message: message || 'User rejected the request.' } });
+      return { success: true };
     }
 
     // ---- Account addresses pushed from popup after unlock -------------------
@@ -263,17 +269,8 @@ async function handleMessage(message) {
     }
 
     case 'NETWORK_CHANGE': {
-      const { isTestnet, rpcUrl } = payload;
-      chrome.storage.local.set({ isTestnet, rpcUrl }, () => {
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach(tab => {
-            chrome.tabs.sendMessage(tab.id, {
-              type: 'CELESTIAL_NETWORK_CHANGED',
-              chainId: isTestnet ? '0xaa36a7' : '0x1'
-            }).catch(() => {});
-          });
-        });
-      });
+      const { isTestnet, rpcUrl, rpcUrls } = payload;
+      await setNetwork(isTestnet, rpcUrl, rpcUrls);
       return { success: true };
     }
 
@@ -281,6 +278,80 @@ async function handleMessage(message) {
       return { success: false, error: `Unknown message type: ${type}` };
   }
 }
+
+// ---- Approval popups & network state ---------------------------------------
+
+const EVM_CHAINS = { '0x1': 'mainnet', '0xaa36a7': 'sepolia' };
+
+/** Show a request in the open popup, or open the approval window. */
+function openApproval(kind, incomingType, reqId, origin, onWindow) {
+  chrome.runtime.sendMessage({ type: incomingType, id: reqId, origin }, (response) => {
+    if (chrome.runtime.lastError || !response || !response.received) {
+      chrome.windows.create({
+        url: `index.html?request=${kind}&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
+        type: 'popup',
+        width: 360,
+        height: 600,
+        focused: true
+      }, (win) => onWindow?.(win?.id));
+    }
+  });
+}
+
+/** Persist the EVM network and tell every tab (chainChanged). */
+async function setNetwork(isTestnet, rpcUrl, rpcUrls) {
+  const update = { isTestnet: !!isTestnet };
+  if (rpcUrl) update.rpcUrl = rpcUrl;
+  if (rpcUrls) update.rpcUrls = rpcUrls;
+  await chrome.storage.local.set(update);
+  const chainId = isTestnet ? '0xaa36a7' : '0x1';
+  const tabs = await chrome.tabs.query({});
+  tabs.forEach((tab) => {
+    chrome.tabs.sendMessage(tab.id, { type: 'CELESTIAL_NETWORK_CHANGED', chainId }).catch(() => {});
+  });
+}
+
+// ---- Solana signing requests --------------------------------------------------
+// The popup decodes, simulates and signs (keys live there after unlock); the worker only queues
+// the request, stores its payload under `solreq_<id>` and relays the answer to the page.
+
+const SOLANA_SIGN_METHODS = ['signTransaction', 'signAllTransactions', 'signAndSendTransaction', 'signMessage'];
+const pendingSolanaRequests = new Map(); // id → { resolve, windowId }
+
+function openSolanaSignRequest(method, params, origin) {
+  const { account, chain, transactions, message, options } = params;
+  if (typeof account !== 'string' || !account) {
+    return { error: { code: 4100, message: 'Connect Celestial Wallet before requesting a signature.' } };
+  }
+  if (method === 'signMessage' ? typeof message !== 'string' : !Array.isArray(transactions) || transactions.length === 0) {
+    return { error: { code: -32602, message: 'Nothing to sign in this request.' } };
+  }
+  return new Promise((resolve) => {
+    const reqId = String(nextReqId++);
+    pendingSolanaRequests.set(reqId, { resolve, windowId: null });
+    chrome.storage.local.set({ [`solreq_${reqId}`]: { method, account, chain, transactions, message, options, origin } }, () => {
+      openApproval('sign-sol', 'INCOMING_SIGN_SOL', reqId, origin, (windowId) => {
+        const req = pendingSolanaRequests.get(reqId);
+        if (req) req.windowId = windowId ?? null;
+      });
+    });
+  });
+}
+
+function settleSolanaRequest(id, response) {
+  const req = pendingSolanaRequests.get(String(id));
+  if (!req) return;
+  pendingSolanaRequests.delete(String(id));
+  chrome.storage.local.remove(`solreq_${id}`);
+  req.resolve(response);
+}
+
+// Closing the approval window without answering is a rejection, not a 5-minute hang.
+chrome.windows.onRemoved.addListener((windowId) => {
+  for (const [id, req] of pendingSolanaRequests) {
+    if (req.windowId === windowId) settleSolanaRequest(id, { error: { code: 4001, message: 'User rejected the request.' } });
+  }
+});
 
 // ---- EIP-1193 Web3 Request Handler ------------------------------------------
 
@@ -316,17 +387,7 @@ async function handleWeb3Request(method, params, origin) {
           type: 'eth'
         });
 
-        chrome.runtime.sendMessage({ type: 'INCOMING_CONNECT', id: reqId, origin }, (response) => {
-          if (chrome.runtime.lastError || !response || !response.received) {
-            chrome.windows.create({
-              url: `index.html?request=connect&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
-              type: 'popup',
-              width: 360,
-              height: 600,
-              focused: true
-            });
-          }
-        });
+        openApproval('connect', 'INCOMING_CONNECT', reqId, origin);
       });
     }
 
@@ -360,17 +421,7 @@ async function handleWeb3Request(method, params, origin) {
         
         // Store payload for the popup to read
         chrome.storage.local.set({ [`tx_${reqId}`]: txPayload }, () => {
-          chrome.runtime.sendMessage({ type: 'INCOMING_SIGN_TX', id: reqId, origin }, (response) => {
-            if (chrome.runtime.lastError || !response || !response.received) {
-              chrome.windows.create({
-                url: `index.html?request=sign-tx&id=${reqId}&origin=${encodeURIComponent(origin || '')}`,
-                type: 'popup',
-                width: 360,
-                height: 600,
-                focused: true
-              });
-            }
-          });
+          openApproval('sign-tx', 'INCOMING_SIGN_TX', reqId, origin);
         });
       });
     }
@@ -380,10 +431,23 @@ async function handleWeb3Request(method, params, origin) {
       return { result: result.isTestnet ? '11155111' : '1' };
     }
 
-    case 'wallet_switchEthereumChain':
-    case 'wallet_addEthereumChain': {
-      // Return null on success per EIP-3326. We handle switching internally.
+    case 'wallet_switchEthereumChain': {
+      // EIP-3326: switch between the two networks Celestial supports; 4902 for anything else.
+      const chainId = String(params?.[0]?.chainId || '').toLowerCase();
+      if (!(chainId in EVM_CHAINS)) {
+        return { error: { code: 4902, message: `Celestial does not support chain ${chainId || '(none)'}. Use Ethereum mainnet or Sepolia.` } };
+      }
+      const { rpcUrls } = await chrome.storage.local.get('rpcUrls');
+      const isTestnet = EVM_CHAINS[chainId] === 'sepolia';
+      await setNetwork(isTestnet, rpcUrls?.[EVM_CHAINS[chainId]]);
       return { result: null };
+    }
+
+    case 'wallet_addEthereumChain': {
+      // EIP-3085: the two built-in chains are already "added"; custom chains are not supported.
+      const chainId = String(params?.[0]?.chainId || '').toLowerCase();
+      if (chainId in EVM_CHAINS) return { result: null };
+      return { error: { code: 4200, message: 'Celestial does not support adding custom networks.' } };
     }
 
     default: {

@@ -31,7 +31,24 @@
   // ---- Request ID tracking --------------------------------------------------
 
   let _requestId = 0;
-  const _pendingRequests = new Map(); // id → { resolve, reject }
+  const _pendingRequests = new Map(); // id → { resolve, reject, timer }
+  const REQUEST_TIMEOUT_MS = 300_000; // 5 minutes: approvals wait for the user
+
+  function _track(id, resolve, reject, onTimeout) {
+    const timer = setTimeout(() => {
+      if (_pendingRequests.delete(id)) onTimeout();
+    }, REQUEST_TIMEOUT_MS);
+    _pendingRequests.set(id, { resolve, reject, timer });
+  }
+
+  /** Remove a pending request and cancel its timeout; undefined if unknown. */
+  function _takePending(id) {
+    const pending = _pendingRequests.get(id);
+    if (!pending) return undefined;
+    _pendingRequests.delete(id);
+    clearTimeout(pending.timer);
+    return pending;
+  }
 
   // ---- Event Emitter --------------------------------------------------------
 
@@ -131,14 +148,26 @@
         case 'eth_signTypedData':
         case 'wallet_switchEthereumChain':
         case 'wallet_addEthereumChain':
+          return this._sendToBackground(method, params);
+
+        // Read-only JSON-RPC, proxied to the network RPC by the background.
         case 'eth_getBalance':
         case 'eth_call':
         case 'eth_estimateGas':
         case 'eth_blockNumber':
         case 'eth_getTransactionReceipt':
         case 'eth_getTransactionByHash':
+        case 'eth_getTransactionCount':
+        case 'eth_getBlockByNumber':
+        case 'eth_getBlockByHash':
+        case 'eth_getLogs':
+        case 'eth_getStorageAt':
+        case 'eth_feeHistory':
+        case 'eth_maxPriorityFeePerGas':
         case 'eth_gasPrice':
         case 'eth_getCode':
+        case 'eth_syncing':
+        case 'web3_clientVersion':
           return this._sendToBackground(method, params);
 
         default:
@@ -188,7 +217,8 @@
     _sendToBackground(method, params) {
       return new Promise((resolve, reject) => {
         const id = ++_requestId;
-        _pendingRequests.set(id, { resolve, reject });
+        // Some methods (signing) wait for the user in the approval popup.
+        _track(id, resolve, reject, () => reject(this._rpcError(-32603, 'Request timed out')));
 
         window.postMessage(
           {
@@ -199,14 +229,6 @@
           },
           '*',
         );
-
-        // Timeout after 5 minutes (some methods like tx signing take time)
-        setTimeout(() => {
-          if (_pendingRequests.has(id)) {
-            _pendingRequests.delete(id);
-            reject(this._rpcError(-32603, 'Request timed out'));
-          }
-        }, 300_000);
       });
     }
 
@@ -219,9 +241,8 @@
     // ---- Handle responses from content script --------------------------------
 
     _handleResponse(id, error, result) {
-      const pending = _pendingRequests.get(id);
+      const pending = _takePending(id);
       if (!pending) return;
-      _pendingRequests.delete(id);
 
       if (error) {
         const err = new Error(error.message || 'Unknown error');
@@ -241,7 +262,61 @@
     }
   }
 
-  // ---- CelestialSolanaProvider (Solana Wallet Adapter) ----------------------
+  // ---- Solana encoding helpers ----------------------------------------------
+
+  const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+  function base58Decode(str) {
+    const bytes = [0];
+    for (const ch of str) {
+      let carry = B58.indexOf(ch);
+      if (carry < 0) throw new Error('Invalid base58 string');
+      for (let i = 0; i < bytes.length; i++) {
+        carry += bytes[i] * 58;
+        bytes[i] = carry & 0xff;
+        carry >>= 8;
+      }
+      while (carry > 0) {
+        bytes.push(carry & 0xff);
+        carry >>= 8;
+      }
+    }
+    for (let i = 0; i < str.length && str[i] === '1'; i++) bytes.push(0);
+    return new Uint8Array(bytes.reverse());
+  }
+
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
+  function fromBase64(b64) {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  /** Wire bytes of a web3.js Transaction / VersionedTransaction (or raw bytes). */
+  function serializeTx(tx) {
+    if (tx instanceof Uint8Array) return tx;
+    // Legacy Transaction needs the flags (it is unsigned); VersionedTransaction ignores them.
+    return tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+  }
+
+  /** Rebuild the dApp's own transaction class from signed bytes. */
+  function rebuildTx(original, bytes) {
+    const C = original && original.constructor;
+    if (C && typeof C.deserialize === 'function') return C.deserialize(bytes); // VersionedTransaction
+    if (C && typeof C.from === 'function') return C.from(bytes); // legacy Transaction
+    return bytes;
+  }
+
+  const SOLANA_CHAINS = ['solana:mainnet', 'solana:devnet', 'solana:testnet'];
+  const SOLANA_FEATURES = ['solana:signAndSendTransaction', 'solana:signTransaction', 'solana:signMessage'];
+
+  // ---- CelestialSolanaProvider (window.solana / window.phantom.solana) ------
 
   class CelestialSolanaProvider extends EventEmitter {
     constructor() {
@@ -255,13 +330,18 @@
     async connect() {
       const response = await this._sendToBackground('connect', {});
       if (response && response.publicKey) {
+        const address = response.publicKey;
+        const bytes = base58Decode(address);
         this.publicKey = {
-          toString: () => response.publicKey,
-          toBase58: () => response.publicKey,
-          toBytes: () => new Uint8Array(), // stub
+          toString: () => address,
+          toBase58: () => address,
+          toBytes: () => bytes.slice(),
+          toJSON: () => address,
+          equals: (other) => !!other && String(other.toBase58 ? other.toBase58() : other) === address,
         };
         this.isConnected = true;
         this.emit('connect', this.publicKey);
+        this.emit('change', { accounts: solanaWalletStandard.accounts });
         return { publicKey: this.publicKey };
       }
       throw new Error('Connection failed');
@@ -271,12 +351,49 @@
       this.publicKey = null;
       this.isConnected = false;
       this.emit('disconnect');
+      this.emit('change', { accounts: [] });
+    }
+
+    async signTransaction(transaction) {
+      const [signed] = await this.signAllTransactions([transaction]);
+      return signed;
+    }
+
+    async signAllTransactions(transactions) {
+      const result = await this._request('signAllTransactions', {
+        transactions: transactions.map((tx) => toBase64(serializeTx(tx))),
+      });
+      return result.transactions.map((b64, i) => rebuildTx(transactions[i], fromBase64(b64)));
+    }
+
+    async signAndSendTransaction(transaction, options) {
+      const result = await this._request('signAndSendTransaction', {
+        transactions: [toBase64(serializeTx(transaction))],
+        options,
+      });
+      return { signature: result.signature, publicKey: this.publicKey.toBase58() };
+    }
+
+    async signMessage(message) {
+      const result = await this._request('signMessage', { message: toBase64(message) });
+      return { signature: fromBase64(result.signature), publicKey: this.publicKey };
+    }
+
+    /** Signing request for the connected account (or the account a Wallet Standard input names). */
+    _request(method, params) {
+      const account = params.account || (this.publicKey && this.publicKey.toBase58());
+      if (!account) {
+        const err = new Error('Connect Celestial Wallet first.');
+        err.code = 4100;
+        return Promise.reject(err);
+      }
+      return this._sendToBackground(method, { ...params, account });
     }
 
     _sendToBackground(method, params) {
       return new Promise((resolve, reject) => {
         const id = ++_requestId;
-        _pendingRequests.set(id, { resolve, reject });
+        _track(id, resolve, reject, () => reject(new Error('Request timed out')));
 
         window.postMessage(
           {
@@ -287,13 +404,6 @@
           },
           '*',
         );
-
-        setTimeout(() => {
-          if (_pendingRequests.has(id)) {
-            _pendingRequests.delete(id);
-            reject(new Error('Request timed out'));
-          }
-        }, 300_000);
       });
     }
   }
@@ -324,12 +434,13 @@
     }
 
     if (event.data?.target === 'celestial-inpage' && event.data?.type === 'CELESTIAL_SOLANA_RESPONSE') {
-      const pending = _pendingRequests.get(event.data.id);
+      const pending = _takePending(event.data.id);
       if (!pending) return;
-      _pendingRequests.delete(event.data.id);
-      
+
       if (event.data.error) {
-        pending.reject(new Error(event.data.error.message || 'Unknown error'));
+        const err = new Error(event.data.error.message || 'Unknown error');
+        if (event.data.error.code !== undefined) err.code = event.data.error.code;
+        pending.reject(err);
       } else {
         pending.resolve(event.data.result);
       }
@@ -411,26 +522,24 @@
 
   // ---- Wallet Standard: Solana Provider Discovery ---------------------------
 
+  const standardAccount = (address) => ({
+    address,
+    publicKey: base58Decode(address),
+    chains: SOLANA_CHAINS,
+    features: SOLANA_FEATURES,
+  });
+
   const solanaWalletStandard = {
     version: '1.0.0',
     name: 'Celestial Wallet',
     icon: providerInfo.icon,
-    chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+    chains: SOLANA_CHAINS,
     features: {
       'standard:connect': {
         version: '1.0.0',
         connect: async () => {
           const res = await solanaProvider.connect();
-          return {
-            accounts: [
-              {
-                address: res.publicKey.toString(),
-                publicKey: new Uint8Array(32), // standard expects 32 bytes
-                chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
-                features: ['solana:signAndSendTransaction', 'solana:signTransaction', 'solana:signMessage'],
-              },
-            ],
-          };
+          return { accounts: [standardAccount(res.publicKey.toBase58())] };
         },
       },
       'standard:disconnect': {
@@ -441,33 +550,58 @@
       },
       'standard:events': {
         version: '1.0.0',
-        on: (event, listener) => solanaProvider.on(event, listener),
-      },
-      'solana:signAndSendTransaction': {
-        version: '1.0.0',
-        supportedTransactionVersions: ['legacy', 0],
-        signAndSendTransaction: async () => {}, // Phase 3 stub
+        on: (event, listener) => {
+          solanaProvider.on(event, listener);
+          return () => solanaProvider.removeListener(event, listener);
+        },
       },
       'solana:signTransaction': {
         version: '1.0.0',
         supportedTransactionVersions: ['legacy', 0],
-        signTransaction: async () => {}, // Phase 3 stub
+        // All inputs are approved together in one popup (they share the first input's account).
+        signTransaction: async (...inputs) => {
+          const result = await solanaProvider._request('signAllTransactions', {
+            account: inputs[0] && inputs[0].account && inputs[0].account.address,
+            chain: inputs[0] && inputs[0].chain,
+            transactions: inputs.map((input) => toBase64(input.transaction)),
+          });
+          return result.transactions.map((b64) => ({ signedTransaction: fromBase64(b64) }));
+        },
+      },
+      'solana:signAndSendTransaction': {
+        version: '1.0.0',
+        supportedTransactionVersions: ['legacy', 0],
+        signAndSendTransaction: async (...inputs) => {
+          const outputs = [];
+          for (const input of inputs) {
+            const result = await solanaProvider._request('signAndSendTransaction', {
+              account: input.account && input.account.address,
+              chain: input.chain,
+              transactions: [toBase64(input.transaction)],
+              options: input.options,
+            });
+            outputs.push({ signature: base58Decode(result.signature) });
+          }
+          return outputs;
+        },
       },
       'solana:signMessage': {
         version: '1.0.0',
-        signMessage: async () => {}, // Phase 3 stub
+        signMessage: async (...inputs) => {
+          const outputs = [];
+          for (const input of inputs) {
+            const result = await solanaProvider._request('signMessage', {
+              account: input.account && input.account.address,
+              message: toBase64(input.message),
+            });
+            outputs.push({ signedMessage: input.message, signature: fromBase64(result.signature) });
+          }
+          return outputs;
+        },
       },
     },
     get accounts() {
-      if (solanaProvider.publicKey) {
-        return [{
-          address: solanaProvider.publicKey.toString(),
-          publicKey: new Uint8Array(32),
-          chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
-          features: ['solana:signAndSendTransaction', 'solana:signTransaction', 'solana:signMessage'],
-        }];
-      }
-      return [];
+      return solanaProvider.publicKey ? [standardAccount(solanaProvider.publicKey.toBase58())] : [];
     },
   };
 

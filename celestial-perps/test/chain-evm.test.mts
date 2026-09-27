@@ -47,6 +47,7 @@ describe("EVM chain layer (Anvil + keeper)", { timeout: 300_000 }, () => {
       deployBlock: 0,
       explorer: "http://localhost",
       pollMs: 300,
+      keepers: [new Wallet(ANVIL_KEYS[1]).address],
     };
     const traderWallet = new NonceManager(new Wallet(ANVIL_KEYS[2], env.provider));
     const lpWallet = new NonceManager(new Wallet(ANVIL_KEYS[3], env.provider));
@@ -214,6 +215,12 @@ describe("EVM chain layer (Anvil + keeper)", { timeout: 300_000 }, () => {
     const res = await trader.requestIncrease({ market: "ETH-USD", isLong: false, collateralDelta: 100n * USD, sizeDelta: 500n * USD, acceptablePrice: 1n });
     const [pending] = await reader.getPendingRequests(traderAddr);
     assert.equal(pending.id, res.requestId);
+    const ops = await reader.getOpsStatus();
+    assert.equal(ops.pendingCount, 1, "status page sees the stuck request");
+    assert.equal(ops.oldestPendingAt, pending.createdAt);
+    assert.equal(ops.pendingComplete, true);
+    assert.equal(ops.paused, false);
+    assert.deepEqual(ops.keepers.map((k) => [k.active, k.balance > 0n]), [[true, true]]);
     assert.equal(pending.kind, "increase");
     assert.equal(pending.cancellableAt - pending.createdAt, 60);
     await assert.rejects(trader.cancel(res.requestId!), (e: Error & { code?: string }) => e.code === "RequestNotExpired");

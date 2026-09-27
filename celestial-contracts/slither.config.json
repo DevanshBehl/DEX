@@ -1,0 +1,5 @@
+{
+  "filter_paths": "lib/|test/|script/|src/legacy/|src/test-nfts/",
+  "exclude_dependencies": true,
+  "foundry_compile_all": true
+}

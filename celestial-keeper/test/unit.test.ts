@@ -6,7 +6,8 @@ import { PublicKey } from "@solana/web3.js";
 
 import { ConfigError, loadConfig } from "../src/config.ts";
 import { createLogger, errMsg } from "../src/log.ts";
-import { backoffMs } from "../src/retry.ts";
+import { Alerter, alertIfStuck } from "../src/health.ts";
+import { backoffMs, runLoop } from "../src/retry.ts";
 import { CHAINLINK_STORE, decodeChainlink, normalise, readOraclePrice } from "../src/solana/oracle.ts";
 
 // Real devnet SOL-USD feed account captured 2026-09-22 (same bytes as oracle.rs's test).
@@ -60,6 +61,8 @@ describe("config", () => {
     assert.ok(c.evm!.startBlock > 0, "deploy block recorded in deployments/sepolia.json");
     assert.equal(c.intervals.executorMs, 1_500);
     assert.equal(c.intervals.fundingMs, 3_600_000);
+    assert.equal(c.evm!.rpcTimeoutMs, 10_000, "RPC requests time out instead of ethers' 5 min default");
+    assert.equal(c.evm!.stuckAlertS, 30);
   });
 });
 
@@ -81,5 +84,43 @@ describe("logging and backoff", () => {
       const d = backoffMs(a, 500, 30_000);
       assert.ok(d >= 0.75 * Math.min(30_000, 500 * 2 ** (a - 1)) && d <= 1.25 * Math.min(30_000, 500 * 2 ** (a - 1)));
     }
+  });
+
+  it("a loop's backoff is capped by maxBackoffMs (order execution retries within seconds)", async () => {
+    const lines: string[] = [];
+    const log = createLogger({ sink: (l) => lines.push(l) });
+    const ctl = new AbortController();
+    let ticks = 0;
+    const done = runLoop("executor", 1, async () => {
+      if (++ticks >= 8) ctl.abort();
+      throw new Error("fetch failed");
+    }, log, ctl.signal, { maxBackoffMs: 5 });
+    await done;
+    const delays = lines.map((l) => JSON.parse(l)).filter((o) => o.msg === "loop tick failed").map((o) => o.retry_in_ms);
+    assert.ok(delays.length >= 7);
+    assert.ok(delays.every((d: number) => d <= 5 * 1.25), `all delays within the cap: ${delays}`);
+  });
+});
+
+describe("stuck request alert", () => {
+  const setup = () => {
+    const lines: string[] = [];
+    return { lines, alerter: new Alerter(createLogger({ sink: (l) => lines.push(l) })) };
+  };
+
+  it("alerts once when the oldest pending request is older than the threshold", async () => {
+    const { lines, alerter } = setup();
+    await alertIfStuck(alerter, "evm", { id: "12", createdAtS: 1_000 }, 1_031, 30);
+    await alertIfStuck(alerter, "evm", { id: "12", createdAtS: 1_000 }, 1_040, 30); // rate-limited
+    const alerts = lines.map((l) => JSON.parse(l)).filter((o) => o.level === "alert");
+    assert.equal(alerts.length, 1);
+    assert.deepEqual([alerts[0].alert, alerts[0].request, alerts[0].age_s], ["evm-request-stuck", "12", 31]);
+  });
+
+  it("stays quiet for fresh requests and when nothing is pending", async () => {
+    const { lines, alerter } = setup();
+    await alertIfStuck(alerter, "solana", { id: "Req", createdAtS: 1_000 }, 1_030, 30);
+    await alertIfStuck(alerter, "solana", undefined, 9_999, 30);
+    assert.equal(lines.length, 0);
   });
 });

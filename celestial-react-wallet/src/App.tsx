@@ -2133,9 +2133,9 @@ function LoadingScreen() {
 function UninitializedScreen() {
   function handleOpenSetup() {
     if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-      chrome.tabs.create({ url: 'http://localhost:5173' });
+      chrome.tabs.create({ url: CONFIG.ONBOARDING_URL });
     } else {
-      window.open('http://localhost:5173', '_blank');
+      window.open(CONFIG.ONBOARDING_URL, '_blank');
     }
   }
 

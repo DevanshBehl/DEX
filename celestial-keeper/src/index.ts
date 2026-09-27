@@ -68,8 +68,9 @@ async function runChain(k: ChainKeeper, config: Config, log: Logger, alerter: Al
   const { executorMs, liquidatorMs, fundingMs, healthMs } = config.intervals;
 
   await Promise.all([
-    runLoop("executor", executorMs, () => k.executorTick(), log.child({ job: "executor" }), chain.signal),
-    runLoop("liquidator", liquidatorMs, () => k.liquidatorTick(), log.child({ job: "liquidator" }), chain.signal, { initialDelayMs: 250 }),
+    // Order execution and liquidation are latency-sensitive: retry within seconds after an outage.
+    runLoop("executor", executorMs, () => k.executorTick(), log.child({ job: "executor" }), chain.signal, { maxBackoffMs: 5_000 }),
+    runLoop("liquidator", liquidatorMs, () => k.liquidatorTick(), log.child({ job: "liquidator" }), chain.signal, { initialDelayMs: 250, maxBackoffMs: 10_000 }),
     runLoop("funding", () => jitter(fundingMs), () => k.fundingTick(), log.child({ job: "funding" }), chain.signal, { initialDelayMs: 500 }),
     runLoop(
       "health",

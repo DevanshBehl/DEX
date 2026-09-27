@@ -178,7 +178,7 @@ Pausing blocks **new increases** only. Traders can still close positions, cancel
 | Phantom warns "This transaction reverted during simulation" on devnet | Phantom's own scanner can't preview this devnet program ("Unknown"). The transaction is valid: the app re-simulates on devnet before sending, and a failing one is rejected with no fee |
 | "Switch your wallet to Sepolia" | The EVM wallet is on another chain; use the in-app switch button |
 | Order **cancelled: Oracle price was stale** | The Chainlink feed is older than the max age (Sepolia heartbeat is 1 h). Retry after the next update |
-| Order stays **pending** | The keeper isn't running or not whitelisted. After 60 s the trader can cancel for a full refund |
+| Order stays **pending** | Check `/status`: the order-queue age, keeper balance and whitelist are shown per chain. Usually the keeper isn't running, isn't whitelisted, or its RPC is down (it alerts `request-stuck` after 30 s). After 60 s the trader can cancel for a full refund |
 | Earn APR shows `x%+` | The RPC capped the log range; the value is a lower bound |
 
 ### Keeper troubleshooting

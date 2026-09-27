@@ -37,7 +37,7 @@ import {
 
 import { type ChainKeeper, FatalError } from "../chain.ts";
 import type { SolanaConfig } from "../config.ts";
-import type { Alerter } from "../health.ts";
+import { type Alerter, alertIfStuck } from "../health.ts";
 import { errMsg, type Logger } from "../log.ts";
 import { checkLiquidatable, type RiskParams } from "../math.ts";
 import { RateLimitedLog, backoffMs, sleep, withRetry } from "../retry.ts";
@@ -82,7 +82,16 @@ export class SolanaKeeper implements ChainKeeper {
     private log: Logger,
     private alerter: Alerter,
   ) {
-    this.connection = new Connection(cfg.rpcUrl, { commitment: "confirmed", disableRetryOnRateLimit: true });
+    const timeoutMs = cfg.rpcTimeoutMs ?? 10_000;
+    this.connection = new Connection(cfg.rpcUrl, {
+      commitment: "confirmed",
+      disableRetryOnRateLimit: true,
+      // web3.js has no request timeout: a hung RPC call would stall the loop indefinitely.
+      fetch: (input, init) => {
+        const timeout = AbortSignal.timeout(timeoutMs);
+        return fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout });
+      },
+    });
     this.keypair = loadKeypair(cfg.keypairPath);
     this.idl = JSON.parse(readFileSync(cfg.idlPath, "utf8"));
     this.coder = new BorshCoder(this.idl);
@@ -227,8 +236,13 @@ export class SolanaKeeper implements ChainKeeper {
     const pending = all
       .filter((r) => !this.inFlight.has(r.pubkey.toBase58()) && (this.retryAfter.get(r.pubkey.toBase58())?.at ?? 0) <= now)
       .sort((a, b) => Number(BigInt(a.data.created_at.toString()) - BigInt(b.data.created_at.toString())));
-    if (pending.length === 0) return;
     const nowS = Math.floor(now / 1000);
+    const oldest = all.reduce<(typeof all)[number] | undefined>(
+      (a, r) => (!a || BigInt(r.data.created_at.toString()) < BigInt(a.data.created_at.toString()) ? r : a),
+      undefined,
+    );
+    await alertIfStuck(this.alerter, "solana", oldest && { id: oldest.pubkey.toBase58(), createdAtS: Number(oldest.data.created_at.toString()) }, nowS, this.cfg.stuckAlertS ?? 30);
+    if (pending.length === 0) return;
     for (const r of pending) {
       const id = r.pubkey.toBase58();
       if (this.seen.has(id)) continue;

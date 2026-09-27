@@ -17,6 +17,7 @@ import { join } from "node:path";
 import {
   Contract,
   type ContractTransactionResponse,
+  FetchRequest,
   type Interface,
   JsonRpcProvider,
   type Log,
@@ -27,7 +28,7 @@ import {
 
 import { type ChainKeeper, FatalError } from "../chain.ts";
 import { REPO_ROOT, type EvmConfig } from "../config.ts";
-import type { Alerter } from "../health.ts";
+import { type Alerter, alertIfStuck } from "../health.ts";
 import { errMsg, type Logger } from "../log.ts";
 import { checkLiquidatable, type RiskParams } from "../math.ts";
 import { RateLimitedLog, backoffMs, withRetry } from "../retry.ts";
@@ -83,15 +84,22 @@ export class EvmKeeper implements ChainKeeper {
     return this.engine.interface;
   }
 
+  /** RPC endpoint with a short timeout: a hung request must not stall a loop for ethers' default 5 min. */
+  private request(): FetchRequest {
+    const req = new FetchRequest(this.cfg.rpcUrl);
+    req.timeout = this.cfg.rpcTimeoutMs ?? 10_000;
+    return req;
+  }
+
   private sym(market: string) {
     return this.symbols.get(market.toLowerCase()) ?? market;
   }
 
   async init(): Promise<void> {
-    const probe = new JsonRpcProvider(this.cfg.rpcUrl);
+    const probe = new JsonRpcProvider(this.request());
     const network = await withRetry(() => probe.getNetwork());
     probe.destroy();
-    this.provider = new JsonRpcProvider(this.cfg.rpcUrl, network, { staticNetwork: network, pollingInterval: this.cfg.pollingMs });
+    this.provider = new JsonRpcProvider(this.request(), network, { staticNetwork: network, pollingInterval: this.cfg.pollingMs });
     const wallet = new Wallet(this.cfg.privateKey, this.provider);
     this.address = wallet.address;
     this.signer = new NonceManager(wallet);
@@ -139,6 +147,8 @@ export class EvmKeeper implements ChainKeeper {
       });
     }
     this.cursor = firstPending ?? next;
+    const oldest = pending[0];
+    await alertIfStuck(this.alerter, "evm", oldest && { id: oldest.id.toString(), createdAtS: Number(oldest.createdAt) }, Math.floor(Date.now() / 1000), this.cfg.stuckAlertS ?? 30);
 
     const now = Date.now();
     const todo = pending.filter(({ id }) => !this.inFlight.has(id) && (this.retryAfter.get(id)?.at ?? 0) <= now);

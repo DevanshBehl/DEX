@@ -100,12 +100,14 @@ flowchart TB
 | NFT metadata | Treated as untrusted: plain-text descriptions, `javascript:` URIs rejected, HTML and 3D media never rendered |
 | Partner API keys | Never read from the bundle. They go through the optional server-side proxy |
 | Keys in NFT sends | Used only by local signers, never included in a network request |
+| Message senders | The background checks Chrome's `sender` on every message. Web pages may send only `VAULT_INIT`, `WEB3_REQUEST` and `SOLANA_REQUEST`; everything else must come from the extension's own pages. Other extensions are refused |
+| Vault import | `VAULT_INIT` is accepted only from the onboarding origins (`ONBOARDING_ORIGINS`). Fixed in Phase 7: previously any page could add a vault whose password it knew |
+| Approval popup origin | Taken from `sender`, not from the page's message, so a site can't pose as another one in the approval popup (fixed in Phase 7) |
 
 ### Known risks and limitations
 
 | Risk | Detail | Severity |
 |---|---|---|
-| **`VAULT_INIT` from any origin** | `content.js` runs on `<all_urls>` and relays `VAULT_INIT` from any page. A malicious site could add a vault whose password it knows, and a user who later unlocks and funds that wallet would be sending to the attacker. Existing vaults are not readable or overwritable unless the site guesses their exact id | **High.** Fix: restrict relaying to the onboarding origin(s), and show a confirmation in the popup |
 | **Mnemonic in service-worker memory and returned by `VAULT_STATE_GET`** | While unlocked, the plaintext mnemonic lives in the worker and is returned to the popup on request. Only extension pages can send runtime messages (content scripts relay a fixed set of types, not `VAULT_STATE_GET`) | Medium. Fix: keep the key only, and sign in the worker |
 | **Keys derived and used in the popup** | Transactions are signed in the popup's JS context | Medium. Fix: move signing to the background |
 | **No auto-lock** | The session ends only on lock or when the worker is stopped | Medium. Fix: idle timer with `chrome.alarms` |
@@ -119,6 +121,29 @@ flowchart TB
 
 - The seed comes from `@scure/bip39` (CSPRNG, 128-bit) and is encrypted **before** leaving the page. Only the ciphertext is posted to the extension. No network requests carry wallet data.
 - Password policy: ≥ 8 characters with uppercase, digit and symbol. PBKDF2 at 600k iterations slows offline guessing but doesn't prevent it for weak passwords.
+
+## Internal review (Phase 7, 2026-09)
+
+| Area | Method | Result |
+|---|---|---|
+| EVM maths and accounting | `FOUNDRY_PROFILE=ci forge test`: 5,000 fuzz runs, invariants at 1,000 runs × depth 200 | 107/107 pass; all six invariants hold with 0 reverts over 200,000 calls each |
+| EVM static analysis | Slither 0.11 (`slither .` with `celestial-contracts/slither.config.json`) | 54 findings, triaged below. No exploitable issue |
+| Solana lint | `cargo clippy -p celestial-perps --all-targets -- -D warnings` | Clean |
+| Solana account validation | Manual review of every `UncheckedAccount` and constraint | All constrained: position PDAs by seeds and `has_one = position`, owners by `has_one = owner`, the mint authority by seeds, oracles owner-checked against the Chainlink store program, token accounts pinned by mint and authority, market set fully validated |
+| Cross-chain equivalence | `celestial-perps` `npm run test:cross-chain`: the same scenario through `PerpsChain` on Anvil and the Solana validator | Every fill, fee, position field, payout, AUM, CLP price and funding rate identical. CLP mint within 1 unit after scaling, as expected (perp-math Ex 10) |
+| Wallet message boundary | `celestial-react-wallet/tests/background` | Vault import restricted to onboarding, extension-only messages refused from pages and other extensions, real origin in popups |
+
+**Slither triage (High and Medium).**
+
+| Finding | Verdict |
+|---|---|
+| `arbitrary-send-erc20` in `LiquidityPool.escrowIn(from, …)` | False positive. `onlyEngine`, the engine is set once, and its only caller passes `msg.sender` |
+| `arbitrary-send-eth` in `PerpEngine._sendEth(to, …)` | False positive. Recipients are `msg.sender` (the keeper's fee) or the request owner (their own refund) |
+| `incorrect-equality` ×5 | Intended: `size == 0` means no position; `last == block.timestamp` means funding already accrued this block |
+| `uninitialized-local` ×3, `unused-return` ×4 | Intended zero defaults; `EnumerableSet` add/remove on unique ids; unused `startedAt` from Chainlink |
+| `reentrancy-no-eth` ×4 | **Not exploitable today, fix at the next redeploy.** `_decrease` pays out (`poolToTrader`, `collateralOut`) before writing the position back. Every engine entry point is `nonReentrant`, and USDC has no transfer hooks, so there's no re-entry path. With a hook token, a re-entry into `LiquidityPool.addLiquidity` mid-update would be possible. **Mainnet redeploy item:** move the two payouts after the storage writes. Revert conditions stay equivalent because the new reserve is at most old reserve − profit. The live Sepolia contract is left unchanged, so the verified source keeps matching |
+
+The Low findings (`events-maths`, `timestamp`, `calls-loop`, `reentrancy-events`) are expected. The admin setters do emit `ParamUpdated` (through `_setBounded`, which Slither doesn't follow), time comparisons are the protocol's clocks, and the loops are bounded by the market count (at most 8).
 
 ## Repository hygiene
 

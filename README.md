@@ -348,12 +348,13 @@ The local suites need `forge build` (contracts artifacts) and `pnpm build:test` 
 | Area | What you get |
 |:--|:--|
 | **Trade form** | USDC collateral with balance and % buttons, a leverage slider (max read on-chain) and slippage presets. The order summary shows size, estimated entry, acceptable price, **liquidation price**, open fee, execution fee (plus the refundable position rent on Solana), funding per hour and remaining side capacity. It is computed with the same bigint maths as the chain. |
-| **Pre-flight checks** | Nothing is sent if it would cancel: minimum collateral, leverage bounds, capacity, balances, market enabled, not paused, fresh oracle. On Sepolia a USDC **approve** step (exact or max) appears first. |
+| **Pre-flight checks** | Nothing is sent if it would cancel: minimum collateral, leverage bounds, capacity, balances, market enabled, not paused, fresh oracle. On Sepolia the first order asks for a USDC **approval** (exact or max) and then places the order, from one click. |
 | **Order tracker** | *Confirm in wallet → submitted → pending keeper (elapsed seconds) → filled* (price, fee) or *cancelled* (a readable reason), with explorer links for the request and the fill. |
 | **Positions** | Size, collateral, entry, mark (oracle), liquidation price, net PnL (capped profit − close fee − funding), funding owed. **Close**, **Partial** (%), **+Coll**, **−Coll** (checked against leverage and liquidation). |
 | **Orders & history** | Pending requests with a **Cancel** button that enables after 60 s. History comes from on-chain events: orders, fills, cancellations with reasons, increases and decreases with realised PnL, liquidations, faucet and LP actions. |
 | **Market info** | Oracle price and age, gap to the Coinbase index, available liquidity, long/short OI with a skew bar, capacity per side, funding for each side, max leverage and fees. |
 | **`/earn`** | Pool AUM, CLP price, unreserved and reserved liquidity, your CLP, share and value, and a 7-day fee APR estimate. Add liquidity with a min-CLP guard. Remove with a min-USDC guard, a **cooldown countdown**, and a clear message when reserved liquidity blocks the withdrawal. |
+| **`/status`** | Health of both deployments read straight from the chains (works when the keeper is down): order queue age, keeper balance and whitelist, oracle freshness, pool and OI per market, funding. |
 | **Guards & errors** | A Sepolia network guard (switch or add the chain; writes are blocked until then). Contract and program errors are decoded into plain language ("Price moved past your slippage limit", "Rejected in wallet", …). Slow or rate-limited RPCs show a retrying banner instead of hanging. |
 
 Chart and index price come from the Coinbase Exchange public API and are **display only**. Every fill uses the on-chain Chainlink price.
@@ -430,8 +431,8 @@ Phantom tips: turn on **Testnet Mode** and select **Solana Devnet** / **Sepolia*
 | 3 | EVM contracts: tests, invariants, Sepolia deploy + verification | ✅ 2026-09-22 |
 | 4 | Solana Anchor program: tests, Chainlink integration, devnet deploy | ✅ 2026-09-25 |
 | 5 | Keeper service for both chains, live on testnets | ✅ 2026-09-25 |
-| 6 | Frontend integration: chain layer, trade flow, positions & history, `/earn`, faucet, network guard | 🟡 In progress: built and fully tested locally; Solana verified live in the browser; Sepolia browser run next |
-| 7 | Hardening & public testnet: cross-chain consistency test, longer fuzzing, Slither/clippy, internal security review, monitoring dashboard, user/LP guides | ⏳ |
+| 6 | Frontend integration: chain layer, trade flow, positions & history, `/earn`, faucet, network guard; Celestial Wallet Solana signing | ✅ 2026-09-27 (verified live on both chains) |
+| 7 | Hardening & public testnet: cross-chain consistency test, longer fuzzing, Slither/clippy, internal security review, monitoring dashboard, user/LP guides | 🟡 Built and tested; remaining: tester round |
 | 8 | Mainnet-only: limit/stop orders, pull oracle, real USDC + depeg handling, permissionless liquidations, audits, multisig + timelock | ⏳ |
 
 Detailed checklists, decisions and deviations for every phase: [`phases.md`](phases.md).
@@ -440,10 +441,11 @@ Detailed checklists, decisions and deviations for every phase: [`phases.md`](pha
 
 ## 📚 Documentation index
 
-The full technical reference lives in [`docs/`](docs/README.md). Start with the [reading guide](docs/README.md).
+The full technical reference lives in [`docs/`](docs/README.md). Start with the [reading guide](docs/README.md). Testers: [Trader guide](docs/user-guide.md) · [LP guide](docs/lp-guide.md).
 
 | Document | Contents |
 |:--|:--|
+| [`docs/user-guide.md`](docs/user-guide.md) · [`docs/lp-guide.md`](docs/lp-guide.md) | How to trade and provide liquidity with test funds, costs, risks, troubleshooting |
 | [`docs/architecture.md`](docs/architecture.md) | System context, the two-chain design, order lifecycle, money flow, app and wallet architecture |
 | [`docs/protocol-spec.md`](docs/protocol-spec.md) | Every protocol rule and parameter (with admin bounds), order checks, funding, liquidation, LP, fees, per-chain deviations |
 | [`docs/perp-math.md`](docs/perp-math.md) | Formulas, rounding rules and 10 worked examples (EVM and Solana CLP columns) |

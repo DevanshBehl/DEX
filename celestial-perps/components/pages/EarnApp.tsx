@@ -121,6 +121,7 @@ export default function EarnApp() {
           <nav className="flex items-center gap-1 text-xs font-semibold">
             <Link href="/trade" className="rounded-md px-2 py-1 text-[#888] hover:text-white">Trade</Link>
             <Link href="/earn" className="rounded-md px-2 py-1 text-white">Earn</Link>
+            <Link href="/status" className="rounded-md px-2 py-1 text-[#888] hover:text-white">Status</Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">

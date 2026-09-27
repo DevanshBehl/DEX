@@ -8,6 +8,7 @@ Each document describes the system **as implemented**. Parameters, formulas and 
 
 | If you want to… | Start with |
 |---|---|
+| Trade or provide liquidity as a tester | [Trader guide](user-guide.md) · [LP guide](lp-guide.md) |
 | Understand the whole system in 10 minutes | [Architecture](architecture.md) |
 | Know every protocol rule and parameter | [Protocol specification](protocol-spec.md) |
 | Implement or verify the maths | [Perp maths & test vectors](perp-math.md) |
@@ -39,6 +40,10 @@ flowchart LR
         W[wallet.md]
         N[wallet-nfts.md]
         L[landing.md]
+    end
+    subgraph Guides["Guides"]
+        UG[user-guide.md]
+        LG[lp-guide.md]
     end
     subgraph Ops["Cross-cutting"]
         A[architecture.md]

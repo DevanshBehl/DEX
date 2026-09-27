@@ -30,3 +30,17 @@ export class Alerter {
     }
   }
 }
+
+/** Oldest pending request older than `thresholdS` → one rate-limited alert (a stuck or slow keeper). */
+export async function alertIfStuck(
+  alerter: Alerter,
+  chain: "evm" | "solana",
+  oldest: { id: string; createdAtS: number } | undefined,
+  nowS: number,
+  thresholdS: number,
+): Promise<void> {
+  if (!oldest) return;
+  const age = nowS - oldest.createdAtS;
+  if (age <= thresholdS) return;
+  await alerter.raise(`${chain}-request-stuck`, `a request has been pending for ${age} s`, { chain, request: oldest.id, age_s: age, threshold_s: thresholdS });
+}

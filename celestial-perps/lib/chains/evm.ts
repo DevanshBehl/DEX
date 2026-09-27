@@ -19,6 +19,7 @@ import {
   type HistoryItem,
   type MarketState,
   type OrderParams,
+  type OpsStatus,
   type OrderUpdate,
   type PendingRequest,
   type PerpsChain,
@@ -43,6 +44,8 @@ export type EvmChainConfig = {
   logRange?: number;
   /** poll interval for trackRequest */
   pollMs?: number;
+  /** keeper addresses to report on the status page */
+  keepers?: readonly string[];
 };
 
 export const SEPOLIA_CONFIG: EvmChainConfig = {
@@ -56,7 +59,11 @@ export const SEPOLIA_CONFIG: EvmChainConfig = {
   markets: EVM_MARKET_IDS,
   deployBlock: SEPOLIA_CONTRACTS.deployBlock,
   explorer: "https://sepolia.etherscan.io",
+  keepers: SEPOLIA_CONTRACTS.keepers,
 };
+
+/** Request ids scanned for the status page: EVM has no global pending list (the keeper walks a cursor). */
+const OPS_SCAN = 50n;
 
 const STATUS = { None: 0, Pending: 1, Executed: 2, Cancelled: 3 } as const;
 const AGGREGATOR_ABI = ["function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"];
@@ -295,6 +302,29 @@ export class EvmChain implements PerpsChain {
       .sort((a, b) => a.createdAt - b.createdAt);
   }
 
+  async getOpsStatus(): Promise<OpsStatus> {
+    const [next, paused, block] = await Promise.all([this.engine.nextRequestId() as Promise<bigint>, this.engine.paused() as Promise<boolean>, this.provider.getBlock("latest")]);
+    const from = next > OPS_SCAN + 1n ? next - OPS_SCAN : 1n;
+    const ids: bigint[] = [];
+    for (let id = from; id < next; id++) ids.push(id);
+    const reqs = await Promise.all(ids.map((id) => this.engine.getRequest(id)));
+    const pending = reqs.filter((r) => Number(r.status) === STATUS.Pending).map((r) => Number(r.createdAt));
+    const keepers = await Promise.all(
+      (this.cfg.keepers ?? []).map(async (address) => {
+        const [balance, active] = await Promise.all([this.provider.getBalance(address), this.engine.isKeeper(address) as Promise<boolean>]);
+        return { address, balance, active };
+      }),
+    );
+    return {
+      now: block?.timestamp ?? Math.floor(Date.now() / 1000),
+      paused,
+      pendingCount: pending.length,
+      oldestPendingAt: pending.length ? Math.min(...pending) : null,
+      pendingComplete: from === 1n,
+      keepers,
+    };
+  }
+
   async faucetStatus(owner: string) {
     const next = Number(await this.usdc.nextClaimAt(owner));
     const now = Math.floor(Date.now() / 1000);
@@ -375,7 +405,9 @@ export class EvmChain implements PerpsChain {
       from = to + 1;
     }
     writeCache(cacheKey, { lastBlock: head, items });
-    const out = [...items].sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
+    // `items` is in exact chain order (block, then log index; cached items before new ones), so
+    // newest-first is its reverse. Sorting by timestamp would misorder events in the same block.
+    const out = [...items].reverse();
     return opts.limit ? out.slice(0, opts.limit) : out;
   }
 

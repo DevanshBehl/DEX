@@ -195,8 +195,9 @@ export default function OnboardingPage() {
       );
 
       // Wait for acknowledgement from extension
-      const ack = await new Promise<boolean>((resolve) => {
-        const timeout = setTimeout(() => resolve(false), 5000);
+      // null = no answer (extension missing); otherwise the extension's verdict.
+      const ack = await new Promise<{ success: boolean; error: string | null } | null>((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 5000);
 
         function handler(event: MessageEvent) {
           if (
@@ -205,19 +206,20 @@ export default function OnboardingPage() {
           ) {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
-            resolve(event.data.success === true);
+            resolve({ success: event.data.success === true, error: event.data.error ?? null });
           }
         }
         window.addEventListener('message', handler);
       });
 
-      if (ack) {
+      if (ack?.success) {
         transitionTo('completion');
       } else {
         dispatch({
           type: 'SET_ERROR',
-          value:
-            'Could not connect to the Celestial extension. Make sure it is installed and try again.',
+          value: ack
+            ? `The Celestial extension refused the wallet: ${ack.error ?? 'unknown error'}`
+            : 'Could not connect to the Celestial extension. Make sure it is installed and try again.',
         });
       }
     } catch (err) {

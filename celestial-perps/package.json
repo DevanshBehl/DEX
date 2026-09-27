@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:math": "node --import tsx --test lib/perpMath.test.ts",
+    "test:math": "node --import tsx --test lib/perpMath.test.ts lib/opsHealth.test.ts",
     "test:chain": "node --import tsx --test --test-concurrency=1 test/chain-evm.test.mts test/chain-solana.test.mts",
-    "typecheck:test": "tsc --noEmit -p test"
+    "typecheck:test": "tsc --noEmit -p test",
+    "test:cross-chain": "node --import tsx --test --test-force-exit test/cross-chain.test.mts"
   },
   "dependencies": {
     "@anchor-lang/core": "1.1.2",

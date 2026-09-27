@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { ShieldCheck, Layers, Zap, ArrowRight, ArrowUpRight, ArrowDownLeft, Lock, Key, Smartphone, Repeat, Check, Sparkles, Terminal, Shield } from 'lucide-react';
+import { ShieldCheck, Layers, Zap, ArrowRight, ArrowUpRight, ArrowDownLeft, Lock, Key, Smartphone, Repeat, Check, Sparkles } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
 
 /* ============================================================
@@ -216,8 +216,10 @@ function SecurityVault() {
 /* ============================================================
    AGENT WALLET MOCKUP COMPONENT
    ============================================================ */
+type MockMessage = { role: 'user' | 'agent'; content: string; thinking?: boolean; executionDetails?: boolean };
+
 function AgentWalletMockup() {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<MockMessage[]>([
     { role: 'user', content: 'Buy 1 ETH on Base using USDC' },
     { role: 'agent', content: 'Analyzing intent & finding best route...', thinking: true },
   ]);

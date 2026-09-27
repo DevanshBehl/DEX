@@ -54,7 +54,7 @@ export async function runLoop(
   tick: () => Promise<void>,
   log: Logger,
   signal: AbortSignal,
-  opts: { initialDelayMs?: number } = {},
+  opts: { initialDelayMs?: number; maxBackoffMs?: number } = {},
 ): Promise<void> {
   const interval = typeof intervalMs === "function" ? intervalMs : () => intervalMs;
   let failures = 0;
@@ -68,7 +68,8 @@ export async function runLoop(
       await sleep(interval(), signal);
     } catch (e) {
       failures++;
-      const delay = Math.max(interval(), backoffMs(failures, 1_000, 60_000));
+      // Latency-sensitive loops (order execution) cap their backoff low: a fill waits on it.
+      const delay = Math.max(interval(), backoffMs(failures, 1_000, opts.maxBackoffMs ?? 60_000));
       log[failures >= 5 ? "error" : "warn"]("loop tick failed", { loop: name, failures, retry_in_ms: delay, err: errMsg(e) });
       await sleep(delay, signal);
     }

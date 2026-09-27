@@ -141,6 +141,12 @@ sequenceDiagram
     I-->>D: resolve / reject (EIP-1193 error code)
 ```
 
+**Trusted senders.** The background checks where every message comes from, using the `sender` Chrome attaches (a page can't fake it):
+
+- Web pages, through `content.js`, may send only `VAULT_INIT`, `WEB3_REQUEST` and `SOLANA_REQUEST`. Everything else (unlock, approvals, account updates, network changes) is accepted only from the extension's own pages.
+- `VAULT_INIT` is accepted only from the onboarding site's origins (`ONBOARDING_ORIGINS` in `background.js`, matching `CONFIG.ONBOARDING_URL`, default `http://localhost:5173`).
+- The origin shown in approval popups is taken from `sender`, not from the request, so a site can't pose as another one.
+
 Requests time out after 5 minutes in `inpage.js`. If the extension was reloaded under the page, the page gets `-32603 "Extension context invalidated. Please reload the page."`.
 
 ### EVM provider (`window.ethereum`)
@@ -249,4 +255,3 @@ These are tracked in [security.md](security.md#wallet-extension) where they have
 | Per-origin permissions | Connection approval is not remembered per origin, and there is no "connected sites" list |
 | Signing location | Transactions are signed in the popup with keys derived there. The background receives addresses only |
 | Auto-lock | No idle timer. The session ends on manual lock or when Chrome stops the service worker |
-| Vault import origin | `content.js` accepts `VAULT_INIT` from any page |

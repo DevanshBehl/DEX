@@ -91,4 +91,4 @@ To test the handshake end to end, load the built extension unpacked (see [wallet
 
 - The seed is generated with `@scure/bip39` (audited, CSPRNG-backed), 128 bits of entropy.
 - `postMessage` uses target `'*'`, but it only reaches the same window (`content.js` checks `event.source === window`). The payload is already encrypted.
-- The extension currently accepts `VAULT_INIT` from **any** origin. See [security.md](security.md#wallet-extension) for the risk and the planned origin allow-list.
+- The extension accepts `VAULT_INIT` only from the onboarding origins (`ONBOARDING_ORIGINS` in `background.js`). A refusal is shown on the completion step with the extension's reason. When the site moves to a real domain, add it there and set `VITE_ONBOARDING_URL` in the wallet build.

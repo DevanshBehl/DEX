@@ -17,5 +17,10 @@ export const CONFIG = {
    * marketplace keys server-side, so no partner key ever ships in the extension
    * bundle. Unset → only keyless marketplace endpoints are used.
    */
-  CELESTIAL_API_URL: env.VITE_CELESTIAL_API_URL || ''
+  CELESTIAL_API_URL: env.VITE_CELESTIAL_API_URL || '',
+  /**
+   * Onboarding site that creates vaults. public/background.js only accepts VAULT_INIT from the
+   * origins in its ONBOARDING_ORIGINS list — keep the two in sync when this changes.
+   */
+  ONBOARDING_URL: env.VITE_ONBOARDING_URL || 'http://localhost:5173'
 };

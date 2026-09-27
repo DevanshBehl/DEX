@@ -256,6 +256,13 @@ describe("Solana chain layer (local validator + keeper)", { timeout: 400_000 }, 
     const fresh = new SolanaChain({ rpcUrl: local.rpcUrl, idl: IDL, explorerTx: (x: string) => x }); // no config cache
     const [pending] = await fresh.getPendingRequests(owner());
     assert.equal(pending.id, res.requestId);
+    const ops = await fresh.getOpsStatus();
+    assert.equal(ops.pendingCount, 1, "status page sees the stuck request");
+    assert.equal(ops.oldestPendingAt, pending.createdAt);
+    assert.ok(ops.now >= pending.createdAt);
+    assert.equal(ops.paused, false);
+    assert.deepEqual(ops.keepers.map((k) => k.address), [local.keeper.publicKey.toBase58()]);
+    assert.ok(ops.keepers[0].balance > 0n);
     assert.equal(pending.kind, "increase");
     assert.equal(pending.market, "SOL-USD");
     assert.equal(pending.cancellableAt - pending.createdAt, 10);

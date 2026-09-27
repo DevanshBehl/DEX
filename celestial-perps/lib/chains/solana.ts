@@ -57,6 +57,7 @@ import {
   type PerpsChain,
   type PoolState,
   type Position,
+  type OpsStatus,
   type ProtocolParams,
   type TxResult,
 } from "./types";
@@ -389,6 +390,28 @@ export class SolanaChain implements PerpsChain {
       .sort((a, b) => a.createdAt - b.createdAt);
   }
 
+  async getOpsStatus(): Promise<OpsStatus> {
+    const [config, requests] = await Promise.all([
+      this.getConfig(),
+      this.connection.getProgramAccounts(this.programId, {
+        commitment: "confirmed",
+        minContextSlot: this.minSlot || undefined,
+        filters: [{ memcmp: { offset: 0, bytes: this.disc.Request } }],
+      }),
+    ]);
+    const keeperKeys = (config.keepers as PublicKey[]).filter((k) => !k.equals(PublicKey.default));
+    const [clock, ...keeperInfos] = await this.accounts([SYSVAR_CLOCK_PUBKEY, ...keeperKeys]);
+    const created = requests.map(({ account }) => Number(big(this.coder.accounts.decode("Request", Buffer.from(account.data)).created_at)));
+    return {
+      now: Number(Buffer.from(clock!.data).readBigInt64LE(32)),
+      paused: !!config.paused,
+      pendingCount: created.length,
+      oldestPendingAt: created.length ? Math.min(...created) : null,
+      pendingComplete: true,
+      keepers: keeperKeys.map((k, i) => ({ address: k.toBase58(), balance: BigInt(keeperInfos[i]?.lamports ?? 0), active: true })),
+    };
+  }
+
   private async symbolMap(): Promise<Map<string, MarketId>> {
     const config = await this.getConfig();
     const keys: PublicKey[] = config.markets;
@@ -447,14 +470,18 @@ export class SolanaChain implements PerpsChain {
       const txs = await this.transactions(chunk.map((s) => s.signature));
       txs.forEach((tx, j) => {
         if (!tx?.meta?.logMessages?.some((l) => l.includes(this.programId.toBase58()))) return;
+        const inTx: HistoryItem[] = [];
         let idx = 0;
         for (const ev of this.eventsFromLogs(tx.meta.logMessages)) {
           const item = this.toHistory(ev, chunk[j].signature, tx.blockTime ?? null, idx++, ownerPk, symbols);
-          if (item) items.push(item);
+          if (item) inTx.push(item);
         }
+        items.push(...inTx.reverse());
       });
     }
-    return items.sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
+    // Signatures come newest-first and each transaction's events were reversed above, so `items`
+    // is newest-first in exact chain order (a timestamp sort would misorder same-second events).
+    return items;
   }
 
   /**

@@ -31,9 +31,9 @@ flowchart TB
 | `src/index.ts` | CLI entry, `startKeeper()` (also used in-process by the integration tests), SIGINT/SIGTERM drain (10 s) |
 | `src/config.ts` | Env parsing and validation; addresses, market ids and deploy block from `deployments/*.json`; ABIs from `celestial-perps/src/abis/`, IDL from `celestial-perps/src/idl/` |
 | `src/chain.ts` | `ChainKeeper` interface (`init`, `executorTick`, `liquidatorTick`, `fundingTick`, `healthTick`, `drain`) and `FatalError` |
-| `src/retry.ts` | `runLoop` with per-loop backoff (1 s → 60 s), `backoffMs`, `jitter`, abortable `sleep` |
+| `src/retry.ts` | `runLoop` with per-loop backoff (1 s up to a per-loop cap), `backoffMs`, `jitter`, abortable `sleep` |
 | `src/log.ts` | JSON-lines logger with secret redaction |
-| `src/health.ts` | `Alerter`: alert dedupe and webhook |
+| `src/health.ts` | `Alerter` (alert dedupe and webhook) and `alertIfStuck` (oldest pending request over the threshold) |
 | `src/math.ts` | Bigint port of `PerpMath.sol` for off-chain liquidation checks |
 | `src/evm/keeper.ts` | Sepolia implementation (ethers 6, `NonceManager`) |
 | `src/solana/keeper.ts`, `src/solana/oracle.ts` | Devnet implementation (web3.js, Anchor coder, OCR2 decoder) |
@@ -91,6 +91,8 @@ Markets with a stale oracle are skipped, with at most one warning per minute. Th
 | Nonces stay consistent (EVM) | One `NonceManager`, re-synced after any send failure or confirmation timeout |
 | Lagging RPC nodes don't cause double work (Solana) | Reads pass `minContextSlot` = last slot the keeper confirmed. Just-settled accounts are ignored for 2 minutes. `AccountNotInitialized` on a request means "already settled" |
 | One failure doesn't stop the others | Each loop backs off independently. Init is retried with backoff, so an RPC outage at start-up isn't fatal |
+| Outages cost seconds, not minutes | Backoff is capped per loop: executor 5 s, liquidator 10 s, funding and health 60 s. Every RPC request times out after `RPC_TIMEOUT_MS` (10 s): ethers' default is 5 minutes and web3.js has none, so one hung request could otherwise stall a loop |
+| A stuck queue is noticed | Every executor tick checks the oldest pending request; one older than `STUCK_REQUEST_ALERT_S` (30 s) raises a `<chain>-request-stuck` alert |
 
 ## Configuration
 
@@ -110,6 +112,8 @@ Markets with a stale oracle are skipped, with at most one warning per minute. Th
 | `EVM_LOG_RANGE` | 500 | Starting `eth_getLogs` block range (halved on range errors) |
 | `ALERT_WEBHOOK_URL` | unset | Alerts are POSTed as JSON `{ source, alert, message, chain, … }` |
 | `LOG_LEVEL` | `info` | `debug` · `info` · `warn` · `error` · `alert` |
+| `RPC_TIMEOUT_MS` | 10000 | Per-request RPC timeout, both chains |
+| `STUCK_REQUEST_ALERT_S` | 30 | Alert when the oldest pending request is older than this |
 
 Advanced overrides, read by `src/config.ts` and normally left unset: `EVM_START_BLOCK`, `EVM_MAX_BATCH`, `EVM_CONFIRM_TIMEOUT_MS`, `EVM_POLLING_MS`, `EVM_MIN_BALANCE_ETH`, `EVM_ENGINE`, `EVM_ORACLE`, `EVM_DEPLOYMENTS`, `EVM_EXPECTED_KEEPER`, `SOLANA_MAX_BATCH`, `SOLANA_CU_PER_EXECUTE`, `SOLANA_CONFIRM_TIMEOUT_MS`, `SOLANA_MIN_BALANCE_SOL`, `SOLANA_DEPLOYMENTS`, `SOLANA_IDL_PATH`, `SOLANA_EXPECTED_KEEPER`.
 
@@ -138,7 +142,7 @@ Logs go to stdout as one JSON object per line: `ts`, `level`, `chain`, `job`, `m
 | `health` | Balance and whitelist status |
 | `loop tick failed` / `loop recovered` | RPC trouble and recovery |
 
-Alerts are lines with `"level":"alert"` (low balance, not whitelisted, fatal init). Each alert key fires at most once every 15 minutes.
+Alerts are lines with `"level":"alert"`: low balance, not whitelisted, fatal init, and `request-stuck` (a request pending longer than `STUCK_REQUEST_ALERT_S`). Each alert key fires at most once every 15 minutes. For a live view without logs, the app's `/status` page reads the same signals from the chains ([frontend.md](frontend.md#status-page)).
 
 **Secrets are never logged.** The EVM key is never passed to the logger. URLs are stripped from error messages (they can embed RPC keys), and fields named like `privateKey`, `secret` or `keypair` are redacted.
 

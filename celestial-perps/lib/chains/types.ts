@@ -125,6 +125,21 @@ export type OrderUpdate =
 
 export type TxResult = { tx: string; requestId?: string };
 
+export type KeeperStatus = { address: string; balance: bigint; active: boolean };
+
+/** Operational health for the status page (reads only; works when the keeper is down). */
+export type OpsStatus = {
+  /** chain time (unix s) of the read */
+  now: number;
+  paused: boolean;
+  /** requests waiting for the keeper, across all traders */
+  pendingCount: number;
+  oldestPendingAt: number | null;
+  /** false when only the most recent requests were scanned (EVM keeps no global pending list) */
+  pendingComplete: boolean;
+  keepers: KeeperStatus[];
+};
+
 export type OrderParams = {
   market: MarketId;
   isLong: boolean;
@@ -163,6 +178,8 @@ export interface PerpsChain {
    * false when the RPC could not return the whole window (the estimate is then a lower bound).
    */
   getFeesToPool(since: number): Promise<{ amount: bigint; complete: boolean }>;
+  /** Protocol-wide operational health: pending requests, keepers, pause. */
+  getOpsStatus(): Promise<OpsStatus>;
 
   // ── writes (need a signer) ──
   approve(amount: bigint): Promise<TxResult>;

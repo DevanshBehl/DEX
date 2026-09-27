@@ -255,45 +255,51 @@ A Node/TypeScript service. One process drives both chains.
 
 ---
 
-## Phase 6 — Frontend integration (`celestial-perps/`)
+## Phase 6 — Frontend integration (`celestial-perps/`) ✅ (2026-09-27)
 
 ### 6a. Chain layer
-- [ ] `lib/chains/evm.ts` and `lib/chains/solana.ts` behind **one interface**: `getMarketInfo`, `getPositions`, `requestIncrease`, `requestDecrease`, `cancel`, `addLiquidity`, `removeLiquidity`, `faucet`, `getUsdcBalance`, `getHistory`
-- [ ] Choose the chain from the connected wallet. EVM uses ethers with the **provider of the connected EIP-6963 wallet**, not `window.ethereum`. Solana uses `@solana/web3.js`, `@coral-xyz/anchor`, and the Wallet Standard `signTransaction`.
-- [ ] **Network guard:** if the wallet isn't on Sepolia, call `wallet_switchEthereumChain` and block transactions until it is. On Solana, always use a devnet RPC connection.
-- [ ] React to `accountsChanged` and `chainChanged`
+- [x] `lib/chains/evm.ts` and `lib/chains/solana.ts` behind **one interface**: `getMarketInfo`, `getPositions`, `requestIncrease`, `requestDecrease`, `cancel`, `addLiquidity`, `removeLiquidity`, `faucet`, `getUsdcBalance`, `getHistory`
+- [x] Choose the chain from the connected wallet. EVM uses ethers with the **provider of the connected EIP-6963 wallet**, not `window.ethereum`. Solana uses `@solana/web3.js`, `@coral-xyz/anchor`, and the Wallet Standard `signTransaction`.
+- [x] **Network guard:** if the wallet isn't on Sepolia, call `wallet_switchEthereumChain` and block transactions until it is. On Solana, always use a devnet RPC connection.
+- [x] React to `accountsChanged` and `chainChanged`
 
 ### 6b. Trade flow
-- [ ] USDC collateral input with the balance and % buttons, the ERC20 `approve` step on EVM, and a leverage slider from 1 to 20x
-- [ ] Order summary computed from the protocol maths: size, entry (oracle price ± slippage), **liquidation price**, open fee, execution fee, funding
-- [ ] Order states: submitted → pending keeper → filled or cancelled, with an explorer link for each chain
-- [ ] Decode contract errors (`interface.parseError` on EVM, Anchor error codes on Solana) into readable messages
+- [x] USDC collateral input with the balance and % buttons, the ERC20 `approve` step on EVM, and a leverage slider from 1 to 20x
+- [x] Order summary computed from the protocol maths: size, entry (oracle price ± slippage), **liquidation price**, open fee, execution fee, funding
+- [x] Order states: submitted → pending keeper → filled or cancelled, with an explorer link for each chain
+- [x] Decode contract errors (`interface.parseError` on EVM, Anchor error codes on Solana) into readable messages
 
 ### 6c. Positions & history
-- [ ] Positions table read from the chain: live mark price and PnL (oracle price, with the Coinbase ticker as an in-between estimate), liquidation price, collateral, funding paid
-- [ ] Close and partial-close buttons, plus add/remove collateral
-- [ ] Pending requests with a Cancel button once they're older than 60 s
-- [ ] Order history built from events and program logs
+- [x] Positions table read from the chain: live mark price and PnL (oracle price, with the Coinbase ticker as an in-between estimate), liquidation price, collateral, funding paid
+- [x] Close and partial-close buttons, plus add/remove collateral
+- [x] Pending requests with a Cancel button once they're older than 60 s
+- [x] Order history built from events and program logs
 
 ### 6d. New pages & panels
-- [ ] Connect the `MarketInfo` panel (from Phase 1) to `getMarketInfo`
-- [ ] `/earn` (liquidity page): pool AUM, CLP price, your share, APR based on fees, add/remove liquidity
-- [ ] A "Get test USDC" faucet button in the header when on a testnet
-- [ ] Link the landing page CTA to `/trade`, and add a link to `/earn`
+- [x] Connect the `MarketInfo` panel (from Phase 1) to `getMarketInfo`
+- [x] `/earn` (liquidity page): pool AUM, CLP price, your share, APR based on fees, add/remove liquidity
+- [x] A "Get test USDC" faucet button in the header when on a testnet
+- [x] Link the landing page CTA to `/trade`, and add a link to `/earn`
 
 **Done when:** a fresh wallet on either chain can get USDC from the faucet, open a position, see live PnL, close it, and see it in history. An LP can deposit and withdraw.
 
 ---
 
-## Phase 7 — Hardening & testnet launch
+## Phase 7 — Hardening & testnet launch 🟡 (built 2026-09-27; tester round pending)
 
-- [ ] Cross-chain consistency test: run the same scenario (prices, sizes, time) on both chains and compare PnL, fees, and funding to 1 unit of precision
-- [ ] Longer invariant and fuzz runs on EVM, and property tests on the Solana maths
-- [ ] Internal security review: access control, rounding direction, reentrancy, oracle manipulation, account validation (owner/signer/PDA checks, mint and token-program checks), front-running
-- [ ] Run Slither on EVM, and use `cargo clippy` plus the Anchor account-constraint checklist on Solana
-- [ ] Monitoring dashboard: pool AUM, OI, keeper health, failed executions
-- [ ] Docs: user guide, LP guide, protocol spec, deployment runbook
+- [x] Cross-chain consistency test: run the same scenario (prices, sizes, time) on both chains and compare PnL, fees, and funding to 1 unit of precision. `celestial-perps` `npm run test:cross-chain`: every fill, fee, position field, payout, AUM, CLP price and funding rate identical; CLP mint within 1 unit. Funding is compared as rates (accrual runs on wall-clock time locally; the formula is covered by the shared vectors)
+- [x] Longer invariant and fuzz runs on EVM, and property tests on the Solana maths. `FOUNDRY_PROFILE=ci`: 107/107, invariants 1,000 runs × depth 200 with 0 reverts; Solana property sweeps in `cargo test`
+- [x] Internal security review: access control, rounding direction, reentrancy, oracle manipulation, account validation (owner/signer/PDA checks, mint and token-program checks), front-running. See `docs/security.md` § Internal review. One redeploy item: move the `_decrease` payouts after the storage writes (not exploitable with USDC)
+- [x] Run Slither on EVM, and use `cargo clippy` plus the Anchor account-constraint checklist on Solana. Slither: 54 findings, none exploitable (config in `celestial-contracts/slither.config.json`); clippy `-D warnings` clean; every `UncheckedAccount` constrained
+- [x] Monitoring dashboard: pool AUM, OI, keeper health, failed executions. `/status` in the app (order queue age, keepers, oracles, pool, OI, funding) plus keeper alerts for stuck requests
+- [x] Docs: user guide, LP guide, protocol spec, deployment runbook (`docs/user-guide.md`, `docs/lp-guide.md`, `docs/protocol-spec.md`, `docs/operations.md`)
 - [ ] Public testnet with a small group of testers, then fix what they find
+
+Also fixed in Phase 7:
+- Wallet: `VAULT_INIT` accepted only from the onboarding origin; extension-only messages refused from web pages; approval popups show the real origin (from Chrome's `sender`)
+- Keeper: backoff capped per loop (executor 5 s, liquidator 10 s), 10 s RPC timeouts, stuck-request alerts
+- App: history ordering (same-block events), status page, EVM approval chained into the order/deposit
+- Landing: the site build (`tsc -b`) passes again
 
 ---
 

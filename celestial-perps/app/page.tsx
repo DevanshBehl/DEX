@@ -303,7 +303,7 @@ export default function Page() {
             {[
               { label: "Trade", href: "/trade" },
               { label: "Earn", href: "/earn" },
-              { label: "Markets", href: "#" },
+              { label: "Status", href: "/status" },
               { label: "Docs", href: "#" },
             ].map((l) => (
               <a

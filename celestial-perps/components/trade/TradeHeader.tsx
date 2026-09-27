@@ -64,6 +64,7 @@ export function TradeHeader({
         <nav className="hidden items-center gap-1 text-xs font-semibold md:flex">
           <Link href="/trade" className="rounded-md px-2 py-1 text-white">Trade</Link>
           <Link href="/earn" className="rounded-md px-2 py-1 text-[#888] hover:text-white">Earn</Link>
+            <Link href="/status" className="rounded-md px-2 py-1 text-[#888] hover:text-white">Status</Link>
         </nav>
         <div className="relative">
           <button

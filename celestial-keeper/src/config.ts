@@ -27,6 +27,10 @@ export type EvmConfig = {
   confirmTimeoutMs: number;
   minBalanceWei: bigint;
   pollingMs: number;
+  /** Abort an RPC request after this long (ethers' default is 5 minutes). */
+  rpcTimeoutMs?: number;
+  /** Alert when a request has been pending longer than this. */
+  stuckAlertS?: number;
 };
 
 export type SolanaConfig = {
@@ -39,6 +43,10 @@ export type SolanaConfig = {
   computeUnitsPerExecute: number;
   confirmTimeoutMs: number;
   minBalanceLamports: bigint;
+  /** Abort an RPC request after this long (web3.js has no timeout of its own). */
+  rpcTimeoutMs?: number;
+  /** Alert when a request has been pending longer than this. */
+  stuckAlertS?: number;
 };
 
 export type Config = {
@@ -122,6 +130,8 @@ export function loadConfig(env: Env = process.env): Config {
       confirmTimeoutMs: int(env, "EVM_CONFIRM_TIMEOUT_MS", 120_000),
       minBalanceWei: BigInt(Math.round(Number(env.EVM_MIN_BALANCE_ETH ?? "0.02") * 1e9)) * 10n ** 9n,
       pollingMs: int(env, "EVM_POLLING_MS", 1_000, 50),
+      rpcTimeoutMs: int(env, "RPC_TIMEOUT_MS", 10_000, 1_000),
+      stuckAlertS: int(env, "STUCK_REQUEST_ALERT_S", 30, 5),
     };
   }
 
@@ -139,6 +149,8 @@ export function loadConfig(env: Env = process.env): Config {
       computeUnitsPerExecute: int(env, "SOLANA_CU_PER_EXECUTE", 90_000),
       confirmTimeoutMs: int(env, "SOLANA_CONFIRM_TIMEOUT_MS", 60_000),
       minBalanceLamports: BigInt(Math.round(Number(env.SOLANA_MIN_BALANCE_SOL ?? "1") * 1e9)),
+      rpcTimeoutMs: int(env, "RPC_TIMEOUT_MS", 10_000, 1_000),
+      stuckAlertS: int(env, "STUCK_REQUEST_ALERT_S", 30, 5),
     };
     if (!existsSync(config.solana.idlPath)) throw new ConfigError("SOLANA_IDL_PATH does not exist");
   }

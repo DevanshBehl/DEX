@@ -12,6 +12,8 @@ export const SEPOLIA_CONTRACTS = {
   mockUsdc: "0x88a77050162285276d6346a4Bc07C406572d6cD2",
   /** PerpEngine deploy block — event history starts here */
   deployBlock: 11757411,
+  /** whitelisted keepers (PerpEngine.isKeeper) — shown on the status page */
+  keepers: ["0xA0c3A70806983a965e43961DE48658a9D41f2322"],
 } as const;
 
 // keccak256 of the market symbol — the `bytes32 market` argument everywhere on EVM.

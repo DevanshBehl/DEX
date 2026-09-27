@@ -39,9 +39,10 @@ flowchart TB
 | solana | `pnpm test:chainlink` | Devnet build against `solana-test-validator` with the Chainlink store and feeds cloned from devnet | Network access |
 | keeper | `pnpm test` | Maths vectors (Ex 1–9), oracle decoding, config, logging redaction | Node |
 | keeper | `pnpm test:local` | In-process keeper vs Anvil + test validator | `forge build`, `pnpm build:test` in celestial-solana |
-| perps | `npm run test:math` | `lib/perpMath.ts` vs every vector | Node |
+| perps | `npm run test:math` | `lib/perpMath.ts` vs every vector, plus the status-page health rules (`lib/opsHealth.ts`) | Node |
 | perps | `npm run test:chain` | `EvmChain` and `SolanaChain` end to end with the keeper in-process | Same as keeper `test:local` |
-| wallet | `npm test` | NFT module (normalisers, spam, media, grouping, transfers, marketplaces) | Node |
+| perps | `npm run test:cross-chain` | The **same** scenario on both local chains; every number compared (see below) | Same as keeper `test:local` |
+| wallet | `npm test` | NFT module; Solana signing core; the real `inpage.js` providers end to end; the background's message boundary (trusted senders, vault import, approval origin, chain switching, Solana signing queue) | Node |
 
 ## EVM contracts
 
@@ -129,9 +130,25 @@ TRADER_PRIVATE_KEY=<test key> SEPOLIA_RPC_URL=… node --import tsx scripts/live
 
 The EVM set-up is in `test/support/evm-local.mts`. The Solana set-up reuses the keeper's local harness (`celestial-keeper/test/support/solana-local.ts`), and both suites start the keeper in-process with `startKeeper`.
 
+## Cross-chain consistency
+
+`celestial-perps/test/cross-chain.test.mts` runs one scenario through the **same `PerpsChain` code** on Anvil (PerpEngine) and the Solana test validator (mock-oracle build), with one in-process keeper serving both. It then asserts both chains produced the same numbers:
+
+| Step | Compared |
+|---|---|
+| Start | Pool AUM, pool amount, CLP price, oracle prices, trader balance |
+| Open ETH long 10× and BTC short 5× | Fill price and fee; every position field (size, collateral, tokens, reserve, entry, liquidation price, close fee, funding owed, mark, PnL, net PnL) |
+| Prices move (ETH +10%, BTC −5%) | Positions, AUM, reserved, available, CLP price |
+| Partial close with a collateral withdrawal | Fill, payout, remaining position |
+| Full close in profit | Payout |
+| Funding restored | Funding rates per side at identical open interest and AUM |
+| LP deposit | CLP minted (EVM 18 decimals vs Solana 6, compared in 6-decimal units, ±1 per Ex 10), AUM, final balances |
+
+Funding accrues on wall-clock time, which neither local chain can pin, so the lifecycle runs with a zero funding factor and funding is compared as rates. The accrual formula itself is covered by the shared vectors. The script uses `--test-force-exit`: after the validator stops, web3.js keeps reconnecting its websocket, which would otherwise keep Node alive.
+
 ## Wallet
 
-`npm test` in `celestial-react-wallet` runs `tests/nft/*.test.ts` with Node's built-in runner (not Vitest, which would pull in `esbuild` and break the Vite build). The suites are listed in [wallet-nfts.md](wallet-nfts.md#tests). The extension UI and the onboarding handshake are checked manually in Chrome at 360×600.
+`npm test` in `celestial-react-wallet` runs `tests/**/*.test.ts` (NFT module, `tests/solana/` signing and page providers, `tests/background/` message boundary) with Node's built-in runner (not Vitest, which would pull in `esbuild` and break the Vite build). The suites are listed in [wallet-nfts.md](wallet-nfts.md#tests). The extension UI and the onboarding handshake are checked manually in Chrome at 360×600.
 
 ## Continuous checks before merging
 
@@ -139,7 +156,7 @@ The EVM set-up is in `test/support/evm-local.mts`. The Solana set-up reuses the 
 (cd celestial-contracts && forge fmt --check && forge test)
 (cd celestial-solana && cargo test -p celestial-perps --lib && pnpm test)
 (cd celestial-keeper && pnpm typecheck && pnpm test && pnpm test:local)
-(cd celestial-perps && npm run test:math && npm run test:chain && npm run build)
+(cd celestial-perps && npm run test:math && npm run test:chain && npm run test:cross-chain && npm run build)
 (cd celestial-react-wallet && npm test && npm run build)
 (cd celestial-landing && npm run lint && npm run build)
 ```

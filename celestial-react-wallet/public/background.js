@@ -66,7 +66,49 @@ async function decryptPayload(key, payload) {
 
 // ---- Message handler --------------------------------------------------------
 
+// ---- Message sources --------------------------------------------------------
+// Web pages reach the worker only through content.js. Chrome fills in `sender` itself, so a page
+// cannot fake where a message came from — unlike anything inside the message.
+
+/** Origins allowed to hand the extension a new vault. Keep in sync with ONBOARDING_URL in src/config/networks.ts. */
+const ONBOARDING_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+/** The only messages a web page (via content.js) may send; everything else is extension-internal. */
+const PAGE_MESSAGES = new Set(['VAULT_INIT', 'WEB3_REQUEST', 'SOLANA_REQUEST']);
+
+function isExtensionPage(sender) {
+  return sender?.id === chrome.runtime.id && typeof sender.url === 'string' && sender.url.startsWith(chrome.runtime.getURL(''));
+}
+
+function senderOrigin(sender) {
+  if (sender?.origin) return sender.origin;
+  try {
+    return new URL(sender.url).origin;
+  } catch {
+    return '';
+  }
+}
+
+/** Why a message must be refused, or null. */
+function senderError(type, sender) {
+  if (isExtensionPage(sender)) return null;
+  if (sender?.id !== chrome.runtime.id || !PAGE_MESSAGES.has(type)) return `Message ${type} is not allowed from a web page.`;
+  if (type === 'VAULT_INIT' && !ONBOARDING_ORIGINS.includes(senderOrigin(sender))) {
+    return 'Wallets can only be created from the Celestial onboarding site.';
+  }
+  return null;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const denied = senderError(message?.type, sender);
+  if (denied) {
+    sendResponse({ success: false, error: denied });
+    return false;
+  }
+  // dApp requests: the origin shown in approval popups is the real one, not what the page claims.
+  if (!isExtensionPage(sender) && message.payload && typeof message.payload === 'object') {
+    message = { ...message, payload: { ...message.payload, origin: senderOrigin(sender) } };
+  }
   handleMessage(message)
     .then(sendResponse)
     .catch((err) => sendResponse({ success: false, error: err.message }));
